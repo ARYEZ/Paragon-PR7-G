@@ -2,8 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// The unit's finish: the original pearl white, or pearl black with white
-// keys and knobs. Only the unit itself changes (its chassis, the expression
+// The unit's finish: the original pearl white, or pearl black with neon
+// keys and knobs (pink to red to orange). Only the unit itself changes (its chassis, the expression
 // pedal's plate, the lettering printed on it, its keys and knobs); the
 // screens, the neon and the dark panels round it stay as they are.
 //
@@ -35,6 +35,11 @@ namespace Finish
     // direction to it (so no brushed lines) and the odd bright mica fleck.
     // On black the flecks show more, as they do in a real black pearl paint.
     juce::Image makeSatinGrain (int width, int height, int seed);
+
+    // The pearl black unit's keys and knobs: hot pink at the left through
+    // red to orange at the right (measured off the reference swatch),
+    // across `left` to `right`. Lighting is drawn over it.
+    juce::ColourGradient neonGradient (float left, float right);
 
     // Picks the colour for the current finish.
     inline juce::Colour pick (juce::uint32 onWhite, juce::uint32 onBlack) { return juce::Colour (isBlack() ? onBlack : onWhite); }

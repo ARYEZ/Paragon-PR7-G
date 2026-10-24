@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.30.0
+
+- **Pearl Black now has neon keys and knobs** instead of white ones. The footswitches, the AMP / CABINET / RIG keys, the small keys (SAVE, UNDO, TUNER...) and the RIG LEVEL and PRESENCE knobs run hot pink through red to orange, left to right.
+  - The colours are measured off a reference swatch: `#e10639` → `#d42e2a` → `#cd6619`.
+  - They're shaded like the swatch too: lit along the top and falling into deep red at the front, so they still look like glossy keys.
+  - On the small keys, an unlit LED stripe shows as a dark slot, so it doesn't vanish red-on-red. Lit stripes are the same neon as before.
+- Pearl White is unchanged.
+
 ## 0.29.1
 
 - **Pearl Black is much deeper black.** It read as navy, so:

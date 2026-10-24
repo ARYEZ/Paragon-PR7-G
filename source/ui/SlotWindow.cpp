@@ -88,7 +88,7 @@ namespace SlotWindow
 
     void drawButton (juce::Graphics& g, juce::Rectangle<int> areaInt, bool hover, bool highlight)
     {
-        // A plain piano key (black, or white on the pearl black unit) in a
+        // A plain piano key (black, or neon on the pearl black unit) in a
         // chrome bezel, exactly like the footswitches: no icon, the title
         // above and caption below say what it is.
         const auto bezel = areaInt.toFloat();

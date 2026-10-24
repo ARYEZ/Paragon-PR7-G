@@ -64,6 +64,15 @@ namespace Finish
     juce::Colour stampEdge() { return isBlack() ? juce::Colours::black.withAlpha (0.75f) : juce::Colours::white.withAlpha (0.7f); }
     juce::Colour printedRed() { return isBlack() ? ParagonColours::glow.brighter (0.15f) : ParagonColours::glow.darker (0.15f); }
 
+    juce::ColourGradient neonGradient (float left, float right)
+    {
+        juce::ColourGradient gradient (juce::Colour (0xffde0639), left, 0.0f, juce::Colour (0xffcd6619), right, 0.0f, false);
+        gradient.addColour (0.25, juce::Colour (0xffd90738));
+        gradient.addColour (0.5, juce::Colour (0xffd42e2a));
+        gradient.addColour (0.75, juce::Colour (0xffcf5c1c));
+        return gradient;
+    }
+
     juce::Image makeSatinGrain (int width, int height, int seed)
     {
         // A fixed seed keeps it identical every time it's drawn.
