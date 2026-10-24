@@ -2,6 +2,15 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.29.0
+
+- **Pearl Black finish.** SETTINGS has a new **FINISH** choice: the original **Pearl White**, or **Pearl Black**. Pearl Black is the same unit in black pearl, with the same satin grain, sheen and pearlescent shimmer, plus white keys and knobs:
+  - The chassis, the expression pedal's plate and the pedal bay are black pearl. The lettering printed on the unit turns pearl white, and the red printing stays red.
+  - The footswitches, the AMP / CABINET / RIG keys, the small keys (SAVE, UNDO, TUNER...) and the RIG LEVEL and PRESENCE knobs are gloss white.
+  - The screens, the neon, the chrome bezels and the panels below the unit don't change.
+  - The choice is saved on your computer, not in the project, so every Paragon PR7-G you open uses it. Every open window switches together.
+- Pearl White looks exactly as before.
+
 ## 0.28.0
 
 - **Talk Box.** A new FILTER / PITCH type. A real talk box sends the amp's sound up a tube into your mouth, which shapes it into vowels. This does the same with three resonant formants, the peaks a voice makes for each vowel.

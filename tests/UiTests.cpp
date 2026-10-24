@@ -6,6 +6,7 @@
 #include "PluginProcessor.h"
 #include "ui/GraphicEqPanel.h"
 #include "ui/EqPresets.h"
+#include "ui/Finish.h"
 #include "ui/PerformanceControls.h"
 
 using Catch::Matchers::WithinAbs;
@@ -77,6 +78,42 @@ TEST_CASE ("The window lays out cleanly at every size", "[ui]")
             checkLayout (*view, "view");
         }
     }
+}
+
+TEST_CASE ("PEARL BLACK recolours the unit's printing, and every open window follows", "[ui]")
+{
+    Finish::set (Finish::Type::pearlWhite, false);
+    ParagonX1AudioProcessor processor;
+    std::unique_ptr<juce::AudioProcessorEditor> first (processor.createEditor()), second (processor.createEditor());
+
+    // RIG LEVEL is printed on the unit: ink on white, light on black.
+    const auto rigLevelColour = [] (juce::Component& editor)
+    {
+        std::vector<juce::Label*> labels;
+        findAll (editor, labels);
+        for (auto* label : labels)
+            if (label->getText() == "RIG LEVEL")
+                return label->findColour (juce::Label::textColourId);
+        return juce::Colour();
+    };
+    CHECK (rigLevelColour (*first) == ParagonColours::ink);
+
+    // Chosen in one window (here, without saving the preference), it shows in both.
+    Finish::set (Finish::Type::pearlBlack, false);
+    CHECK (Finish::isBlack());
+    CHECK (rigLevelColour (*first) == Finish::ink());
+    CHECK (rigLevelColour (*second) == Finish::ink());
+    CHECK (Finish::ink().getPerceivedBrightness() > 0.8f);
+
+    // The key and knob drawing still works in both finishes.
+    for (const auto type : { Finish::Type::pearlBlack, Finish::Type::pearlWhite })
+    {
+        Finish::set (type, false);
+        first->setSize (1280, 720);
+        const auto image = first->createComponentSnapshot (first->getLocalBounds());
+        CHECK (image.isValid());
+    }
+    CHECK (rigLevelColour (*first) == ParagonColours::ink);
 }
 
 TEST_CASE ("The chain and footswitches pick which block's knobs show; the graphic EQ is the default", "[ui]")

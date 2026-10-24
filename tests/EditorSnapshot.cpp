@@ -3,6 +3,7 @@
 #include "Parameters.h"
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
+#include "ui/Finish.h"
 
 namespace
 {
@@ -44,6 +45,10 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     processor.prepareToPlay (48000.0, 256);
 
     const auto showPresets = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_PAGE", {}) == "presets";
+
+    // PARAGON_SNAPSHOT_FINISH=black: the pearl black unit (not saved as the preference).
+    Finish::set (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_FINISH", {}) == "black" ? Finish::Type::pearlBlack
+                                                                                                    : Finish::Type::pearlWhite, false);
     const auto rigFolder = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("ParagonX1SnapshotRigs");
     rigFolder.deleteRecursively();
     processor.useRigFolder (rigFolder);

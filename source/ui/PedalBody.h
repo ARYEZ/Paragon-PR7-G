@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// The floor unit from the mockup, drawn as one piece of bright pearl white:
+// The floor unit from the mockup, drawn as one piece of pearl (white, or black: see Finish.h):
 // a thick bevelled rim with the red-orange light spilling round it, the
 // satin face plate with screws in its corners, recessed section panels
 // (the slot row and the footswitch row), the panels behind the slot windows, the
@@ -24,6 +24,9 @@ public:
         juce::Path printedRed, printedInk;                 // lines printed on the face (the tuner bracket, SAVE—SAVE AS)
     };
     void setGeometry (Geometry);
+
+    // Redraws it in the current finish (see Finish.h).
+    void refinish();
 
     void paint (juce::Graphics&) override;
     void resized() override;

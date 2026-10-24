@@ -1,6 +1,7 @@
 #include "PerformanceControls.h"
 
 #include "Parameters.h"
+#include "ui/Finish.h"
 #include "ui/ParagonLookAndFeel.h"
 #include "ui/LedDisplay.h"
 #include "ui/SlotWindow.h"
@@ -327,8 +328,8 @@ namespace
     constexpr float baseCorner = 16.0f, treadleCorner = 13.0f;
     constexpr int treadleOversample = 2;   // the treadle's face is drawn at twice its size, so it stays sharp when rocked
 
-    // The treadle's face, drawn once: a plate in the unit's own pearl white
-    // satin finish, and two black rubber pads split by a diagonal band
+    // The treadle's face, drawn once: a plate in the unit's own pearl
+    // satin finish (white or black, see Finish.h), and two black rubber pads split by a diagonal band
     // (the mockup's design), ribbed across like the DigiTech RP6's. Drawn square and true,
     // so it rocks without any lean or warp.
     juce::Image makeTreadleFace (int w, int h)
@@ -342,52 +343,38 @@ namespace
         juce::Path plate;
         plate.addRoundedRectangle (bounds.reduced (1.0f), corner);
         {
-            // Pearl white, its long edges curving away into a soft rose shade.
-            juce::ColourGradient pearl (juce::Colour (0xffe6d6de), 0.0f, 0.0f, juce::Colour (0xffdccbd4), fw, 0.0f, false);
-            pearl.addColour (0.14, juce::Colour (0xfffffdfe));
-            pearl.addColour (0.5, juce::Colour (0xfff4ebf0));
-            pearl.addColour (0.86, juce::Colour (0xfffbf6f8));
+            // Pearl, its long edges curving away into shade.
+            using Finish::pick;
+            juce::ColourGradient pearl (pick (0xffe6d6de, 0xff1e1a21), 0.0f, 0.0f, pick (0xffdccbd4, 0xff17141a), fw, 0.0f, false);
+            pearl.addColour (0.14, pick (0xfffffdfe, 0xff3a3440));
+            pearl.addColour (0.5, pick (0xfff4ebf0, 0xff26222a));
+            pearl.addColour (0.86, pick (0xfffbf6f8, 0xff302b35));
             g.setGradientFill (pearl);
             g.fillPath (plate);
 
             // The same pearlescent shift as the chassis: rose to peach to lilac.
-            juce::ColourGradient iridescence (juce::Colour (0xffffc8dc).withAlpha (0.16f), 0.0f, 0.0f,
-                                              juce::Colour (0xffe2d0ff).withAlpha (0.14f), fw, fh, false);
-            iridescence.addColour (0.5, juce::Colour (0xffffe0c8).withAlpha (0.12f));
+            const auto black = Finish::isBlack();
+            juce::ColourGradient iridescence (black ? juce::Colour (0xffff7ab0).withAlpha (0.14f) : juce::Colour (0xffffc8dc).withAlpha (0.16f), 0.0f, 0.0f,
+                                              black ? juce::Colour (0xffa080ff).withAlpha (0.16f) : juce::Colour (0xffe2d0ff).withAlpha (0.14f), fw, fh, false);
+            iridescence.addColour (0.5, black ? juce::Colour (0xff7ae0d0).withAlpha (0.06f) : juce::Colour (0xffffe0c8).withAlpha (0.12f));
             g.setGradientFill (iridescence);
             g.fillPath (plate);
 
-            // The same satin grain as the chassis: a fine speckle with no
-            // direction to it, and the odd brighter mica fleck.
-            juce::Image grain (juce::Image::ARGB, w, h, true);
-            {
-                juce::Image::BitmapData pixels (grain, juce::Image::BitmapData::writeOnly);
-                juce::Random random (7);
-                for (int y = 0; y < h; ++y)
-                    for (int x = 0; x < w; ++x)
-                    {
-                        if (random.nextInt (500) == 0)
-                        {
-                            pixels.setPixelColour (x, y, (random.nextBool() ? juce::Colours::white : juce::Colour (0xffffd8e6)).withAlpha ((juce::uint8) (60 + random.nextInt (60))));
-                            continue;
-                        }
-                        const auto shade = random.nextFloat() * 2.0f - 1.0f;
-                        pixels.setPixelColour (x, y, (shade > 0.0f ? juce::Colours::white : juce::Colour (0xff5a3a4a))
-                                                         .withAlpha ((juce::uint8) juce::roundToInt (std::abs (shade) * 9.0f)));
-                    }
-            }
+            // The same satin grain as the chassis.
+            const auto grain = Finish::makeSatinGrain (w, h, 7);
             juce::Graphics::ScopedSaveState clip (g);
             g.reduceClipRegion (plate);
             g.drawImageAt (grain, 0, 0);
         }
 
         // Its bevelled edge: lit along the top and left, darker at the bottom right.
-        g.setGradientFill (juce::ColourGradient (juce::Colours::white.withAlpha (0.9f), bounds.getTopLeft(),
-                                                 juce::Colour (0xffa88896), bounds.getBottomRight(), false));
+        const auto black = Finish::isBlack();
+        g.setGradientFill (juce::ColourGradient (juce::Colours::white.withAlpha (black ? 0.35f : 0.9f), bounds.getTopLeft(),
+                                                 juce::Colour (black ? 0xff050405 : 0xffa88896), bounds.getBottomRight(), false));
         g.strokePath (plate, juce::PathStrokeType (fw * 0.012f));
         juce::Path seam;
         seam.addRoundedRectangle (bounds.reduced (fw * 0.03f), corner * 0.8f);
-        g.setColour (juce::Colour (0xff4a2034).withAlpha (0.18f));
+        g.setColour (black ? juce::Colours::black.withAlpha (0.5f) : juce::Colour (0xff4a2034).withAlpha (0.18f));
         g.strokePath (seam, juce::PathStrokeType (1.5f));
 
         // The two rubber pads, with the diagonal chrome band between them.
@@ -451,6 +438,12 @@ ExpressionPedal::ExpressionPedal (ParagonX1AudioProcessor& processorToUse)
     startTimerHz (30);   // follows a MIDI pedal smoothly
     timerCallback();
     shownPosition = position;   // start where the pedal is, rather than gliding there
+}
+
+void ExpressionPedal::refinish()
+{
+    treadle = makeTreadleFace (treadle.getWidth(), treadle.getHeight());
+    repaint();
 }
 
 void ExpressionPedal::timerCallback()
@@ -604,7 +597,7 @@ void ExpressionPedal::paint (juce::Graphics& g)
         for (int layer = 0; layer < layers; ++layer)
         {
             const auto t = (float) layer / (float) (layers - 1);
-            g.setColour (juce::Colour (0xff7a5c6a).interpolatedWith (juce::Colour (0xffeee3e9), t));
+            g.setColour (Finish::pick (0xff7a5c6a, 0xff060507).interpolatedWith (Finish::pick (0xffeee3e9, 0xff2a2530), t));
             g.fillPath (roundedOutline (topZ - thickness * (1.0f - t)));
         }
 
@@ -633,7 +626,8 @@ void ExpressionPedal::paint (juce::Graphics& g)
             const auto amount = tilt / maxTilt;   // +1 toe down (heel up), -1 heel down (toe up)
             const auto toeEnd = corner (0.5f, 0.0f, topZ), heelEnd = corner (0.5f, 1.0f, topZ);
             const auto lit = juce::Colours::white.withAlpha (0.10f * std::abs (amount));
-            const auto shaded = juce::Colour (0xff4a2034).withAlpha (0.28f * std::abs (amount));   // rose, not black, so the pearl doesn't go grey
+            const auto shaded = Finish::isBlack() ? juce::Colours::black.withAlpha (0.45f * std::abs (amount))
+                                                  : juce::Colour (0xff4a2034).withAlpha (0.28f * std::abs (amount));   // rose, not black, so the pearl doesn't go grey
             g.setGradientFill (juce::ColourGradient (amount < 0.0f ? lit : shaded, toeEnd,
                                                      amount < 0.0f ? shaded : lit, heelEnd, false));
             g.fillPath (face);
@@ -841,7 +835,7 @@ void HeelIndicator::timerCallback()
 void HeelIndicator::paint (juce::Graphics& g)
 {
     const auto area = getLocalBounds().toFloat();
-    g.setColour (ParagonColours::inkDim);
+    g.setColour (Finish::inkDim());
     g.setFont (juce::FontOptions (9.5f, juce::Font::bold));
     g.drawText ("MIN", area.withTrimmedRight (14.0f), juce::Justification::centredRight, false);
     SlotWindow::drawRingLed (g, { area.getRight() - 6.0f, area.getCentreY() }, lit);

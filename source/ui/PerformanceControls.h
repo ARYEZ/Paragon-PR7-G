@@ -119,6 +119,9 @@ public:
     void mouseUp (const juce::MouseEvent&) override;
     void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 
+    // Redraws the treadle in the current finish (see Finish.h).
+    void refinish();
+
 private:
     void timerCallback() override;
     juce::Rectangle<float> trackArea() const;

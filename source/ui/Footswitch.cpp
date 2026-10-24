@@ -1,5 +1,6 @@
 #include "Footswitch.h"
 
+#include "Finish.h"
 #include "ParagonLookAndFeel.h"
 
 Footswitch::Footswitch (int numberToShow, const juce::String& nameToShow, juce::AudioProcessorValueTreeState& parametersToUse,
@@ -89,7 +90,7 @@ void Footswitch::paint (juce::Graphics& g)
         g.fillRoundedRectangle (lens.reduced (2.0f).withHeight (lens.getHeight() * 0.3f), 1.5f);
     }
 
-    // The pad: a big piano-black key standing in a raised chrome bezel, the
+    // The pad: a big piano key (black, or white on the pearl black unit) standing in a raised chrome bezel, the
     // way a real floor unit's footswitch is mounted. The bezel casts a
     // shadow on the panel, is lit along its top and darker at the front,
     // and holds the key in a dark well.
@@ -97,7 +98,7 @@ void Footswitch::paint (juce::Graphics& g)
     const auto hover = isMouseOver() && switchArea.contains (getMouseXYRelative());
     const auto bezel = switchArea.toFloat();
     ParagonLookAndFeel::drawChromeBezel (g, bezel, 11.0f);
-    ParagonLookAndFeel::drawPianoBlackKey (g, bezel.reduced (7.0f, 6.5f).withTrimmedBottom (1.0f), 6.0f, 6.0f, pressed, hover);
+    ParagonLookAndFeel::drawPianoKey (g, bezel.reduced (7.0f, 6.5f).withTrimmedBottom (1.0f), 6.0f, 6.0f, pressed, hover, Finish::isBlack());
 
     // Number and name stamped into the metal: ink, with a fine light edge
     // underneath where the stamped letters' lower walls catch the light.
@@ -107,13 +108,13 @@ void Footswitch::paint (juce::Graphics& g)
     };
     g.setFont (juce::FontOptions (32.0f, juce::Font::bold));
     stamped (juce::String (number), switchArea.withX (0).withWidth (switchArea.getX() - 8).withTrimmedLeft (switchArea.getX() - 34),
-             ParagonColours::ink);
+             Finish::ink());
 
     // Name under the pad; the selected block's is underlined in red.
     const auto nameBox = nameArea.withX (switchArea.getX()).withWidth (switchArea.getWidth());
     const auto font = juce::FontOptions (14.5f, juce::Font::bold);
     g.setFont (font);
-    stamped (name, nameBox, selected ? ParagonColours::glow : ParagonColours::ink);
+    stamped (name, nameBox, selected ? ParagonColours::glow : Finish::ink());
     if (selected)
     {
         const auto width = (float) juce::GlyphArrangement::getStringWidthInt (font, name);
