@@ -80,6 +80,17 @@ TEST_CASE ("The window lays out cleanly at every size", "[ui]")
     }
 }
 
+TEST_CASE ("The window opens at 1824 x 1026, or the largest that fits a smaller screen", "[ui]")
+{
+    using Editor = ParagonX1AudioProcessorEditor;
+    CHECK (Editor::openingSize ({ 1920, 1080 }) == juce::Point<int> (1824, 1026));
+    CHECK (Editor::openingSize ({ 2560, 1440 }) == juce::Point<int> (1824, 1026));
+    const auto laptop = Editor::openingSize ({ 1366, 768 });
+    CHECK (laptop.x <= 1366 - 40);
+    CHECK (laptop.y <= 768 - 54);
+    CHECK (Editor::openingSize ({ 800, 600 }).x == 960);   // never below the smallest size
+}
+
 TEST_CASE ("PEARL BLACK recolours the unit's printing, and every open window follows", "[ui]")
 {
     Finish::set (Finish::Type::pearlWhite, false);

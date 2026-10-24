@@ -2,6 +2,11 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.31.1
+
+- **Opens bigger:** the window now opens at **1824 × 1026** (it was 1280 × 720). On a screen too small for that, it opens at the largest size that fits. You can still drag it to any size.
+- **Expression pedal on the neon finishes:** tipped heel or toe down (at 0% or 100%), the pedal no longer looks washed out and grey. The end tipping away now just darkens, keeping its colour, and the raised end isn't lightened. Pearl White's pedal is unchanged.
+
 ## 0.31.0
 
 - **New finish: Pearl White + Neon.** This is the pearl white unit with Pearl Black's neon keys. The footswitches, AMP / CABINET / RIG keys, small keys, RIG LEVEL and PRESENCE knobs, and the expression pedal's grip plates all run pink through red to orange.

@@ -638,7 +638,12 @@ void ExpressionPedal::paint (juce::Graphics& g)
             const auto face = roundedOutline (topZ);
             const auto amount = tilt / maxTilt;   // +1 toe down (heel up), -1 heel down (toe up)
             const auto toeEnd = corner (0.5f, 0.0f, topZ), heelEnd = corner (0.5f, 1.0f, topZ);
-            const auto lit = juce::Colours::white.withAlpha (0.10f * std::abs (amount));
+            // On the neon grips white light reads as a milky haze, so there
+            // the raised end isn't lightened; the end tipping away still darkens.
+            // (Transparent black, not transparent white: the gradient blends
+            // between its ends, and from white it would pass through grey.)
+            const auto lit = Finish::neonKeys() ? juce::Colours::transparentBlack
+                                                : juce::Colours::white.withAlpha (0.10f * std::abs (amount));
             const auto shaded = Finish::isBlack() ? juce::Colours::black.withAlpha (0.45f * std::abs (amount))
                                                   : juce::Colour (0xff4a2034).withAlpha (0.28f * std::abs (amount));   // rose, not black, so the pearl doesn't go grey
             g.setGradientFill (juce::ColourGradient (amount < 0.0f ? lit : shaded, toeEnd,

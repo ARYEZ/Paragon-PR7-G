@@ -13,7 +13,17 @@ ParagonX1AudioProcessorEditor::ParagonX1AudioProcessorEditor (ParagonX1AudioProc
     setResizable (true, true);
     setResizeLimits (960, 540, 1920, 1080);
     getConstrainer()->setFixedAspectRatio ((double) MainView::width / (double) MainView::height);
-    setSize (defaultWidth, defaultHeight);
+    const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+    const auto size = openingSize (display != nullptr ? display->totalArea : juce::Rectangle<int> (defaultWidth, defaultHeight + 54));
+    setSize (size.x, size.y);
+}
+
+juce::Point<int> ParagonX1AudioProcessorEditor::openingSize (juce::Rectangle<int> screen)
+{
+    // Leave room round it for the DAW's window frame and title bar.
+    const auto fitWidth = juce::jmin (screen.getWidth() - 40, (screen.getHeight() - 54) * MainView::width / MainView::height);
+    const auto width = juce::jlimit (960, defaultWidth, fitWidth);
+    return { width, width * MainView::height / MainView::width };
 }
 
 ParagonX1AudioProcessorEditor::~ParagonX1AudioProcessorEditor()

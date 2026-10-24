@@ -17,9 +17,13 @@ public:
 
     void resized() override;
 
-    // Opens at 1280 x 720 so it fits on laptop screens; drag to resize.
-    static constexpr int defaultWidth = 1280;
-    static constexpr int defaultHeight = 720;
+    // Opens at 1824 x 1026, a comfortable size on a 1080p screen, or the
+    // largest 16:9 size that fits a smaller screen; drag to resize.
+    static constexpr int defaultWidth = 1824;
+    static constexpr int defaultHeight = 1026;
+
+    // The size to open at on a screen of this size (logical pixels).
+    static juce::Point<int> openingSize (juce::Rectangle<int> screen);
 
 private:
     juce::SharedResourcePointer<SharedParagonLookAndFeel> look;   // declared first: outlives the view
