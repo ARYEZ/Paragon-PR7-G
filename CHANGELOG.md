@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.30.1
+
+- **Pearl Black:**
+  - The neon keys and knobs are 25% darker.
+  - The expression pedal's two ribbed grip plates now have the same pink-to-orange neon.
+  - The six button names (UNDO, REDO, BYPASS, TUNER, MUTE, TAP) are white, so they read clearly above the neon keys. HOLD TO TUNER stays red.
+- Pearl White is unchanged.
+
 ## 0.30.0
 
 - **Pearl Black now has neon keys and knobs** instead of white ones. The footswitches, the AMP / CABINET / RIG keys, the small keys (SAVE, UNDO, TUNER...) and the RIG LEVEL and PRESENCE knobs run hot pink through red to orange, left to right.

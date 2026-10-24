@@ -585,8 +585,11 @@ void MainView::applyFinish()
 {
     for (auto* label : { &rigLevelLabel, &presenceLabel })
         label->setColour (juce::Label::textColourId, Finish::ink());
-    for (auto* label : { &undoLabel, &redoLabel, &bypassLabel, &tunerLabel, &muteLabel, &tapLabel, &holdLabel })
-        label->setColour (juce::Label::textColourId, Finish::printedRed());
+    // The cluster's names: red on pearl white, white on pearl black (red
+    // on the neon keys' red was hard to read). HOLD TO TUNER stays red.
+    for (auto* label : { &undoLabel, &redoLabel, &bypassLabel, &tunerLabel, &muteLabel, &tapLabel })
+        label->setColour (juce::Label::textColourId, Finish::isBlack() ? Finish::ink() : Finish::printedRed());
+    holdLabel.setColour (juce::Label::textColourId, Finish::printedRed());
     pedal.refinish();
     expressionPedal.refinish();
     repaint();

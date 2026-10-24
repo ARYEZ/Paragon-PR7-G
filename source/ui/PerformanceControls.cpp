@@ -397,8 +397,21 @@ namespace
             // Set into the plate: a dark shadow line round it, deepest along the top.
             g.setColour (juce::Colours::black.withAlpha (0.55f));
             g.strokePath (pad, juce::PathStrokeType (fw * 0.014f), juce::AffineTransform::translation (0.0f, -1.0f));
-            g.setGradientFill (juce::ColourGradient (juce::Colour (0xff1a1618), 0.0f, pad.getBounds().getY(),
-                                                     juce::Colour (0xff090708), 0.0f, pad.getBounds().getBottom(), false));
+            // Black rubber, or on the pearl black unit the neon of its keys,
+            // lit at the top of each pad and shaded towards the bottom.
+            const auto neon = Finish::isBlack();
+            if (neon)
+            {
+                g.setGradientFill (Finish::neonGradient (0.0f, fw));
+                g.fillPath (pad);
+                g.setGradientFill (juce::ColourGradient (juce::Colours::transparentBlack, 0.0f, pad.getBounds().getY(),
+                                                         juce::Colours::black.withAlpha (0.4f), 0.0f, pad.getBounds().getBottom(), false));
+            }
+            else
+            {
+                g.setGradientFill (juce::ColourGradient (juce::Colour (0xff1a1618), 0.0f, pad.getBounds().getY(),
+                                                         juce::Colour (0xff090708), 0.0f, pad.getBounds().getBottom(), false));
+            }
             g.fillPath (pad);
 
             // Ribs across it, each with a lit top edge and a shadow under it.
@@ -407,9 +420,9 @@ namespace
             const auto pitch = fh * 0.0125f;
             for (auto y = pad.getBounds().getY() + pitch * 0.5f; y < pad.getBounds().getBottom(); y += pitch)
             {
-                g.setColour (juce::Colours::white.withAlpha (0.07f));
+                g.setColour (juce::Colours::white.withAlpha (neon ? 0.05f : 0.07f));
                 g.fillRect (0.0f, y, fw, pitch * 0.18f);
-                g.setColour (juce::Colours::black.withAlpha (0.45f));
+                g.setColour (juce::Colours::black.withAlpha (neon ? 0.35f : 0.45f));
                 g.fillRect (0.0f, y + pitch * 0.18f, fw, pitch * 0.22f);
             }
 

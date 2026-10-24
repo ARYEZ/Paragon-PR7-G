@@ -36,9 +36,9 @@ namespace Finish
     // On black the flecks show more, as they do in a real black pearl paint.
     juce::Image makeSatinGrain (int width, int height, int seed);
 
-    // The pearl black unit's keys and knobs: hot pink at the left through
-    // red to orange at the right (measured off the reference swatch),
-    // across `left` to `right`. Lighting is drawn over it.
+    // The pearl black unit's keys, knobs and pedal grips: hot pink at the
+    // left through red to orange at the right (the reference swatch's
+    // colours, 25% darker), across `left` to `right`. Lighting is drawn over it.
     juce::ColourGradient neonGradient (float left, float right);
 
     // Picks the colour for the current finish.
