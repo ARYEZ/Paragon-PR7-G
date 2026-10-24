@@ -104,9 +104,8 @@ void IconButton::paintButton (juce::Graphics& g, bool highlighted, bool down)
 }
 
 //==============================================================================
-ExpressionAssign::ExpressionAssign (juce::AudioProcessorValueTreeState& stateToUse, Style lookStyle)
-    : style (lookStyle),
-      state (stateToUse),
+ExpressionAssign::ExpressionAssign (juce::AudioProcessorValueTreeState& stateToUse)
+    : state (stateToUse),
       attachment (parameter (stateToUse, ParamIDs::expressionTarget), [this] (float value)
       {
           currentTarget = juce::roundToInt (value);
@@ -117,23 +116,18 @@ ExpressionAssign::ExpressionAssign (juce::AudioProcessorValueTreeState& stateToU
           repaint();
       })
 {
-    // Both looks are the same screen, drawing its own menu: the small one on
-    // the unit's face, and a bigger one in the dock with buttons beside it
-    // to scroll the list.
+    // The screen draws its own menu; the buttons beside it scroll the list.
     setTooltip ("Expression pedal assign. Click a line (or scroll) to choose what the pedal controls; "
                 "click the highlighted line again to unassign it. The arrows show more of the list.");
     setMouseCursor (juce::MouseCursor::PointingHandCursor);
     startTimerHz (30);   // follows the pedal's position
 
-    if (style == Style::list)
-    {
-        scrollUp = std::make_unique<ScrollButton> (true);
-        scrollDown = std::make_unique<ScrollButton> (false);
-        scrollUp->onClick = [this] { scroll (-1); };
-        scrollDown->onClick = [this] { scroll (1); };
-        addAndMakeVisible (*scrollUp);
-        addAndMakeVisible (*scrollDown);
-    }
+    scrollUp = std::make_unique<ScrollButton> (true);
+    scrollDown = std::make_unique<ScrollButton> (false);
+    scrollUp->onClick = [this] { scroll (-1); };
+    scrollDown->onClick = [this] { scroll (1); };
+    addAndMakeVisible (*scrollUp);
+    addAndMakeVisible (*scrollDown);
 
     attachment.sendInitialUpdate();
 }
@@ -147,11 +141,8 @@ void ExpressionAssign::scroll (int lines)
 
 void ExpressionAssign::updateScrollButtons()
 {
-    if (scrollUp != nullptr)
-    {
-        scrollUp->setEnabled (firstRow > 0);
-        scrollDown->setEnabled (firstRow + visibleRows < numTargets);
-    }
+    scrollUp->setEnabled (firstRow > 0);
+    scrollDown->setEnabled (firstRow + visibleRows < numTargets);
 }
 
 void ExpressionAssign::select (int target)
@@ -209,11 +200,8 @@ void ExpressionAssign::timerCallback()
 
 juce::Rectangle<float> ExpressionAssign::screenArea() const
 {
-    // The dock's screen leaves room on its right for the scroll buttons.
-    auto area = getLocalBounds().toFloat();
-    if (style == Style::list)
-        area.removeFromRight (scrollButtonWidth + 8.0f);
-    return area;
+    // Room on its right for the scroll buttons.
+    return getLocalBounds().toFloat().withTrimmedRight (scrollButtonWidth + 8.0f);
 }
 
 juce::Rectangle<float> ExpressionAssign::screenGlass() const
@@ -243,10 +231,9 @@ std::array<juce::Rectangle<float>, ExpressionAssign::visibleRows> ExpressionAssi
 
 void ExpressionAssign::paint (juce::Graphics& g)
 {
-    // A small version of the main screen: the same chrome frame, bezel and
-    // orange-lit glass, showing a menu of what the pedal can control. Its
-    // lettering is sized by `scale` (1 on the unit; bigger in the dock,
-    // never smaller).
+    // In the style of the unit's main screen: the same chrome frame, bezel
+    // and orange-lit glass, showing a menu of what the pedal can control.
+    // Its lettering is sized by `scale`.
     const auto glass = LedDisplay::paintScreen (g, screenArea(), screenSize);
     const auto orange = LedDisplay::ledOrange;
     const auto assigned = currentTarget != ExpressionTargets::off;
@@ -322,17 +309,14 @@ void ExpressionAssign::paint (juce::Graphics& g)
 
 void ExpressionAssign::resized()
 {
-    // The lettering grows with the screen's height (the unit's screen is
-    // the reference size), and never shrinks below it.
+    // The lettering grows with the screen's height, and never shrinks
+    // below its designed size.
     scale = juce::jmax (1.0f, (float) getHeight() / referenceHeight);
 
-    if (scrollUp != nullptr)
-    {
-        auto column = getLocalBounds().removeFromRight ((int) scrollButtonWidth);
-        const auto buttonHeight = juce::jmin (44, (column.getHeight() - 8) / 2);
-        scrollUp->setBounds (column.withHeight (buttonHeight).withY (column.getCentreY() - buttonHeight - 4));
-        scrollDown->setBounds (column.withHeight (buttonHeight).withY (column.getCentreY() + 4));
-    }
+    auto column = getLocalBounds().removeFromRight ((int) scrollButtonWidth);
+    const auto buttonHeight = juce::jmin (44, (column.getHeight() - 8) / 2);
+    scrollUp->setBounds (column.withHeight (buttonHeight).withY (column.getCentreY() - buttonHeight - 4));
+    scrollDown->setBounds (column.withHeight (buttonHeight).withY (column.getCentreY() + 4));
 }
 
 void ExpressionAssign::mouseUp (const juce::MouseEvent& event)
@@ -745,7 +729,7 @@ void ExpressionPedal::mouseWheelMove (const juce::MouseEvent&, const juce::Mouse
 
 //==============================================================================
 ExpressionPanel::ExpressionPanel (juce::AudioProcessorValueTreeState& state)
-    : assign (state, ExpressionAssign::Style::list),
+    : assign (state),
       minAttachment (parameter (state, ParamIDs::expressionMin), [this] (float value)
       {
           range.setMinValue (value, juce::dontSendNotification, true);

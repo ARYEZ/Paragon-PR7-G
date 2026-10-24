@@ -36,6 +36,11 @@ namespace
     constexpr float clusterLabelY[] = { 119, 160 };
     constexpr float clusterButtonY[] = { 136, 177 };
 
+    // The AMP / CABINET / RIG panels: three equal panels spread evenly
+    // across their section (174 to 1325), with equal gaps between them.
+    constexpr float slotX[] = { 204, 580, 956 };
+    constexpr float slotWidth = 340;
+
     // Footswitch pads' left edges; each is 154 wide.
     constexpr float footswitchX[] = { 228, 517, 807, 1090 };
 
@@ -116,7 +121,6 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                processorToShow.getParameters(), ParamIDs::ampOn),
       cabSlot ("CABINET", "*.wav;*.aif;*.aiff;*.flac", "Load / Edit IR",
                processorToShow.getParameters(), ParamIDs::cabOn),
-      pedalAssign (processorToShow.getParameters(), ExpressionAssign::Style::pedal),
       expressionPedal (processorToShow),
       heelIndicator (processorToShow),
       tunerReader (processorToShow),
@@ -287,7 +291,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                       &undoPedal, &redoPedal, &tunerPedal, &mutePedal, &tapPedal,
                       &undoLabel, &redoLabel, &bypassLabel, &tunerLabel, &muteLabel, &tapLabel, &holdLabel,
                       &rigLevelKnob, &presenceKnob, &rigLevelLabel, &presenceLabel,
-                      &ampSlot, &cabSlot, &rigSlot, &pedalAssign, &expressionPedal, &heelIndicator,
+                      &ampSlot, &cabSlot, &rigSlot, &expressionPedal, &heelIndicator,
                       &rigNavigator, &selectedRig, &expressionPanel };
     for (auto& footswitch : footswitches)
         processorPage.push_back (footswitch.get());
@@ -685,7 +689,8 @@ void MainView::resized()
     geometry.face = local (mockF (164, 94, 1338, 534));
     geometry.pedalBay = local (mockF (1347, 86, 1535, 547));
     geometry.sections = { local (mockF (174, 240, 1325, 388)), local (mockF (174, 396, 1325, 524)) };
-    geometry.insets = { local (mockF (253, 250, 512, 382)), local (mockF (578, 250, 820, 382)), local (mockF (870, 250, 1148, 382)) };
+    for (const auto x : slotX)
+        geometry.insets.push_back (local (mockF (x, 250, x + slotWidth, 382)));
     geometry.badge = local (mockF (212, 117, 410, 207));
 
     // Printed lines: SAVE ... SAVE AS, and the bracket tying TUNER and
@@ -726,10 +731,9 @@ void MainView::resized()
     presenceKnob.setBounds (mock (1203, 98, 1317, 212));
     presenceLabel.setBounds (mock (1200, 196, 1320, 214));
 
-    ampSlot.setBounds (mock (253, 250, 512, 382));
-    cabSlot.setBounds (mock (578, 250, 820, 382));
-    rigSlot.setBounds (mock (870, 250, 1148, 382));
-    pedalAssign.setBounds (mock (1196, 250, 1310, 382));   // level with the AMP / CABINET / RIG panels, as a fourth window
+    ampSlot.setBounds (mock (slotX[0], 250, slotX[0] + slotWidth, 382));
+    cabSlot.setBounds (mock (slotX[1], 250, slotX[1] + slotWidth, 382));
+    rigSlot.setBounds (mock (slotX[2], 250, slotX[2] + slotWidth, 382));
     heelIndicator.setBounds (mock (1262, 407, 1314, 423));
 
     for (size_t i = 0; i < footswitches.size(); ++i)

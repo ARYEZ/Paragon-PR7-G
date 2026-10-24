@@ -133,7 +133,6 @@ private:
     std::array<std::unique_ptr<Footswitch>, 4> footswitches;
 
     // Expression pedal and tuner
-    ExpressionAssign pedalAssign;
     ExpressionPedal expressionPedal;
     HeelIndicator heelIndicator;
     TunerReader tunerReader;
