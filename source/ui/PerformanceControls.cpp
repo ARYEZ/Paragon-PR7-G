@@ -399,7 +399,7 @@ namespace
             g.strokePath (pad, juce::PathStrokeType (fw * 0.014f), juce::AffineTransform::translation (0.0f, -1.0f));
             // Black rubber, or on the pearl black unit the neon of its keys,
             // lit at the top of each pad and shaded towards the bottom.
-            const auto neon = Finish::isBlack();
+            const auto neon = Finish::neonKeys();
             if (neon)
             {
                 g.setGradientFill (Finish::neonGradient (0.0f, fw));

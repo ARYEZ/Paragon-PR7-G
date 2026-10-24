@@ -335,13 +335,15 @@ SettingsPage::SettingsPage (ParagonX1AudioProcessor& p)
     };
 
     pearlWhite.setTooltip ("The original pearl white unit with black keys and knobs");
+    pearlWhiteNeon.setTooltip ("The pearl white unit with neon pink-to-orange keys and knobs");
     pearlBlack.setTooltip ("A pearl black unit with neon pink-to-orange keys and knobs");
     pearlWhite.onClick = [] { Finish::set (Finish::Type::pearlWhite); };
+    pearlWhiteNeon.onClick = [] { Finish::set (Finish::Type::pearlWhiteNeon); };
     pearlBlack.onClick = [] { Finish::set (Finish::Type::pearlBlack); };
     Finish::changes().addChangeListener (this);
     showFinish();
 
-    for (auto* component : std::initializer_list<juce::Component*> { &reference, &muteWhileTuning, &ccBox, &openFolder, &pearlWhite, &pearlBlack })
+    for (auto* component : std::initializer_list<juce::Component*> { &reference, &muteWhileTuning, &ccBox, &openFolder, &pearlWhite, &pearlWhiteNeon, &pearlBlack })
         addAndMakeVisible (component);
 }
 
@@ -353,8 +355,9 @@ SettingsPage::~SettingsPage()
 void SettingsPage::showFinish()
 {
     // The chosen finish is lit like the dock's primary buttons.
-    styleButton (pearlWhite, ! Finish::isBlack());
-    styleButton (pearlBlack, Finish::isBlack());
+    styleButton (pearlWhite, Finish::get() == Finish::Type::pearlWhite);
+    styleButton (pearlWhiteNeon, Finish::get() == Finish::Type::pearlWhiteNeon);
+    styleButton (pearlBlack, Finish::get() == Finish::Type::pearlBlack);
     repaint();
 }
 
@@ -384,7 +387,7 @@ void SettingsPage::paint (juce::Graphics& g)
              "A MIDI expression pedal moves the on-screen pedal. Pick the MIDI controller it sends "
              "(most send CC 11), and route the MIDI track to Paragon PR7-G in your DAW.");
     section (finishArea, "FINISH",
-             "The unit's colour: pearl white with black keys, or pearl black with neon pink-to-orange keys. "
+             "The unit's colour: pearl white with black keys, or pearl white or pearl black with neon pink-to-orange keys. "
              "Saved on this computer, so every Paragon PR7-G you open uses it.");
     section (rigsArea, "RIGS", "Your rigs are files in this folder, so you can back them up or share them:\n"
                                + processor.getRigLibrary().getFolder().getFullPathName());
@@ -414,6 +417,8 @@ void SettingsPage::resized()
     ccBox.setBounds (expressionArea.reduced (24, 18).withTrimmedTop (100).removeFromTop (30).withWidth (300));
     openFolder.setBounds (rigsArea.reduced (24, 18).withTrimmedTop (100).removeFromTop (32).withWidth (200));
     auto finishButtons = finishArea.reduced (24, 18).withTrimmedTop (100).removeFromTop (32);
-    pearlWhite.setBounds (finishButtons.removeFromLeft (150));
-    pearlBlack.setBounds (finishButtons.withTrimmedLeft (12).withWidth (150));
+    const auto buttonWidth = juce::jmin (150, (finishButtons.getWidth() - 24) / 3);
+    pearlWhite.setBounds (finishButtons.removeFromLeft (buttonWidth));
+    pearlWhiteNeon.setBounds (finishButtons.withTrimmedLeft (12).removeFromLeft (buttonWidth));
+    pearlBlack.setBounds (finishButtons.withTrimmedLeft (24 + buttonWidth).removeFromLeft (buttonWidth));
 }

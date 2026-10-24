@@ -100,7 +100,7 @@ private:
     juce::AudioProcessorValueTreeState::ButtonAttachment muteAttachment;
     juce::ComboBox ccBox;
     juce::TextButton openFolder { "OPEN RIGS FOLDER" };
-    juce::TextButton pearlWhite { "PEARL WHITE" }, pearlBlack { "PEARL BLACK" };
+    juce::TextButton pearlWhite { "PEARL WHITE" }, pearlWhiteNeon { "WHITE + NEON" }, pearlBlack { "PEARL BLACK" };
     juce::Rectangle<int> tunerArea, expressionArea, finishArea, rigsArea, aboutArea;
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override { showFinish(); }

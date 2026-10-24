@@ -98,7 +98,7 @@ void Footswitch::paint (juce::Graphics& g)
     const auto hover = isMouseOver() && switchArea.contains (getMouseXYRelative());
     const auto bezel = switchArea.toFloat();
     ParagonLookAndFeel::drawChromeBezel (g, bezel, 11.0f);
-    ParagonLookAndFeel::drawPianoKey (g, bezel.reduced (7.0f, 6.5f).withTrimmedBottom (1.0f), 6.0f, 6.0f, pressed, hover, Finish::isBlack());
+    ParagonLookAndFeel::drawPianoKey (g, bezel.reduced (7.0f, 6.5f).withTrimmedBottom (1.0f), 6.0f, 6.0f, pressed, hover, Finish::neonKeys());
 
     // Number and name stamped into the metal: ink, with a fine light edge
     // underneath where the stamped letters' lower walls catch the light.

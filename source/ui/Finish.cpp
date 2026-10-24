@@ -24,7 +24,8 @@ namespace Finish
             {
                 // Read once, the first time anything is drawn.
                 juce::PropertiesFile file (settingsOptions());
-                type = file.getIntValue (settingKey, 0) == (int) Type::pearlBlack ? Type::pearlBlack : Type::pearlWhite;
+                const auto saved = file.getIntValue (settingKey, 0);
+                type = saved == (int) Type::pearlBlack || saved == (int) Type::pearlWhiteNeon ? (Type) saved : Type::pearlWhite;
             }
 
             Type type = Type::pearlWhite;

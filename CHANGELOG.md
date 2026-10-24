@@ -2,6 +2,13 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.31.0
+
+- **New finish: Pearl White + Neon.** This is the pearl white unit with Pearl Black's neon keys. The footswitches, AMP / CABINET / RIG keys, small keys, RIG LEVEL and PRESENCE knobs, and the expression pedal's grip plates all run pink through red to orange.
+  - Choose it in **SETTINGS → FINISH → WHITE + NEON**.
+  - Over its neon keys, the six button names (UNDO, REDO, BYPASS, TUNER, MUTE, TAP) are printed in dark ink, since red on red was hard to read.
+- Pearl White and Pearl Black are unchanged.
+
 ## 0.30.1
 
 - **Pearl Black:**

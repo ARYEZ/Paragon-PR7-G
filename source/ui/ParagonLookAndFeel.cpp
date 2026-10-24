@@ -93,7 +93,7 @@ void ParagonLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& 
         g.fillRoundedRectangle (surround.reduced (1.5f), 4.0f);
         g.setColour (juce::Colours::black.withAlpha (0.55f));
         g.drawRoundedRectangle (surround, 5.0f, 0.8f);
-        drawPianoKey (g, surround.reduced (2.2f, 2.0f).withTrimmedBottom (0.6f), 3.0f, 2.2f, down, highlighted, Finish::isBlack());
+        drawPianoKey (g, surround.reduced (2.2f, 2.0f).withTrimmedBottom (0.6f), 3.0f, 2.2f, down, highlighted, Finish::neonKeys());
         return;
     }
 
@@ -143,7 +143,7 @@ void ParagonLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& bu
         // On a neon key an unlit stripe would be red on red, so it shows
         // as a dark slot instead.
         const auto stripe = area.withSizeKeepingCentre (area.getWidth() * 0.6f, 4.0f).translated (0.0f, down ? 0.5f : -0.5f);
-        if (Finish::isBlack() && ! on)
+        if (Finish::neonKeys() && ! on)
         {
             g.setColour (juce::Colours::black.withAlpha (0.5f));
             g.fillRoundedRectangle (stripe, 2.0f);
@@ -156,7 +156,7 @@ void ParagonLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& bu
     g.setFont (juce::FontOptions (juce::jmin (12.0f, area.getHeight() * 0.7f), juce::Font::bold));
     // Light lettering on a black key; white on a neon one (lit: a pale
     // gold, as the accent orange would vanish into the key).
-    const auto neonKey = Finish::isBlack();
+    const auto neonKey = Finish::neonKeys();
     g.setColour (button.isEnabled() ? (on ? (neonKey ? juce::Colour (0xffffe9a8) : ParagonColours::accent) : (neonKey ? juce::Colours::white : ParagonColours::text))
                                     : (neonKey ? juce::Colours::white.withAlpha (0.5f) : ParagonColours::textDim));
     g.drawFittedText (button.getButtonText(), area.toNearestInt(), juce::Justification::centred, 1);
@@ -181,7 +181,7 @@ void ParagonLookAndFeel::drawPedalKnob (juce::Graphics& g, juce::Rectangle<float
     // On the pearl black unit the knobs are neon, like its keys: the
     // cylinder and its top coloured pink to red to orange across, lit and
     // shaded the same way as the black knob.
-    const auto neonKnob = Finish::isBlack();
+    const auto neonKnob = Finish::neonKeys();
 
     // 1. Light pooling on the metal round the ring (kept tight, so it reads
     //    as a glow rather than a wash of pink), and the knob's contact shadow.

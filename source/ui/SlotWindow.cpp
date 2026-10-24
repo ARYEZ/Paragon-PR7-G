@@ -94,7 +94,7 @@ namespace SlotWindow
         const auto bezel = areaInt.toFloat();
         ParagonLookAndFeel::drawChromeBezel (g, bezel, 11.0f);
         const auto area = bezel.reduced (7.0f, 6.0f).withTrimmedBottom (1.0f);
-        ParagonLookAndFeel::drawPianoKey (g, area, 7.0f, 5.5f, false, hover || highlight, Finish::isBlack());
+        ParagonLookAndFeel::drawPianoKey (g, area, 7.0f, 5.5f, false, hover || highlight, Finish::neonKeys());
     }
 
     void drawCaption (juce::Graphics& g, juce::Rectangle<int> area, const juce::String& text, bool isError)

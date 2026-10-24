@@ -2,8 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// The unit's finish: the original pearl white, or pearl black with neon
-// keys and knobs (pink to red to orange). Only the unit itself changes (its chassis, the expression
+// The unit's finish: the original pearl white with black keys, or pearl
+// white or pearl black with neon keys and knobs (pink to red to orange). Only the unit itself changes (its chassis, the expression
 // pedal's plate, the lettering printed on it, its keys and knobs); the
 // screens, the neon and the dark panels round it stay as they are.
 //
@@ -14,13 +14,14 @@
 namespace Finish
 {
     // Saved by number: only ever add to the end.
-    enum class Type { pearlWhite, pearlBlack };
-    inline const juce::StringArray names { "Pearl White", "Pearl Black" };
+    enum class Type { pearlWhite, pearlBlack, pearlWhiteNeon };
+    inline const juce::StringArray names { "Pearl White", "Pearl Black", "Pearl White + Neon" };
 
     Type get();
     // `remember` saves it to the settings file (off for tests and snapshots).
     void set (Type, bool remember = true);
-    inline bool isBlack() { return get() == Type::pearlBlack; }
+    inline bool isBlack() { return get() == Type::pearlBlack; }          // the chassis colour
+    inline bool neonKeys() { return get() != Type::pearlWhite; }         // the keys, knobs and pedal grips
 
     // Told whenever the finish changes, to repaint.
     juce::ChangeBroadcaster& changes();

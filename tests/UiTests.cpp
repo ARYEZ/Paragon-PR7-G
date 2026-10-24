@@ -105,8 +105,14 @@ TEST_CASE ("PEARL BLACK recolours the unit's printing, and every open window fol
     CHECK (rigLevelColour (*second) == Finish::ink());
     CHECK (Finish::ink().getPerceivedBrightness() > 0.8f);
 
-    // The key and knob drawing still works in both finishes.
-    for (const auto type : { Finish::Type::pearlBlack, Finish::Type::pearlWhite })
+    // Pearl white with neon keys: the white unit's ink, the black unit's keys.
+    Finish::set (Finish::Type::pearlWhiteNeon, false);
+    CHECK (! Finish::isBlack());
+    CHECK (Finish::neonKeys());
+    CHECK (rigLevelColour (*first) == ParagonColours::ink);
+
+    // The key and knob drawing still works in every finish.
+    for (const auto type : { Finish::Type::pearlBlack, Finish::Type::pearlWhiteNeon, Finish::Type::pearlWhite })
     {
         Finish::set (type, false);
         first->setSize (1280, 720);
