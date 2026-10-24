@@ -65,9 +65,10 @@ private:
 //==============================================================================
 // VOLUME / WAH-FILTER / MORPH-FX / PITCH-WHAMMY / LO-FI / WHAMMY-WAH / GLITCH / TALK BOX: what the expression
 // pedal controls. Click one to assign the pedal to it, or click the lit one
-// again to switch the pedal off. Comes in two looks: a small LCD screen on
-// the unit's face (a menu with the choice highlighted, the pedal's position
-// underneath), and the dock's list of buttons with icons.
+// again to switch the pedal off. An LCD screen (a menu with the choice
+// highlighted, the pedal's position underneath) in two sizes: small on the
+// unit's face, and bigger in the dock, filling its EXPRESSION ASSIGN panel
+// with buttons beside it to scroll the list.
 class ExpressionAssign final : public juce::Component,
                                public juce::SettableTooltipClient,
                                private juce::Timer
@@ -85,15 +86,22 @@ public:
     void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 
 private:
+    static constexpr float referenceHeight = 126.0f;    // the unit's screen: its lettering's size is scale 1
+    static constexpr float scrollButtonWidth = 30.0f;   // the dock's scroll buttons, on the screen's right
+
     void select (int target);
+    void scroll (int lines);
+    void updateScrollButtons();
     void timerCallback() override;
+    juce::Rectangle<float> screenArea() const;          // the screen, frame and all (the dock's leaves room for its buttons)
     juce::Rectangle<float> screenGlass() const;
     std::array<juce::Rectangle<float>, visibleRows> screenRows() const;   // the menu's lines showing
     juce::Rectangle<float> scrollArrows() const;                           // the up and down arrows in the heading
 
     Style style;
     juce::AudioProcessorValueTreeState& state;
-    std::vector<std::unique_ptr<juce::Button>> buttons;   // the list's buttons, one per target, in order (not "Off")
+    std::unique_ptr<juce::Button> scrollUp, scrollDown;   // the dock's scroll buttons (none on the unit)
+    float scale = 1.0f;      // the lettering's size relative to the unit's screen
     juce::ParameterAttachment attachment;
     int currentTarget = 0;
     int firstRow = 0;        // the first target the screen shows (it scrolls)

@@ -2,6 +2,15 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.32.0
+
+- **EXPRESSION ASSIGN is a screen.** The dock's list of tiny buttons is replaced by the same orange LCD as the EXPRESSION screen beside the pedal, enlarged to fill the panel.
+  - Its lettering is bigger than the small screen's, about 1.4 times.
+  - **▲ / ▼ buttons** beside it scroll the list, dimming when there's no more that way. Click a line to assign the pedal, or click it again to unassign; the mouse wheel steps through the list.
+  - MIN, the range slider and MAX now share one row underneath, to give the screen more height.
+  - The small screen beside the pedal stays.
+- **Opening size fits above the taskbar:** the window now sizes itself to the screen *above* the taskbar, leaving room for the DAW's title bar and plugin toolbar. On a 1080p screen it opens at about 1706 × 959, so the bottom isn't cut off. On a larger screen it still opens at 1824 × 1026.
+
 ## 0.31.1
 
 - **Opens bigger:** the window now opens at **1824 × 1026** (it was 1280 × 720). On a screen too small for that, it opens at the largest size that fits. You can still drag it to any size.

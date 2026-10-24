@@ -9,8 +9,6 @@
 
 namespace
 {
-    const Icons::Type targetIcons[] = { Icons::Type::volume, Icons::Type::wah, Icons::Type::rig, Icons::Type::filterPitch, Icons::Type::loFi,
-                                        Icons::Type::wah, Icons::Type::glitch, Icons::Type::wah };
     constexpr float screenSize = 7.0f / 11.0f;   // the assign screen's frame and bezel, relative to the main screen's
 
     const char* pedalNames[] = { "VOLUME", "WAH / FILTER", "MORPH / FX", "PITCH / WHAMMY", "LO-FI", "WHAMMY-WAH", "GLITCH", "TALK BOX" };
@@ -21,6 +19,38 @@ namespace
     {
         return *state.getParameter (id);
     }
+
+    // The dock screen's scroll buttons: a small dark key with an orange
+    // arrow, dimmed when the list can't go further that way.
+    class ScrollButton final : public juce::Button
+    {
+    public:
+        explicit ScrollButton (bool pointsUp) : juce::Button (pointsUp ? "Scroll up" : "Scroll down"), up (pointsUp)
+        {
+            setTooltip (pointsUp ? "Scroll the list up" : "Scroll the list down");
+            setMouseCursor (juce::MouseCursor::PointingHandCursor);
+        }
+
+        void paintButton (juce::Graphics& g, bool highlighted, bool down) override
+        {
+            const auto bounds = getLocalBounds().toFloat().reduced (0.5f);
+            g.setColour (down ? ParagonColours::accentDim : juce::Colour (0xff151217));
+            g.fillRoundedRectangle (bounds, 4.0f);
+            g.setColour (highlighted && isEnabled() ? ParagonColours::accent.withAlpha (0.8f) : ParagonColours::panelEdge);
+            g.drawRoundedRectangle (bounds, 4.0f, 1.0f);
+
+            const auto c = bounds.getCentre();
+            const auto w = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.22f;
+            juce::Path triangle;
+            triangle.addTriangle (c.x - w, up ? c.y + w * 0.6f : c.y - w * 0.6f, c.x + w, up ? c.y + w * 0.6f : c.y - w * 0.6f,
+                                  c.x, up ? c.y - w * 0.8f : c.y + w * 0.8f);
+            g.setColour (ParagonColours::accent.withAlpha (isEnabled() ? 1.0f : 0.25f));
+            g.fillPath (triangle);
+        }
+
+    private:
+        bool up;
+    };
 }
 
 //==============================================================================
@@ -80,39 +110,48 @@ ExpressionAssign::ExpressionAssign (juce::AudioProcessorValueTreeState& stateToU
       attachment (parameter (stateToUse, ParamIDs::expressionTarget), [this] (float value)
       {
           currentTarget = juce::roundToInt (value);
-          for (size_t i = 0; i < buttons.size(); ++i)
-              buttons[i]->setToggleState ((int) i + 1 == currentTarget, juce::dontSendNotification);
           // Keep the chosen line on the screen.
           if (currentTarget != ExpressionTargets::off)
               firstRow = juce::jlimit (currentTarget - visibleRows, currentTarget - 1, firstRow);
+          updateScrollButtons();
           repaint();
       })
 {
-    if (style == Style::pedal)
+    // Both looks are the same screen, drawing its own menu: the small one on
+    // the unit's face, and a bigger one in the dock with buttons beside it
+    // to scroll the list.
+    setTooltip ("Expression pedal assign. Click a line (or scroll) to choose what the pedal controls; "
+                "click the highlighted line again to unassign it. The arrows show more of the list.");
+    setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    startTimerHz (30);   // follows the pedal's position
+
+    if (style == Style::list)
     {
-        // The screen draws its own menu; it has no buttons.
-        setTooltip ("Expression pedal assign. Click a line (or scroll) to choose what the pedal controls; "
-                    "click the highlighted line again to unassign it. The arrows show more of the list.");
-        setMouseCursor (juce::MouseCursor::PointingHandCursor);
-        startTimerHz (30);   // follows the pedal's position
-    }
-    else
-    {
-        for (int target = ExpressionTargets::volume; target <= lastTarget; ++target)
-        {
-            const auto index = (size_t) (target - 1);
-            auto button = std::make_unique<IconButton> (ExpressionTargets::names[target], targetIcons[index],
-                                                        pedalNames[index], juce::Justification::centredLeft);
-            button->setOutlined (true);
-            button->setTooltip ("Assign the expression pedal to " + ExpressionTargets::names[target]
-                                + ". Click again to unassign it.");
-            button->onClick = [this, target] { select (target); };
-            addAndMakeVisible (*button);
-            buttons.push_back (std::move (button));
-        }
+        scrollUp = std::make_unique<ScrollButton> (true);
+        scrollDown = std::make_unique<ScrollButton> (false);
+        scrollUp->onClick = [this] { scroll (-1); };
+        scrollDown->onClick = [this] { scroll (1); };
+        addAndMakeVisible (*scrollUp);
+        addAndMakeVisible (*scrollDown);
     }
 
     attachment.sendInitialUpdate();
+}
+
+void ExpressionAssign::scroll (int lines)
+{
+    firstRow = juce::jlimit (0, numTargets - visibleRows, firstRow + lines);
+    updateScrollButtons();
+    repaint();
+}
+
+void ExpressionAssign::updateScrollButtons()
+{
+    if (scrollUp != nullptr)
+    {
+        scrollUp->setEnabled (firstRow > 0);
+        scrollDown->setEnabled (firstRow + visibleRows < numTargets);
+    }
 }
 
 void ExpressionAssign::select (int target)
@@ -168,24 +207,33 @@ void ExpressionAssign::timerCallback()
         repaint();
 }
 
+juce::Rectangle<float> ExpressionAssign::screenArea() const
+{
+    // The dock's screen leaves room on its right for the scroll buttons.
+    auto area = getLocalBounds().toFloat();
+    if (style == Style::list)
+        area.removeFromRight (scrollButtonWidth + 8.0f);
+    return area;
+}
+
 juce::Rectangle<float> ExpressionAssign::screenGlass() const
 {
-    return getLocalBounds().toFloat().reduced (11.0f * screenSize);   // where LedDisplay::paintScreen puts the glass
+    return screenArea().reduced (11.0f * screenSize);   // where LedDisplay::paintScreen puts the glass
 }
 
 juce::Rectangle<float> ExpressionAssign::scrollArrows() const
 {
     // The heading line's right end: an up and a down arrow, side by side.
-    return screenGlass().reduced (5.0f, 4.0f).removeFromTop (13.0f).removeFromRight (20.0f);
+    return screenGlass().reduced (5.0f * scale, 4.0f * scale).removeFromTop (13.0f * scale).removeFromRight (20.0f * scale);
 }
 
 std::array<juce::Rectangle<float>, ExpressionAssign::visibleRows> ExpressionAssign::screenRows() const
 {
     // Inside the glass: the EXPRESSION heading and a rule, the lines
     // showing (the list scrolls), then the position bar along the bottom.
-    auto content = screenGlass().reduced (5.0f, 4.0f);
-    content.removeFromTop (15.0f);
-    content.removeFromBottom (10.0f);
+    auto content = screenGlass().reduced (5.0f * scale, 4.0f * scale);
+    content.removeFromTop (15.0f * scale);
+    content.removeFromBottom (10.0f * scale);
     std::array<juce::Rectangle<float>, visibleRows> rows;
     const auto rowHeight = content.getHeight() / (float) rows.size();
     for (auto& row : rows)
@@ -195,24 +243,24 @@ std::array<juce::Rectangle<float>, ExpressionAssign::visibleRows> ExpressionAssi
 
 void ExpressionAssign::paint (juce::Graphics& g)
 {
-    if (style != Style::pedal)
-        return;
-
     // A small version of the main screen: the same chrome frame, bezel and
-    // orange-lit glass, showing a menu of what the pedal can control.
-    const auto glass = LedDisplay::paintScreen (g, getLocalBounds().toFloat(), screenSize);
+    // orange-lit glass, showing a menu of what the pedal can control. Its
+    // lettering is sized by `scale` (1 on the unit; bigger in the dock,
+    // never smaller).
+    const auto glass = LedDisplay::paintScreen (g, screenArea(), screenSize);
     const auto orange = LedDisplay::ledOrange;
     const auto assigned = currentTarget != ExpressionTargets::off;
     shownPercent = juce::roundToInt (state.getRawParameterValue (ParamIDs::expression)->load() * 100.0f);
     const auto position = shownPercent;
+    const auto k = scale;
 
-    auto content = glass.reduced (5.0f, 4.0f);
-    auto header = content.removeFromTop (13.0f);
+    auto content = glass.reduced (5.0f * k, 4.0f * k);
+    auto header = content.removeFromTop (13.0f * k);
     g.setColour (orange);
-    g.setFont (juce::FontOptions (10.0f, juce::Font::bold));
-    g.drawFittedText ("EXPRESSION", header.withTrimmedRight (20.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.8f);
+    g.setFont (juce::FontOptions (10.0f * k, juce::Font::bold));
+    g.drawFittedText ("EXPRESSION", header.withTrimmedRight (20.0f * k).toNearestInt(), juce::Justification::centredLeft, 1, 0.8f);
     g.setColour (orange.withAlpha (0.35f));
-    g.fillRect (content.removeFromTop (1.0f));
+    g.fillRect (content.removeFromTop (juce::jmax (1.0f, k)));
 
     // Scroll arrows: lit when there's more of the list that way.
     {
@@ -221,11 +269,12 @@ void ExpressionAssign::paint (juce::Graphics& g)
         {
             const auto c = area.getCentre();
             juce::Path triangle;
-            triangle.addTriangle (c.x - 3.0f, up ? c.y + 2.0f : c.y - 2.0f, c.x + 3.0f, up ? c.y + 2.0f : c.y - 2.0f, c.x, up ? c.y - 2.5f : c.y + 2.5f);
+            triangle.addTriangle (c.x - 3.0f * k, up ? c.y + 2.0f * k : c.y - 2.0f * k, c.x + 3.0f * k, up ? c.y + 2.0f * k : c.y - 2.0f * k,
+                                  c.x, up ? c.y - 2.5f * k : c.y + 2.5f * k);
             g.setColour (orange.withAlpha (more ? 0.9f : 0.2f));
             g.fillPath (triangle);
         };
-        drawArrow (arrows.removeFromLeft (10.0f), true, firstRow > 0);
+        drawArrow (arrows.removeFromLeft (10.0f * k), true, firstRow > 0);
         drawArrow (arrows, false, firstRow + visibleRows < numTargets);
     }
 
@@ -233,7 +282,7 @@ void ExpressionAssign::paint (juce::Graphics& g)
     // the others dimmed so the choice stands out. With nothing chosen, all
     // of them show normally.
     const auto rows = screenRows();
-    g.setFont (juce::FontOptions (8.5f, juce::Font::bold));
+    g.setFont (juce::FontOptions (8.5f * k, juce::Font::bold));
     for (size_t i = 0; i < rows.size(); ++i)
     {
         const auto line = firstRow + (int) i;   // which target this line shows
@@ -241,24 +290,24 @@ void ExpressionAssign::paint (juce::Graphics& g)
         if (selected)
         {
             g.setColour (orange);
-            g.fillRoundedRectangle (rows[i], 2.0f);
+            g.fillRoundedRectangle (rows[i], 2.0f * k);
             g.setColour (juce::Colour (0xff1c0b06));
         }
         else
         {
             g.setColour (orange.withAlpha (assigned ? 0.5f : 0.85f));
         }
-        g.drawFittedText (pedalNames[line], rows[i].reduced (4.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
+        g.drawFittedText (pedalNames[line], rows[i].reduced (4.0f * k, 0.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
     }
 
     // The pedal's position: a segmented bar like a level meter, and the
     // percentage beside it. Dark while the pedal isn't assigned, so it's
     // clear at a glance whether the pedal is doing anything.
-    auto bar = content.removeFromBottom (8.0f);
+    auto bar = content.removeFromBottom (8.0f * k);
     g.setColour (orange.withAlpha (assigned ? 0.85f : 0.3f));
-    g.setFont (juce::FontOptions (8.5f, juce::Font::bold));
-    g.drawText (juce::String (position) + "%", bar.removeFromRight (24.0f), juce::Justification::centredRight, false);
-    bar.removeFromRight (3.0f);
+    g.setFont (juce::FontOptions (8.5f * k, juce::Font::bold));
+    g.drawText (juce::String (position) + "%", bar.removeFromRight (24.0f * k), juce::Justification::centredRight, false);
+    bar.removeFromRight (3.0f * k);
     constexpr int segments = 10;
     const auto segmentWidth = bar.getWidth() / (float) segments;
     for (int i = 0; i < segments; ++i)
@@ -273,23 +322,28 @@ void ExpressionAssign::paint (juce::Graphics& g)
 
 void ExpressionAssign::resized()
 {
-    auto area = getLocalBounds();
-    const auto rowHeight = area.getHeight() / juce::jmax (1, (int) buttons.size());
-    for (auto& button : buttons)
-        button->setBounds (area.removeFromTop (rowHeight).reduced (0, 2));
+    // The lettering grows with the screen's height (the unit's screen is
+    // the reference size), and never shrinks below it.
+    scale = juce::jmax (1.0f, (float) getHeight() / referenceHeight);
+
+    if (scrollUp != nullptr)
+    {
+        auto column = getLocalBounds().removeFromRight ((int) scrollButtonWidth);
+        const auto buttonHeight = juce::jmin (44, (column.getHeight() - 8) / 2);
+        scrollUp->setBounds (column.withHeight (buttonHeight).withY (column.getCentreY() - buttonHeight - 4));
+        scrollDown->setBounds (column.withHeight (buttonHeight).withY (column.getCentreY() + 4));
+    }
 }
 
 void ExpressionAssign::mouseUp (const juce::MouseEvent& event)
 {
-    if (style != Style::pedal || ! event.mouseWasClicked())
+    if (! event.mouseWasClicked())
         return;
 
     // The arrows scroll the list; a line picks its target.
     if (auto arrows = scrollArrows().expanded (3.0f); arrows.contains (event.position))
     {
-        const auto up = event.position.x < arrows.getCentreX();
-        firstRow = juce::jlimit (0, numTargets - visibleRows, firstRow + (up ? -1 : 1));
-        repaint();
+        scroll (event.position.x < arrows.getCentreX() ? -1 : 1);
         return;
     }
 
@@ -302,9 +356,6 @@ void ExpressionAssign::mouseUp (const juce::MouseEvent& event)
 void ExpressionAssign::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& wheel)
 {
     // Scroll to step through the menu: down moves down the list.
-    if (style != Style::pedal)
-        return;
-
     wheelTravel -= wheel.isReversed ? -wheel.deltaY : wheel.deltaY;
     if (std::abs (wheelTravel) < 0.15f)
         return;
@@ -758,14 +809,16 @@ void ExpressionPanel::paint (juce::Graphics& g)
 
 void ExpressionPanel::resized()
 {
+    // The screen takes everything but one row along the bottom: MIN, the
+    // range slider, MAX.
     auto area = getLocalBounds().reduced (16, 12);
     area.removeFromTop (34);
-    auto bottom = area.removeFromBottom (52);
+    auto bottom = area.removeFromBottom (28);
+    area.removeFromBottom (6);
     assign.setBounds (area);
 
-    auto labels = bottom.removeFromTop (24);
-    minLabel.setBounds (labels.removeFromLeft (labels.getWidth() / 2));
-    maxLabel.setBounds (labels);
+    minLabel.setBounds (bottom.removeFromLeft (76));
+    maxLabel.setBounds (bottom.removeFromRight (86));
     range.setBounds (bottom);
 }
 

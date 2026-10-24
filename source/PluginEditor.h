@@ -17,12 +17,13 @@ public:
 
     void resized() override;
 
-    // Opens at 1824 x 1026, a comfortable size on a 1080p screen, or the
-    // largest 16:9 size that fits a smaller screen; drag to resize.
+    // Opens at up to 1824 x 1026: the largest 16:9 size that fits the
+    // screen above the taskbar, with room for the DAW's own window frame
+    // (about 1706 x 959 on a 1080p screen); drag to resize.
     static constexpr int defaultWidth = 1824;
     static constexpr int defaultHeight = 1026;
 
-    // The size to open at on a screen of this size (logical pixels).
+    // The size to open at, given the screen's area above the taskbar (logical pixels).
     static juce::Point<int> openingSize (juce::Rectangle<int> screen);
 
 private:
