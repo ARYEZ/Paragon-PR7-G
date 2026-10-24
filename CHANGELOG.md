@@ -2,6 +2,11 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.32.1
+
+- **The small EXPRESSION screen beside the pedal is gone.** The bigger one in the dock's EXPRESSION ASSIGN panel does the same job.
+- **The AMP, CABINET and RIG panels** now share their row evenly, filling the space it left. The keys inside them are the same size as before.
+
 ## 0.32.0
 
 - **EXPRESSION ASSIGN is a screen.** The dock's list of tiny buttons is replaced by the same orange LCD as the EXPRESSION screen beside the pedal, enlarged to fill the panel.

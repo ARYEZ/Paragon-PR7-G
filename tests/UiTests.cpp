@@ -266,16 +266,18 @@ TEST_CASE ("The expression screen: click a line to assign the pedal, again to un
 {
     ParagonX1AudioProcessor processor;
     auto& state = processor.getParameters();
-    ExpressionAssign screen (state, ExpressionAssign::Style::pedal);
-    screen.setBounds (0, 0, 88, 101);   // about its size on the unit
+    ExpressionAssign screen (state);
+    screen.setBounds (0, 0, 272, 160);   // about its size in the EXPRESSION ASSIGN panel
+    const auto k = 160.0f / 126.0f;      // its lettering's scale at that height
+    // The glass's content: right of it the scroll buttons, inside it the frame.
+    const auto glass = screen.getLocalBounds().toFloat().withTrimmedRight (38.0f).reduced (7.0f).reduced (5.0f * k, 4.0f * k);
 
     const auto target = [&] { return juce::roundToInt (state.getRawParameterValue (ParamIDs::expressionTarget)->load()); };
     const auto rowCentre = [&] (int line)
     {
-        // The glass's content: the heading at the top, the position bar at
-        // the bottom, the lines showing evenly between (as the screen lays them out).
-        const auto glass = screen.getLocalBounds().toFloat().reduced (7.0f).reduced (5.0f, 4.0f);
-        const auto top = glass.getY() + 15.0f, height = (glass.getHeight() - 25.0f) / (float) ExpressionAssign::visibleRows;
+        // The heading at the top, the position bar at the bottom, the lines
+        // showing evenly between (as the screen lays them out).
+        const auto top = glass.getY() + 15.0f * k, height = (glass.getHeight() - 25.0f * k) / (float) ExpressionAssign::visibleRows;
         return juce::Point<float> (glass.getCentreX(), top + height * ((float) line + 0.5f));
     };
     const auto click = [&] (int line)
@@ -325,8 +327,7 @@ TEST_CASE ("The expression screen: click a line to assign the pedal, again to un
     // The list is longer than the screen: the down arrow (the heading's
     // right end) scrolls it, and the last line becomes TALK BOX, which also
     // switches FILTER / PITCH on as a Talk Box.
-    const auto glass = screen.getLocalBounds().toFloat().reduced (7.0f).reduced (5.0f, 4.0f);
-    const auto downArrow = juce::Point<float> (glass.getRight() - 5.0f, glass.getY() + 6.5f);
+    const auto downArrow = juce::Point<float> (glass.getRight() - 5.0f * k, glass.getY() + 6.5f * k);
     for (int i = 0; i < 2; ++i)
     {
         const auto now = juce::Time::getCurrentTime();
@@ -342,7 +343,7 @@ TEST_CASE ("The expression screen: click a line to assign the pedal, again to un
 TEST_CASE ("The dock's expression screen scrolls with the buttons beside it", "[ui]")
 {
     ParagonX1AudioProcessor processor;
-    ExpressionAssign screen (processor.getParameters(), ExpressionAssign::Style::list);
+    ExpressionAssign screen (processor.getParameters());
     screen.setBounds (0, 0, 272, 160);   // about its size in the EXPRESSION ASSIGN panel
 
     std::vector<juce::Button*> buttons;

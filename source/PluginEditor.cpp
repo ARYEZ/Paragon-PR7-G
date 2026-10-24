@@ -14,7 +14,7 @@ ParagonX1AudioProcessorEditor::ParagonX1AudioProcessorEditor (ParagonX1AudioProc
     setResizeLimits (960, 540, 1920, 1080);
     getConstrainer()->setFixedAspectRatio ((double) MainView::width / (double) MainView::height);
     const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
-    const auto size = openingSize (display != nullptr ? display->userArea : juce::Rectangle<int> (defaultWidth, defaultHeight + 80));
+    const auto size = openingSize (display != nullptr ? display->userBounds.toNearestInt() : juce::Rectangle<int> (defaultWidth, defaultHeight + 80));
     setSize (size.x, size.y);
 }
 
