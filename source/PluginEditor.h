@@ -17,9 +17,14 @@ public:
 
     void resized() override;
 
-    // Opens at 1280 x 720 so it fits on laptop screens; drag to resize.
-    static constexpr int defaultWidth = 1280;
-    static constexpr int defaultHeight = 720;
+    // Opens at up to 1824 x 1026: the largest 16:9 size that fits the
+    // screen above the taskbar, with room for the DAW's own window frame
+    // (about 1706 x 959 on a 1080p screen); drag to resize.
+    static constexpr int defaultWidth = 1824;
+    static constexpr int defaultHeight = 1026;
+
+    // The size to open at, given the screen's area above the taskbar (logical pixels).
+    static juce::Point<int> openingSize (juce::Rectangle<int> screen);
 
 private:
     juce::SharedResourcePointer<SharedParagonLookAndFeel> look;   // declared first: outlives the view

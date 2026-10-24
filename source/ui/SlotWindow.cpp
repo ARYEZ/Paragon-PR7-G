@@ -1,5 +1,6 @@
 #include "SlotWindow.h"
 
+#include "Finish.h"
 #include "ParagonLookAndFeel.h"
 
 namespace SlotWindow
@@ -27,11 +28,11 @@ namespace SlotWindow
                 // Stamped into the metal, like the lettering.
                 if (isEnabled())
                 {
-                    g.setColour (juce::Colours::white.withAlpha (0.7f));
+                    g.setColour (Finish::stampEdge());
                     g.fillPath (triangle, juce::AffineTransform::translation (0.0f, 1.0f));
                 }
-                g.setColour (! isEnabled() ? ParagonColours::inkDim.withAlpha (0.4f)
-                                           : highlighted ? ParagonColours::glow : ParagonColours::ink);
+                g.setColour (! isEnabled() ? Finish::inkDim().withAlpha (0.4f)
+                                           : highlighted ? ParagonColours::glow : Finish::ink());
                 g.fillPath (triangle);
             }
 
@@ -58,7 +59,7 @@ namespace SlotWindow
     void drawTitle (juce::Graphics& g, const Layout& l, const juce::String& title)
     {
         g.setFont (juce::FontOptions (14.0f, juce::Font::bold));
-        ParagonLookAndFeel::drawStampedText (g, title, l.title.toFloat(), juce::Justification::centred, ParagonColours::ink);
+        ParagonLookAndFeel::drawStampedText (g, title, l.title.toFloat(), juce::Justification::centred, Finish::ink());
     }
 
     void drawRingLed (juce::Graphics& g, juce::Point<float> centre, bool lit)
@@ -87,20 +88,21 @@ namespace SlotWindow
 
     void drawButton (juce::Graphics& g, juce::Rectangle<int> areaInt, bool hover, bool highlight)
     {
-        // A plain piano-black key in a chrome bezel, exactly like the
-        // footswitches: no icon, the title above and caption below say what it is.
+        // A plain piano key (black, or neon on the pearl black unit) in a
+        // chrome bezel, exactly like the footswitches: no icon, the title
+        // above and caption below say what it is.
         const auto bezel = areaInt.toFloat();
         ParagonLookAndFeel::drawChromeBezel (g, bezel, 11.0f);
         const auto area = bezel.reduced (7.0f, 6.0f).withTrimmedBottom (1.0f);
-        ParagonLookAndFeel::drawPianoBlackKey (g, area, 7.0f, 5.5f, false, hover || highlight);
+        ParagonLookAndFeel::drawPianoKey (g, area, 7.0f, 5.5f, false, hover || highlight, Finish::neonKeys());
     }
 
     void drawCaption (juce::Graphics& g, juce::Rectangle<int> area, const juce::String& text, bool isError)
     {
         g.setFont (juce::FontOptions (12.5f, isError ? juce::Font::bold : juce::Font::plain));
-        g.setColour (juce::Colours::white.withAlpha (0.6f));   // stamped: a light edge under the letters
+        g.setColour (Finish::isBlack() ? Finish::stampEdge() : juce::Colours::white.withAlpha (0.6f));   // stamped: a fine edge under the letters
         g.drawFittedText (text, area.translated (0, 1), juce::Justification::centred, 1, 0.7f);
-        g.setColour (isError ? juce::Colour (0xffc8231a) : ParagonColours::ink);
+        g.setColour (isError ? (Finish::isBlack() ? ParagonColours::glow : juce::Colour (0xffc8231a)) : Finish::ink());
         g.drawFittedText (text, area, juce::Justification::centred, 1, 0.7f);
     }
 

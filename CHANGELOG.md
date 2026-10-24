@@ -2,6 +2,60 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.32.0
+
+- **EXPRESSION ASSIGN is a screen.** The dock's list of tiny buttons is replaced by the same orange LCD as the EXPRESSION screen beside the pedal, enlarged to fill the panel.
+  - Its lettering is bigger than the small screen's, about 1.4 times.
+  - **▲ / ▼ buttons** beside it scroll the list, dimming when there's no more that way. Click a line to assign the pedal, or click it again to unassign; the mouse wheel steps through the list.
+  - MIN, the range slider and MAX now share one row underneath, to give the screen more height.
+  - The small screen beside the pedal stays.
+- **Opening size fits above the taskbar:** the window now sizes itself to the screen *above* the taskbar, leaving room for the DAW's title bar and plugin toolbar. On a 1080p screen it opens at about 1706 × 959, so the bottom isn't cut off. On a larger screen it still opens at 1824 × 1026.
+
+## 0.31.1
+
+- **Opens bigger:** the window now opens at **1824 × 1026** (it was 1280 × 720). On a screen too small for that, it opens at the largest size that fits. You can still drag it to any size.
+- **Expression pedal on the neon finishes:** tipped heel or toe down (at 0% or 100%), the pedal no longer looks washed out and grey. The end tipping away now just darkens, keeping its colour, and the raised end isn't lightened. Pearl White's pedal is unchanged.
+
+## 0.31.0
+
+- **New finish: Pearl White + Neon.** This is the pearl white unit with Pearl Black's neon keys. The footswitches, AMP / CABINET / RIG keys, small keys, RIG LEVEL and PRESENCE knobs, and the expression pedal's grip plates all run pink through red to orange.
+  - Choose it in **SETTINGS → FINISH → WHITE + NEON**.
+  - Over its neon keys, the six button names (UNDO, REDO, BYPASS, TUNER, MUTE, TAP) are printed in dark ink, since red on red was hard to read.
+- Pearl White and Pearl Black are unchanged.
+
+## 0.30.1
+
+- **Pearl Black:**
+  - The neon keys and knobs are 25% darker.
+  - The expression pedal's two ribbed grip plates now have the same pink-to-orange neon.
+  - The six button names (UNDO, REDO, BYPASS, TUNER, MUTE, TAP) are white, so they read clearly above the neon keys. HOLD TO TUNER stays red.
+- Pearl White is unchanged.
+
+## 0.30.0
+
+- **Pearl Black now has neon keys and knobs** instead of white ones. The footswitches, the AMP / CABINET / RIG keys, the small keys (SAVE, UNDO, TUNER...) and the RIG LEVEL and PRESENCE knobs run hot pink through red to orange, left to right.
+  - The colours are measured off a reference swatch: `#e10639` → `#d42e2a` → `#cd6619`.
+  - They're shaded like the swatch too: lit along the top and falling into deep red at the front, so they still look like glossy keys.
+  - On the small keys, an unlit LED stripe shows as a dark slot, so it doesn't vanish red-on-red. Lit stripes are the same neon as before.
+- Pearl White is unchanged.
+
+## 0.29.1
+
+- **Pearl Black is much deeper black.** It read as navy, so:
+  - The chassis, pedal bay and treadle are now true deep black, about half as bright as before. Only the top edges catch the light.
+  - The cool violet and teal shimmer is gone. What's left is a faint warm rose, so it sits with the red neon.
+  - The white keys, lettering and neon stand out more strongly against it.
+- Pearl White is unchanged.
+
+## 0.29.0
+
+- **Pearl Black finish.** SETTINGS has a new **FINISH** choice: the original **Pearl White**, or **Pearl Black**. Pearl Black is the same unit in black pearl, with the same satin grain, sheen and pearlescent shimmer, plus white keys and knobs:
+  - The chassis, the expression pedal's plate and the pedal bay are black pearl. The lettering printed on the unit turns pearl white, and the red printing stays red.
+  - The footswitches, the AMP / CABINET / RIG keys, the small keys (SAVE, UNDO, TUNER...) and the RIG LEVEL and PRESENCE knobs are gloss white.
+  - The screens, the neon, the chrome bezels and the panels below the unit don't change.
+  - The choice is saved on your computer, not in the project, so every Paragon PR7-G you open uses it. Every open window switches together.
+- Pearl White looks exactly as before.
+
 ## 0.28.0
 
 - **Talk Box.** A new FILTER / PITCH type. A real talk box sends the amp's sound up a tube into your mouth, which shapes it into vowels. This does the same with three resonant formants, the peaks a voice makes for each vowel.

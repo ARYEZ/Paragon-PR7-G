@@ -49,6 +49,23 @@ namespace
 }
 
 //==============================================================================
+InkArrowButton::InkArrowButton (const juce::String& name, float direction) : juce::Button (name)
+{
+    path.addTriangle (0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.5f);
+    path.applyTransform (juce::AffineTransform::rotation (juce::MathConstants<float>::twoPi * direction, 0.5f, 0.5f));
+}
+
+void InkArrowButton::paintButton (juce::Graphics& g, bool, bool down)
+{
+    auto p = path;
+    const auto offset = down ? 1.0f : 0.0f;
+    p.applyTransform (path.getTransformToScaleToFit (offset, offset, (float) getWidth() - 3.0f, (float) getHeight() - 3.0f, false));
+    juce::DropShadow (juce::Colours::black.withAlpha (0.3f), down ? 2 : 4, {}).drawForPath (g, p);
+    g.setColour (Finish::ink());
+    g.fillPath (p);
+}
+
+//==============================================================================
 GainColumn::GainColumn (const juce::String& title, juce::AudioProcessorValueTreeState& parameters,
                         const juce::String& parameterId, LevelMeterSource& meterSource)
     : attachment (parameters, parameterId, knob),
@@ -390,6 +407,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     audioProcessor.rigBroadcaster.addChangeListener (this);
     audioProcessor.statusBroadcaster.addChangeListener (this);
     changeListenerCallback (nullptr);
+    Finish::changes().addChangeListener (this);
+    applyFinish();
 
     // The modified marker, tempo and undo state can change from the audio
     // thread or the host, so poll them. 30 Hz for the TAP light's flash.
@@ -401,6 +420,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
 
 MainView::~MainView()
 {
+    Finish::changes().removeChangeListener (this);
     audioProcessor.statusBroadcaster.removeChangeListener (this);
     audioProcessor.rigBroadcaster.removeChangeListener (this);
 }
@@ -561,8 +581,29 @@ void MainView::saveRig()
     refreshRig();
 }
 
-void MainView::changeListenerCallback (juce::ChangeBroadcaster*)
+void MainView::applyFinish()
 {
+    for (auto* label : { &rigLevelLabel, &presenceLabel })
+        label->setColour (juce::Label::textColourId, Finish::ink());
+    // The cluster's names: red over black keys; over neon keys red was
+    // hard to read, so they're printed in the unit's ink (white on pearl
+    // black, dark on pearl white). HOLD TO TUNER stays red.
+    for (auto* label : { &undoLabel, &redoLabel, &bypassLabel, &tunerLabel, &muteLabel, &tapLabel })
+        label->setColour (juce::Label::textColourId, Finish::neonKeys() ? Finish::ink() : Finish::printedRed());
+    holdLabel.setColour (juce::Label::textColourId, Finish::printedRed());
+    pedal.refinish();
+    expressionPedal.refinish();
+    repaint();
+}
+
+void MainView::changeListenerCallback (juce::ChangeBroadcaster* source)
+{
+    if (source == &Finish::changes())
+    {
+        applyFinish();
+        return;
+    }
+
     refreshRig();
     ampSlot.setStatus (audioProcessor.getAmpStatus());
     cabSlot.setStatus (audioProcessor.getCabStatus());

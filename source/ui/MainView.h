@@ -5,6 +5,7 @@
 #include "PluginProcessor.h"
 #include "ui/DockPanels.h"
 #include "ui/EffectPanel.h"
+#include "ui/Finish.h"
 #include "ui/GraphicEqPanel.h"
 #include "ui/Footswitch.h"
 #include "ui/LedDisplay.h"
@@ -33,6 +34,19 @@ private:
     juce::Slider knob { juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow };
     juce::AudioProcessorValueTreeState::SliderAttachment attachment;
     LevelMeter meter;
+};
+
+// A solid triangle printed on the unit beside the screen (the rig up and
+// down arrows), in the finish's ink: like juce::ArrowButton, whose colour
+// can't change after it's made.
+class InkArrowButton final : public juce::Button
+{
+public:
+    InkArrowButton (const juce::String& name, float direction);
+    void paintButton (juce::Graphics&, bool highlighted, bool down) override;
+
+private:
+    juce::Path path;
 };
 
 // Everything in the plugin window, laid out on a fixed 1600 x 900 canvas.
@@ -68,6 +82,7 @@ private:
     enum class Page { processor, presets, settings };
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
+    void applyFinish();   // colours the printed labels and redraws the unit in the current finish
     void timerCallback() override;
 
     void selectBlock (int block);
@@ -99,7 +114,7 @@ private:
     // The pedal unit and what sits on it
     PedalBody pedal;
     LedDisplay display;
-    juce::ArrowButton rigUp { "Previous rig", 0.75f, ParagonColours::ink }, rigDown { "Next rig", 0.25f, ParagonColours::ink };
+    InkArrowButton rigUp { "Previous rig", 0.75f }, rigDown { "Next rig", 0.25f };
     juce::TextButton pedalSave { "SAVE" }, pedalSaveAs { "SAVE AS..." }, bypassButton;
     juce::AudioProcessorValueTreeState::ButtonAttachment bypassAttachment;
 

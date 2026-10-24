@@ -6,6 +6,7 @@
 #include "PluginProcessor.h"
 #include "ui/GraphicEqPanel.h"
 #include "ui/EqPresets.h"
+#include "ui/Finish.h"
 #include "ui/PerformanceControls.h"
 
 using Catch::Matchers::WithinAbs;
@@ -77,6 +78,62 @@ TEST_CASE ("The window lays out cleanly at every size", "[ui]")
             checkLayout (*view, "view");
         }
     }
+}
+
+TEST_CASE ("The window opens as big as fits above the taskbar, up to 1824 x 1026", "[ui]")
+{
+    using Editor = ParagonX1AudioProcessorEditor;
+    // 1080p with a 40-pixel taskbar: room left for the DAW's title bar and toolbar.
+    const auto fullHd = Editor::openingSize ({ 1920, 1040 });
+    CHECK (fullHd == juce::Point<int> (1706, 959));
+    CHECK (fullHd.y + 80 <= 1040);
+    CHECK (Editor::openingSize ({ 2560, 1400 }) == juce::Point<int> (1824, 1026));
+    const auto laptop = Editor::openingSize ({ 1366, 728 });
+    CHECK (laptop.x <= 1366 - 40);
+    CHECK (laptop.y + 80 <= 728);
+    CHECK (Editor::openingSize ({ 800, 600 }).x == 960);   // never below the smallest size
+}
+
+TEST_CASE ("PEARL BLACK recolours the unit's printing, and every open window follows", "[ui]")
+{
+    Finish::set (Finish::Type::pearlWhite, false);
+    ParagonX1AudioProcessor processor;
+    std::unique_ptr<juce::AudioProcessorEditor> first (processor.createEditor()), second (processor.createEditor());
+
+    // RIG LEVEL is printed on the unit: ink on white, light on black.
+    const auto rigLevelColour = [] (juce::Component& editor)
+    {
+        std::vector<juce::Label*> labels;
+        findAll (editor, labels);
+        for (auto* label : labels)
+            if (label->getText() == "RIG LEVEL")
+                return label->findColour (juce::Label::textColourId);
+        return juce::Colour();
+    };
+    CHECK (rigLevelColour (*first) == ParagonColours::ink);
+
+    // Chosen in one window (here, without saving the preference), it shows in both.
+    Finish::set (Finish::Type::pearlBlack, false);
+    CHECK (Finish::isBlack());
+    CHECK (rigLevelColour (*first) == Finish::ink());
+    CHECK (rigLevelColour (*second) == Finish::ink());
+    CHECK (Finish::ink().getPerceivedBrightness() > 0.8f);
+
+    // Pearl white with neon keys: the white unit's ink, the black unit's keys.
+    Finish::set (Finish::Type::pearlWhiteNeon, false);
+    CHECK (! Finish::isBlack());
+    CHECK (Finish::neonKeys());
+    CHECK (rigLevelColour (*first) == ParagonColours::ink);
+
+    // The key and knob drawing still works in every finish.
+    for (const auto type : { Finish::Type::pearlBlack, Finish::Type::pearlWhiteNeon, Finish::Type::pearlWhite })
+    {
+        Finish::set (type, false);
+        first->setSize (1280, 720);
+        const auto image = first->createComponentSnapshot (first->getLocalBounds());
+        CHECK (image.isValid());
+    }
+    CHECK (rigLevelColour (*first) == ParagonColours::ink);
 }
 
 TEST_CASE ("The chain and footswitches pick which block's knobs show; the graphic EQ is the default", "[ui]")
@@ -280,6 +337,36 @@ TEST_CASE ("The expression screen: click a line to assign the pedal, again to un
     click (ExpressionAssign::visibleRows - 1);
     CHECK (target() == ExpressionTargets::talkBox);
     CHECK (juce::roundToInt (state.getRawParameterValue (ParamIDs::fpType)->load()) == (int) effects::FilterPitch::Type::talkBox);
+}
+
+TEST_CASE ("The dock's expression screen scrolls with the buttons beside it", "[ui]")
+{
+    ParagonX1AudioProcessor processor;
+    ExpressionAssign screen (processor.getParameters(), ExpressionAssign::Style::list);
+    screen.setBounds (0, 0, 272, 160);   // about its size in the EXPRESSION ASSIGN panel
+
+    std::vector<juce::Button*> buttons;
+    findAll (screen, buttons);
+    REQUIRE (buttons.size() == 2);
+    auto* up = buttons[0];
+    auto* down = buttons[1];
+    // Both inside the component, to the right of the screen.
+    for (auto* button : buttons)
+    {
+        CHECK (screen.getLocalBounds().contains (button->getBounds()));
+        CHECK (button->getX() > screen.getWidth() / 2);
+    }
+
+    // At the top: only down works. Two steps reach the end of the eight-line list.
+    CHECK (! up->isEnabled());
+    CHECK (down->isEnabled());
+    for (int i = 0; i < ExpressionAssign::numTargets - ExpressionAssign::visibleRows; ++i)
+        down->onClick();
+    CHECK (! down->isEnabled());
+    CHECK (up->isEnabled());
+
+    // Scrolling never assigns the pedal.
+    CHECK (juce::roundToInt (processor.getParameters().getRawParameterValue (ParamIDs::expressionTarget)->load()) == ExpressionTargets::off);
 }
 
 TEST_CASE ("EQ PRESETS: choosing one sets the faders and switches the EQ on; moving a fader lets go of the name", "[ui]")
