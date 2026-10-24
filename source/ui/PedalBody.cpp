@@ -66,19 +66,19 @@ void PedalBody::paint (juce::Graphics& g)
     //    the rim runs from white where it faces the light to a soft rose
     //    shade lower down, enough range to read as a glossy curved finish
     //    without going grey.
-    g.setGradientFill (juce::ColourGradient (pick (0xffb49ca8, 0xff2a2229), 0.0f, chassis.getBottom() - 30.0f,
-                                             pick (0xff5e4652, 0xff050405), 0.0f, chassis.getBottom(), false));
+    g.setGradientFill (juce::ColourGradient (pick (0xffb49ca8, 0xff141213), 0.0f, chassis.getBottom() - 30.0f,
+                                             pick (0xff5e4652, 0xff020202), 0.0f, chassis.getBottom(), false));
     g.fillPath (chassisPath);
 
     const auto top = chassis.withTrimmedBottom (frontEdge);
     juce::Path topPath;
     topPath.addRoundedRectangle (top, chassisRadius);
     {
-        juce::ColourGradient vertical (pick (0xffffffff, 0xff5a5260), 0.0f, top.getY(), pick (0xffc9b2be, 0xff141016), 0.0f, top.getBottom(), false);
-        vertical.addColour (0.02, pick (0xfff3e9ee, 0xff3a333d));
-        vertical.addColour (0.06, pick (0xffe2d3db, 0xff221d25));
-        vertical.addColour (0.45, pick (0xffeee3e9, 0xff2b252e));
-        vertical.addColour (0.9, pick (0xffdccbd4, 0xff1c171e));
+        juce::ColourGradient vertical (pick (0xffffffff, 0xff3a3638), 0.0f, top.getY(), pick (0xffc9b2be, 0xff080707), 0.0f, top.getBottom(), false);
+        vertical.addColour (0.02, pick (0xfff3e9ee, 0xff1e1c1d));
+        vertical.addColour (0.06, pick (0xffe2d3db, 0xff121112));
+        vertical.addColour (0.45, pick (0xffeee3e9, 0xff181617));
+        vertical.addColour (0.9, pick (0xffdccbd4, 0xff0d0c0d));
         g.setGradientFill (vertical);
         g.fillPath (topPath);
 
@@ -86,7 +86,7 @@ void PedalBody::paint (juce::Graphics& g)
         // dark just inside.
         const auto bandShade = black ? juce::Colours::black.withAlpha (0.5f) : juce::Colour (0xff4a2a3a).withAlpha (0.3f);
         const auto bandShadeInner = black ? juce::Colours::black.withAlpha (0.26f) : juce::Colour (0xff4a2a3a).withAlpha (0.16f);
-        const auto bandLight = black ? 0.4f : 1.0f;
+        const auto bandLight = black ? 0.55f : 1.0f;
         juce::ColourGradient banding (bandShade, top.getX(), 0.0f, bandShade, top.getRight(), 0.0f, false);
         banding.addColour (0.006, juce::Colours::white.withAlpha (0.9f * bandLight));
         banding.addColour (0.018, bandShadeInner);
@@ -103,7 +103,7 @@ void PedalBody::paint (juce::Graphics& g)
 
     // Crisp machined edges: a bright line along the top of the rim, the
     // reflected red along its bottom, and a dark outline all round.
-    strokeTopHighlight (g, top.reduced (1.0f), chassisRadius, 1.4f, black ? 0.6f : 1.0f);
+    strokeTopHighlight (g, top.reduced (1.0f), chassisRadius, 1.4f, black ? 0.75f : 1.0f);
     g.setColour (juce::Colour (0xffff8a8a).withAlpha (0.7f));
     g.drawHorizontalLine ((int) top.getBottom() - 1, top.getX() + chassisRadius, top.getRight() - chassisRadius);
     g.setColour (black ? juce::Colours::black.withAlpha (0.9f) : juce::Colour (0xff2a1420).withAlpha (0.7f));
@@ -125,13 +125,14 @@ void PedalBody::paint (juce::Graphics& g)
         // Pearl white, lit from above: nearly pure white at the top, a soft
         // band where it reflects the room, brighter again lower down. The
         // shading stays warm (rose, not grey) so it sits with the neon.
-        // Black pearl is lit the same way: a lifted plum-grey at the top
-        // (the light on its gloss) falling to deep black.
-        juce::ColourGradient pearl (pick (0xfffffdfe, 0xff3a3440), face.getX(), face.getY(),
-                                    pick (0xffefe3e9, 0xff19161c), face.getX(), face.getBottom(), false);
-        pearl.addColour (0.18, pick (0xfffaf4f7, 0xff2e2933));
-        pearl.addColour (0.42, pick (0xfff1e7ec, 0xff1d1a20));
-        pearl.addColour (0.7, pick (0xfff8f1f4, 0xff26222a));
+        // Black pearl is lit the same way, but stays deep black: only the
+        // top catches a little light. Neutral to faintly warm, never blue,
+        // so it reads as black next to the red neon rather than navy.
+        juce::ColourGradient pearl (pick (0xfffffdfe, 0xff1a1819), face.getX(), face.getY(),
+                                    pick (0xffefe3e9, 0xff070707), face.getX(), face.getBottom(), false);
+        pearl.addColour (0.18, pick (0xfffaf4f7, 0xff121112));
+        pearl.addColour (0.42, pick (0xfff1e7ec, 0xff0a0a0a));
+        pearl.addColour (0.7, pick (0xfff8f1f4, 0xff0e0d0e));
         g.setGradientFill (pearl);
         g.fillPath (facePath);
 
@@ -141,12 +142,12 @@ void PedalBody::paint (juce::Graphics& g)
 
         // Pearlescence: a faint shift of hue across the plate, rose at the
         // left, peach in the middle, lilac at the right, the way pearl
-        // paint changes colour with the angle you see it from. Black pearl
-        // has its own overtones: rose, a hint of teal, violet.
+        // paint changes colour with the angle you see it from. On black,
+        // only a faint warm rose (cool tints made it read as navy).
         {
-            juce::ColourGradient iridescence (black ? juce::Colour (0xffff7ab0).withAlpha (0.14f) : juce::Colour (0xffffc8dc).withAlpha (0.16f), face.getX(), face.getY(),
-                                              black ? juce::Colour (0xffa080ff).withAlpha (0.16f) : juce::Colour (0xffe2d0ff).withAlpha (0.14f), face.getRight(), face.getBottom(), false);
-            iridescence.addColour (0.5, black ? juce::Colour (0xff7ae0d0).withAlpha (0.06f) : juce::Colour (0xffffe0c8).withAlpha (0.12f));
+            juce::ColourGradient iridescence (black ? juce::Colour (0xffff6a9a).withAlpha (0.05f) : juce::Colour (0xffffc8dc).withAlpha (0.16f), face.getX(), face.getY(),
+                                              black ? juce::Colour (0xffff4a6a).withAlpha (0.04f) : juce::Colour (0xffe2d0ff).withAlpha (0.14f), face.getRight(), face.getBottom(), false);
+            iridescence.addColour (0.5, black ? juce::Colour (0xffffb07a).withAlpha (0.025f) : juce::Colour (0xffffe0c8).withAlpha (0.12f));
             g.setGradientFill (iridescence);
             g.fillRect (face);
         }
@@ -155,7 +156,7 @@ void PedalBody::paint (juce::Graphics& g)
         // in a glossy finish: bright at its core, fading quickly either side.
         juce::ColourGradient sheen (juce::Colours::white.withAlpha (0.0f), face.getX(), face.getY(),
                                     juce::Colours::white.withAlpha (0.0f), face.getX() + face.getWidth() * 0.45f, face.getBottom(), false);
-        const auto sheenStrength = black ? 0.4f : 1.0f;   // on black, a full-strength streak would read as grey paint
+        const auto sheenStrength = black ? 0.22f : 1.0f;   // on black, a full-strength streak would read as grey paint
         sheen.addColour (0.3, juce::Colours::white.withAlpha (0.05f * sheenStrength));
         sheen.addColour (0.38, juce::Colours::white.withAlpha (0.45f * sheenStrength));
         sheen.addColour (0.46, juce::Colours::white.withAlpha (0.05f * sheenStrength));
@@ -165,7 +166,7 @@ void PedalBody::paint (juce::Graphics& g)
         // Vignette: the plate falls off a little towards its edges and
         // corners, which is what makes it look lit rather than flat. Rose,
         // not black, and light, so the corners stay pearl rather than grey.
-        const auto vignette = black ? juce::Colours::black.withAlpha (0.45f) : juce::Colour (0xff8a4a66).withAlpha (0.16f);
+        const auto vignette = black ? juce::Colours::black.withAlpha (0.6f) : juce::Colour (0xff8a4a66).withAlpha (0.16f);
         g.setGradientFill (juce::ColourGradient (vignette.withAlpha (0.0f), face.getCentreX(), face.getY() + face.getHeight() * 0.4f,
                                                  vignette, face.getX() - face.getWidth() * 0.04f, face.getY(), true));
         g.fillRect (face);
@@ -184,8 +185,8 @@ void PedalBody::paint (juce::Graphics& g)
     {
         juce::Path panel;
         panel.addRoundedRectangle (section, 12.0f);
-        g.setGradientFill (juce::ColourGradient (pick (0xffeee3e9, 0xff151217), 0.0f, section.getY(),
-                                                 pick (0xfff9f3f6, 0xff221e25), 0.0f, section.getBottom(), false));
+        g.setGradientFill (juce::ColourGradient (pick (0xffeee3e9, 0xff070707), 0.0f, section.getY(),
+                                                 pick (0xfff9f3f6, 0xff0f0e0f), 0.0f, section.getBottom(), false));
         g.fillPath (panel);
         {
             juce::Graphics::ScopedSaveState state (g);
@@ -238,10 +239,10 @@ void PedalBody::paint (juce::Graphics& g)
         juce::Path bayPath;
         bayPath.addRoundedRectangle (bay, 22.0f);
         juce::DropShadow (juce::Colours::black.withAlpha (0.55f), 8, { -2, 3 }).drawForPath (g, bayPath);
-        juce::ColourGradient housing (pick (0xfff2e6ec, 0xff2e2832), bay.getX(), 0.0f, pick (0xffc8b0bd, 0xff0e0c10), bay.getRight(), 0.0f, false);
-        housing.addColour (0.05, pick (0xffffffff, 0xff4a4350));
-        housing.addColour (0.22, pick (0xffece0e6, 0xff2a252e));
-        housing.addColour (0.7, pick (0xffdcc9d2, 0xff1c181f));
+        juce::ColourGradient housing (pick (0xfff2e6ec, 0xff1a1819), bay.getX(), 0.0f, pick (0xffc8b0bd, 0xff060606), bay.getRight(), 0.0f, false);
+        housing.addColour (0.05, pick (0xffffffff, 0xff2e2b2d));
+        housing.addColour (0.22, pick (0xffece0e6, 0xff151314));
+        housing.addColour (0.7, pick (0xffdcc9d2, 0xff0e0d0e));
         g.setGradientFill (housing);
         g.fillPath (bayPath);
         {

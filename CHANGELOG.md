@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.29.1
+
+- **Pearl Black is much deeper black.** It read as navy, so:
+  - The chassis, pedal bay and treadle are now true deep black, about half as bright as before. Only the top edges catch the light.
+  - The cool violet and teal shimmer is gone. What's left is a faint warm rose, so it sits with the red neon.
+  - The white keys, lettering and neon stand out more strongly against it.
+- Pearl White is unchanged.
+
 ## 0.29.0
 
 - **Pearl Black finish.** SETTINGS has a new **FINISH** choice: the original **Pearl White**, or **Pearl Black**. Pearl Black is the same unit in black pearl, with the same satin grain, sheen and pearlescent shimmer, plus white keys and knobs:

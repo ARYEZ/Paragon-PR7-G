@@ -345,18 +345,18 @@ namespace
         {
             // Pearl, its long edges curving away into shade.
             using Finish::pick;
-            juce::ColourGradient pearl (pick (0xffe6d6de, 0xff1e1a21), 0.0f, 0.0f, pick (0xffdccbd4, 0xff17141a), fw, 0.0f, false);
-            pearl.addColour (0.14, pick (0xfffffdfe, 0xff3a3440));
-            pearl.addColour (0.5, pick (0xfff4ebf0, 0xff26222a));
-            pearl.addColour (0.86, pick (0xfffbf6f8, 0xff302b35));
+            juce::ColourGradient pearl (pick (0xffe6d6de, 0xff070707), 0.0f, 0.0f, pick (0xffdccbd4, 0xff050505), fw, 0.0f, false);
+            pearl.addColour (0.14, pick (0xfffffdfe, 0xff161415));
+            pearl.addColour (0.5, pick (0xfff4ebf0, 0xff0a0a0a));
+            pearl.addColour (0.86, pick (0xfffbf6f8, 0xff100f10));
             g.setGradientFill (pearl);
             g.fillPath (plate);
 
             // The same pearlescent shift as the chassis: rose to peach to lilac.
             const auto black = Finish::isBlack();
-            juce::ColourGradient iridescence (black ? juce::Colour (0xffff7ab0).withAlpha (0.14f) : juce::Colour (0xffffc8dc).withAlpha (0.16f), 0.0f, 0.0f,
-                                              black ? juce::Colour (0xffa080ff).withAlpha (0.16f) : juce::Colour (0xffe2d0ff).withAlpha (0.14f), fw, fh, false);
-            iridescence.addColour (0.5, black ? juce::Colour (0xff7ae0d0).withAlpha (0.06f) : juce::Colour (0xffffe0c8).withAlpha (0.12f));
+            juce::ColourGradient iridescence (black ? juce::Colour (0xffff6a9a).withAlpha (0.05f) : juce::Colour (0xffffc8dc).withAlpha (0.16f), 0.0f, 0.0f,
+                                              black ? juce::Colour (0xffff4a6a).withAlpha (0.04f) : juce::Colour (0xffe2d0ff).withAlpha (0.14f), fw, fh, false);
+            iridescence.addColour (0.5, black ? juce::Colour (0xffffb07a).withAlpha (0.025f) : juce::Colour (0xffffe0c8).withAlpha (0.12f));
             g.setGradientFill (iridescence);
             g.fillPath (plate);
 
@@ -597,7 +597,7 @@ void ExpressionPedal::paint (juce::Graphics& g)
         for (int layer = 0; layer < layers; ++layer)
         {
             const auto t = (float) layer / (float) (layers - 1);
-            g.setColour (Finish::pick (0xff7a5c6a, 0xff060507).interpolatedWith (Finish::pick (0xffeee3e9, 0xff2a2530), t));
+            g.setColour (Finish::pick (0xff7a5c6a, 0xff030303).interpolatedWith (Finish::pick (0xffeee3e9, 0xff181617), t));
             g.fillPath (roundedOutline (topZ - thickness * (1.0f - t)));
         }
 

@@ -79,8 +79,9 @@ namespace Finish
             {
                 if (black && random.nextInt (400) == 0)
                 {
-                    // A fleck: white, rose or lilac, like mica in black pearl paint.
-                    const juce::Colour flecks[] = { juce::Colours::white, juce::Colour (0xffffc4dc), juce::Colour (0xffd6c8ff) };
+                    // A fleck: white or rose, like mica in black pearl paint (no
+                    // cool tints, which pulled the black towards navy).
+                    const juce::Colour flecks[] = { juce::Colours::white, juce::Colour (0xffffc4dc), juce::Colour (0xffffd8c8) };
                     pixels.setPixelColour (x, y, flecks[random.nextInt (3)].withAlpha ((juce::uint8) (30 + random.nextInt (60))));
                     continue;
                 }
