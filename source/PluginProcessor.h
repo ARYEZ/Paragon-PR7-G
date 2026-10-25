@@ -238,7 +238,7 @@ private:
     effects::FilterPitch filterPitch;   // after the compressor, before the drive
     effects::Drive drive;
     effects::Presence presence;
-    effects::Modulation modulation;
+    effects::Modulation modulation, modulation2;   // MOD, then MOD 2
     effects::Delay delay;
     effects::Reverb reverb;
     effects::LoFi loFi;   // last: after the reverb

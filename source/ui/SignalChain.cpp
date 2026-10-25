@@ -48,7 +48,7 @@ void SignalChain::resized()
 
     // Blocks spread evenly with gaps for the dotted connectors.
     const auto count = (float) blocks.size();
-    const auto gap = 16.0f;
+    const auto gap = 10.0f;   // tight enough for thirteen blocks
     const auto blockWidth = (area.getWidth() - gap * (count + 1.0f)) / count;
     blockAreas.clear();
     area.removeFromLeft (gap);
@@ -119,13 +119,16 @@ void SignalChain::paint (juce::Graphics& g)
             g.fillRoundedRectangle (area.withTop (area.getBottom() + 3.0f).withHeight (3.0f).reduced (area.getWidth() * 0.2f, 0.0f), 1.5f);
         }
 
-        auto content = area.reduced (10.0f, 6.0f);
-        Icons::draw (g, block.icon, content.removeFromLeft (content.getHeight()).reduced (2.0f),
+        // A compact icon (not a full square), so thirteen blocks still leave
+        // their names room to read.
+        auto content = area.reduced (7.0f, 6.0f);
+        const auto iconSize = content.getHeight() * 0.62f;
+        Icons::draw (g, block.icon, content.removeFromLeft (iconSize).withSizeKeepingCentre (iconSize, iconSize),
                      on ? block.colour : block.colour.withAlpha (0.35f), 1.6f, on);
-        content.removeFromLeft (6.0f);
+        content.removeFromLeft (5.0f);
         g.setColour (on ? ParagonColours::text : ParagonColours::textDim);
-        // Eleven blocks share the strip: names a touch smaller, and the
-        // longest (MODULATION) squeezed a little rather than cut off.
+        // Thirteen blocks share the strip: names a touch smaller, and the
+        // longest squeezed a little rather than cut off.
         g.setFont (juce::FontOptions (10.5f, juce::Font::bold));
         g.drawFittedText (block.name, content.toNearestInt(), juce::Justification::centredLeft, 2, 0.55f);
     }

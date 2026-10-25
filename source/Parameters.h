@@ -131,6 +131,27 @@ namespace ParamIDs
     // pedal goes on a pedalboard, so the amp works on the modulated sound.
     inline constexpr auto modPosition = "modPosition";
 
+    // Version 27: MOD 2, a second modulation block straight after MOD, with
+    // the same controls (so two effects can run at once: a chorus and a
+    // flanger, say).
+    inline constexpr auto mod2On       = "mod2On";
+    inline constexpr auto mod2Type     = "mod2Type";
+    inline constexpr auto mod2Rate     = "mod2Rate";
+    inline constexpr auto mod2Depth    = "mod2Depth";
+    inline constexpr auto mod2Mix      = "mod2Mix";
+    inline constexpr auto mod2Sync     = "mod2Sync";
+    inline constexpr auto mod2Eq       = "mod2Eq";
+    inline constexpr auto mod2Stereo   = "mod2Stereo";
+    inline constexpr auto mod2Position = "mod2Position";
+
+    // A MOD block's controls, so MOD and MOD 2 share their code.
+    struct ModIds
+    {
+        const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position;
+    };
+    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition };
+    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position };
+
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)
     inline constexpr auto octOn          = "octOn";            // the OCTAVER

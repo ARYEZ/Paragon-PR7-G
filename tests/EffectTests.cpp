@@ -605,6 +605,37 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (dB (rms (quieter[0], 0.2) / rms (output[0], 0.2)) < -10.0f);
     }
 
+    SECTION ("MOD 2 runs a second effect after MOD: a chorus and a flanger together")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modMix, 0.7f);
+        const auto chorusOnly = rig.run (input);
+
+        rig.set (ParamIDs::modOn, 0.0f);
+        rig.set (ParamIDs::mod2On, 1.0f);
+        rig.set (ParamIDs::mod2Type, (float) effects::Modulation::Type::flanger);
+        const auto flangerOnly = rig.run (input);
+
+        rig.set (ParamIDs::modOn, 1.0f);
+        const auto both = rig.run (input);
+        REQUIRE (allFinite (both[0]));
+        // Both together sound like neither alone.
+        CHECK (rms (minus (both[0], chorusOnly[0]), 0.3) > 0.1f * rms (both[0], 0.3));
+        CHECK (rms (minus (both[0], flangerOnly[0]), 0.3) > 0.1f * rms (both[0], 0.3));
+
+        // MOD 2 has its own controls: MOD's don't change it. (Two fresh
+        // plugins, so both sweeps start at the same point.)
+        const auto mod2FlangerWith = [&] (float modRate)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::mod2On, 1.0f);
+            fresh.set (ParamIDs::mod2Type, (float) effects::Modulation::Type::flanger);
+            fresh.set (ParamIDs::modRate, modRate);
+            return fresh.run (input)[0];
+        };
+        CHECK (maxAbsDifference (mod2FlangerWith (0.8f), mod2FlangerWith (5.0f)) < 1.0e-6f);
+    }
+
     SECTION ("MOD in PRE is mono, as one amp follows it: STEREO only applies in POST")
     {
         rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);

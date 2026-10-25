@@ -240,15 +240,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::freezeRelease, "Freeze Release", skewed (50.0f, 8000.0f, 1500.0f, 1.0f), 1500.0f, v24, asTime));
 
     constexpr int v25 = 25;
-    layout.add (makeFloat (ParamIDs::modEq, "Mod EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v25, [] (float value, int)
+    // As the pedal's knob reads: LO to HI, flat at noon.
+    const ToText asVortexEq = [] (float value, int)
     {
-        // As the pedal's knob reads: LO to HI, flat at noon.
         const auto db = value * effects::Modulation::vortexEqRangeDb;
         return std::abs (db) < 0.05f ? juce::String ("Flat") : (db > 0.0f ? "+" : "") + juce::String (db, 1) + " dB";
-    }));
+    };
+    layout.add (makeFloat (ParamIDs::modEq, "Mod EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v25, asVortexEq));
     layout.add (makeSwitch (ParamIDs::modStereo, "Mod Stereo", v25, false));   // off: mono; on: the pedal's two outputs
 
     constexpr int v26 = 26;
     layout.add (makeChoice (ParamIDs::modPosition, "Mod Position", v26, effects::Modulation::positionNames, 0));
+
+    // MOD 2: the same controls as MOD (a flanger by default, to pair with MOD's chorus).
+    constexpr int v27 = 27;
+    layout.add (makeSwitch (ParamIDs::mod2On, "Mod 2 On", v27, false));
+    layout.add (makeChoice (ParamIDs::mod2Type, "Mod 2 Type", v27, effects::Modulation::typeNames, (int) effects::Modulation::Type::flanger));
+    layout.add (makeFloat (ParamIDs::mod2Rate, "Mod 2 Rate", skewed (0.05f, 10.0f, 1.0f, 0.01f), 0.3f, v27, asHz));
+    layout.add (makeFloat (ParamIDs::mod2Depth, "Mod 2 Depth", { 0.0f, 1.0f, 0.01f }, 0.45f, v27, asPercent));
+    layout.add (makeFloat (ParamIDs::mod2Mix, "Mod 2 Mix", { 0.0f, 1.0f, 0.01f }, 0.5f, v27, asPercent));
+    layout.add (makeChoice (ParamIDs::mod2Sync, "Mod 2 Sync", v27, effects::Delay::syncNames, 0));
+    layout.add (makeFloat (ParamIDs::mod2Eq, "Mod 2 EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v27, asVortexEq));
+    layout.add (makeSwitch (ParamIDs::mod2Stereo, "Mod 2 Stereo", v27, false));
+    layout.add (makeChoice (ParamIDs::mod2Position, "Mod 2 Position", v27, effects::Modulation::positionNames, 0));
     return layout;
 }
