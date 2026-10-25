@@ -726,6 +726,160 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (thirdHarmonic (0.9f) > -35.0f);
     }
 
+    SECTION ("Carbonite: the guitar plus the chorus at full level, mono, and MIX does nothing (the pedal's is fixed 50/50)")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modMix, 0.0f);
+        const auto output = rig.run (input);
+        REQUIRE (allFinite (output[0]));
+        CHECK (maxAbsDifference (output[0], output[1]) < 1.0e-6f);
+        CHECK (rms (minus (output[0], input), 0.2) > 0.5f * rms (input, 0.2));   // the chorus is there, near the guitar's level
+        // (Fresh plugins, so both sweeps start at the same point.)
+        const auto withMix = [&] (float mixValue)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+            fresh.set (ParamIDs::modMix, mixValue);
+            return fresh.run (input)[0];
+        };
+        CHECK (maxAbsDifference (withMix (0.0f), withMix (1.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("Carbonite: the delay sits at 3.4 ms and sweeps 2.2 to 4.5 ms at full DEPTH, from a real pedal's clock")
+    {
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (0.0f, 0.7f), WithinAbs (3.41, 0.01));
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (1.0f, -1.0f), WithinAbs (4.53, 0.05));
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (1.0f, 1.0f), WithinAbs (2.20, 0.05));
+
+        // With DEPTH down, an impulse's echo arrives 3.4 ms later.
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        std::vector<float> click ((size_t) (0.1 * sampleRate), 0.0f);
+        click[(size_t) (0.05 * sampleRate)] = 0.5f;
+        const auto output = rig.run (click)[0];
+        const auto echo = minus (output, click);
+        const auto peak = std::distance (echo.begin(), std::max_element (echo.begin(), echo.end(),
+                                                                        [] (float a, float b) { return std::abs (a) < std::abs (b); }));
+        const auto delayMs = 1000.0 * (double) (peak - (long) (0.05 * sampleRate)) / sampleRate;
+        CHECK_THAT (delayMs, WithinAbs (3.41 + 0.1, 0.25));   // (plus the filters' own small delay)
+    }
+
+    SECTION ("Carbonite is darker than Vortex: its filters stop at 6.6 kHz, not 9 kHz")
+    {
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto chorusTreble = [&] (effects::Modulation::Type type)
+        {
+            rig.set (ParamIDs::modType, (float) type);
+            rig.set (ParamIDs::modStereo, 1.0f);   // Vortex: its chorus alone on the left
+            rig.set (ParamIDs::modMix, 1.0f);
+            const auto chorusOf = [&] (double hz)
+            {
+                const auto tone = sine (hz, 0.1f, 0.5);
+                const auto out = rig.run (tone)[0];
+                return type == effects::Modulation::Type::carbonite ? rms (minus (out, tone), 0.2) : rms (out, 0.2);
+            };
+            return dB (chorusOf (10000.0) / chorusOf (1000.0));
+        };
+        const auto carbonite = chorusTreble (effects::Modulation::Type::carbonite);
+        const auto vortex = chorusTreble (effects::Modulation::Type::chorus);
+        CHECK (carbonite < -18.0f);
+        CHECK (carbonite < vortex - 8.0f);
+    }
+
+    SECTION ("Carbonite: DEPTH bends the pitch")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modRate, 1.0f);
+        const auto tone = sine (1000.0, 0.3f, 2.0);
+        const auto chorusWith = [&] (float depthValue)
+        {
+            rig.set (ParamIDs::modDepth, depthValue);
+            return minus (rig.run (tone)[0], tone);
+        };
+        const auto still = chorusWith (0.0f), swept = chorusWith (1.0f);
+        CHECK (levelAt (swept, 1000.0, 0.3) < 0.8f * levelAt (still, 1000.0, 0.3));
+    }
+
+    SECTION ("Hadron: each stage's turn sweeps about 330 Hz to 3 kHz, in step with the LFO's voltage")
+    {
+        CHECK_THAT (effects::Modulation::hadronStageHz (effects::Modulation::hadronLfoLowVolts), WithinAbs (330.0, 15.0));
+        CHECK_THAT (effects::Modulation::hadronStageHz (effects::Modulation::hadronLfoHighVolts), WithinAbs (3000.0, 50.0));
+    }
+
+    SECTION ("Hadron: the guitar plus the phase stages half and half cuts deep moving notches; MIX and DEPTH do nothing")
+    {
+        // White noise in: MIX and DEPTH change nothing.
+        juce::Random random (7);
+        std::vector<float> noise ((size_t) sampleRate);
+        for (auto& sample : noise)
+            sample = 0.2f * (random.nextFloat() * 2.0f - 1.0f);
+        const auto withSettings = [&] (float mixValue, float depthValue, float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modMix, mixValue);
+            fresh.set (ParamIDs::modDepth, depthValue);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return fresh.run (noise)[0];
+        };
+        const auto script = withSettings (0.5f, 0.5f, 0.0f);
+        REQUIRE (allFinite (script));
+        CHECK (maxAbsDifference (script, withSettings (1.0f, 0.0f, 0.0f)) < 1.0e-6f);
+
+        // A sine at a stage's 45-degree point (four stages: 180 degrees) is
+        // cancelled: with the LFO held low, a 137 Hz tone almost vanishes.
+        EffectRig slow;
+        slow.set (ParamIDs::modOn, 1.0f);
+        slow.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+        slow.set (ParamIDs::modRate, 0.05f);   // so slow it barely moves in the test
+        // (Aimed at where the LFO is halfway through the measurement, 0.225 s
+        // in: 0.05 Hz, rising for 65% of the cycle.)
+        const auto lfoVolts = effects::Modulation::hadronLfoLowVolts
+                            + (effects::Modulation::hadronLfoHighVolts - effects::Modulation::hadronLfoLowVolts) * (0.225f * 0.05f / 0.65f);
+        const auto notchHz = 0.4142 * effects::Modulation::hadronStageHz (lfoVolts);
+        const auto low = slow.run (sine (notchHz, 0.3f, 0.3))[0];
+        CHECK (dB (rms (low, 0.15) / 0.3f * std::sqrt (2.0f)) < -20.0f);
+    }
+
+    SECTION ("Hadron: BLOCK's feedback makes the sweep stronger, and stays stable")
+    {
+        juce::Random random (11);
+        std::vector<float> noise ((size_t) (2.0 * sampleRate));
+        for (auto& sample : noise)
+            sample = 0.2f * (random.nextFloat() * 2.0f - 1.0f);
+        const auto run = [&] (float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return fresh.run (noise)[0];
+        };
+        const auto script = run (0.0f), block = run (1.0f);
+        REQUIRE (allFinite (block));
+        CHECK (rms (minus (block, script), 0.2) > 0.1f * rms (script, 0.2));
+        CHECK (rms (block, 0.2) < 2.0f * rms (noise, 0.2));   // nothing runs away
+
+        // The mid hump: at the stages' turn, between the two notches, BLOCK
+        // is about 2.7 dB up where SCRIPT is flat.
+        const auto lfoVolts = effects::Modulation::hadronLfoLowVolts
+                            + (effects::Modulation::hadronLfoHighVolts - effects::Modulation::hadronLfoLowVolts) * (0.225f * 0.05f / 0.65f);
+        const auto tone = sine (effects::Modulation::hadronStageHz (lfoVolts), 0.2f, 0.3);
+        const auto levelWith = [&] (float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modRate, 0.05f);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return dB (rms (fresh.run (tone)[0], 0.15) / rms (tone, 0.15));
+        };
+        CHECK_THAT (levelWith (0.0f), WithinAbs (0.0, 0.5));
+        CHECK_THAT (levelWith (1.0f), WithinAbs (2.7, 0.7));
+    }
+
     SECTION ("Tremolo pulses the volume at the rate setting")
     {
         rig.set (ParamIDs::modType, 3.0f);

@@ -2,6 +2,28 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.38.0
+
+- **Hadron replaces the generic phaser:** modelled on the MXR Phase 90, the phaser behind so many hard-rock and metal leads, built from its circuit's real parts.
+  - **Four phase stages**, each a 47 nF capacitor and a JFET transistor (with 24k across it). The LFO's voltage sets how much the transistors conduct, which sweeps each stage's turn from about 330 Hz to 3 kHz.
+  - **The guitar and the stages are mixed half and half**, which cuts two deep, moving notches (about 140 Hz to 1.2 kHz, and 790 Hz to 7.2 kHz). That's the swoosh.
+  - **The LFO is a lopsided triangle:** it sweeps up for about two thirds of each cycle and back down in one third, as the pedal's does.
+  - **The pedal's one knob:** SPEED is the RATE knob. DEPTH and MIX are greyed out, because the pedal has neither.
+  - **A new CIRCUIT switch, SCRIPT or BLOCK**, as on today's pedals:
+    - **SCRIPT**, the original '70s circuit: smooth and vintage.
+    - **BLOCK** adds the later feedback resistor (R28, 24k): a midrange hump that moves with the sweep (about 2.7 dB up, the bass and treble about 1.5 dB down), and notches set closer together, for a stronger, more vocal sound.
+  - **What's a guess:** where exactly R28 connects isn't published in detail. It's placed where it can work (the second stage's op-amp input), which gives exactly the hump and extra level the BLOCK circuit is known for.
+  - **Your rigs:** rigs and projects that used the Phaser now get Hadron, on SCRIPT. Its DEPTH and MIX settings no longer change anything.
+- Component values and the JFET model are from Giampiccolo et al., "Wave Digital Model of the MXR Phase 90" (Politecnico di Milano).
+
+## 0.37.0
+
+- **Carbonite, a new chorus:** modelled on the Boss CE-2, the late-'70s compact chorus behind countless '80s clean tones. Pick it in MOD or MOD 2's TYPE list (at the bottom, so your saved rigs keep their types).
+  - **Warmer and darker than Vortex:** the filters either side of its delay chip stop at about 6.6 kHz, against Vortex's 9 kHz, and a low cut at about 48 Hz keeps the chorus off the deep bass.
+  - **A tighter, faster sweep:** the delay sits at about 3.4 ms and sweeps about 2.2 to 4.5 ms at full DEPTH, from a real pedal's measured clock. The swing is lopsided, further one way than the other, as the pedal's clock is.
+  - **The pedal's two knobs:** RATE and DEPTH. MIX is greyed out, because the pedal always mixes dry and wet 50/50. Mono, like the pedal: each side gets the same treatment.
+  - **What's a guess:** how hard a loud signal can drive the chip before it rounds off, and the LFO's exact speed range (RATE uses the block's usual range). Real CE-2s also differ from each other by tens of percent; this follows one measured pedal.
+
 ## 0.36.1
 
 - **The Screamer drive is now called Banshee.** Only the name has changed: it sounds the same, and rigs and projects that used it get Banshee.

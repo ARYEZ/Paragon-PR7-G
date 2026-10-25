@@ -271,5 +271,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeChoice (ParamIDs::mod2Position, "Mod 2 Position", v28, effects::Modulation::positionNames, 0));
     layout.add (makeFloat (ParamIDs::mod2Manual, "Mod 2 AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v28, asKnob));
     layout.add (makeFloat (ParamIDs::mod2Res, "Mod 2 AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v28, asKnob));
+
+    // Added in PR7-G 0.38.0: Hadron's (the phaser's) SCRIPT / BLOCK circuit.
+    constexpr int v29 = 29;
+    layout.add (makeChoice (ParamIDs::modHadron, "Hadron Circuit", v29, effects::Modulation::hadronCircuitNames, 0));
+    layout.add (makeChoice (ParamIDs::mod2Hadron, "Mod 2 Hadron Circuit", v29, effects::Modulation::hadronCircuitNames, 0));
     return layout;
 }

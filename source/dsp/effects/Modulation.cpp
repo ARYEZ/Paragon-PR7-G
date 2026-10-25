@@ -62,6 +62,73 @@ namespace effects
             constexpr float eqHz = 2000.0f;
         }
 
+        // Carbonite, modelled on the Boss CE-2 (a 1024-stage bucket-brigade
+        // chip, an MN3007, and its clock driver). It shares its design with
+        // the Vortex's pedal, which came later; what's different is below.
+        // "Measured" values come from players' measurements of real pedals,
+        // "from the circuit" from published analyses of its schematic, and
+        // "estimated" ones from neither.
+        namespace carbonite
+        {
+            // The same pre-emphasis and de-emphasis as the Vortex: 10k and
+            // 6.8 nF, about 15 dB of treble lift between 410 Hz and 2.3 kHz
+            // (from the circuit).
+            constexpr float emphasisZeroHz = 410.0f, emphasisPoleHz = 2340.0f;
+
+            // The filters around the chip pass about 48 Hz to 6.6 kHz (from
+            // the circuit): the top end stops well below the Vortex's 9 kHz,
+            // which is much of why this chorus sounds warmer and darker.
+            constexpr float lowCutHz = 48.0f, filterHz = 6600.0f;
+
+            // How hard a loud signal can drive the chip before it rounds off
+            // (estimated, as the Vortex's).
+            constexpr float headroom = 2.2f;
+
+            // The clock, measured on a real pedal: about 150 kHz with DEPTH
+            // down (1024 stages / (2 x 150 kHz) = 3.4 ms); 128 to 185 kHz at
+            // half DEPTH; 113 to 233 kHz at full DEPTH (4.5 down to 2.2 ms).
+            // The swing is lopsided, further up than down, which this curve
+            // follows. Pedals vary by tens of percent (the clock's capacitor
+            // is a loose-tolerance part); this is one pedal's.
+            constexpr float centreClockKHz = 150.0f, clockSwing = 0.4f, clockBend = 0.153f;
+        }
+
+        // Hadron, modelled on the MXR Phase 90: four phase stages (an op-amp
+        // all-pass each, 10k / 10k, with 47 nF and a 2N5952 JFET in parallel
+        // with 24k setting its turn), the guitar and the stages' output mixed
+        // through equal 150k resistors. Values from the circuit and the
+        // 2N5952's model as published by Giampiccolo et al., "Wave Digital
+        // Model of the MXR Phase 90" (Politecnico di Milano), unless marked.
+        namespace hadron
+        {
+            constexpr float capacitor = 47.0e-9f, parallelOhms = 24.0e3f;
+
+            // The JFET as a resistor, from its gate voltage: 2N5952, zero-bias
+            // current 5.367 mA, pinch-off -2.021 V. The gates sit at the
+            // LFO's voltage against a 5.1 V reference.
+            constexpr float zeroBiasAmps = 5.367e-3f, pinchOffVolts = -2.021f, referenceVolts = 5.1f;
+            constexpr float conductancePerVolt = 2.0f * zeroBiasAmps / (pinchOffVolts * pinchOffVolts);
+
+            // The LFO: a lopsided triangle, rising for 65% of each cycle
+            // (from the researchers' simulation of the pedal's LFO).
+            constexpr float riseFraction = 0.65f;
+
+            // Each stage turns the guitar upside down in the bass and leaves
+            // the treble upright, as the op-amp all-pass with the capacitor
+            // into its + input does.
+            //
+            // BLOCK: R28 (24k) carries the last stage's output back to the
+            // second stage. Builders describe it as going to that stage's
+            // input; it can only have an effect at its op-amp's - input (the
+            // stage's own input is the first op-amp's output), so that's
+            // where it goes here: against the stage's 10k resistors, 10/24
+            // of the last stage, upside down, added to the second's output.
+            // That gives the mid hump, extra level and closer-set notches
+            // the BLOCK circuit is known for.
+            constexpr float stageOhms = 10.0e3f, r28Ohms = 24.0e3f;
+            constexpr float blockFeedback = stageOhms / r28Ohms;
+        }
+
         // Biquad coefficients (bilinear transform), written into an existing
         // filter so nothing is allocated.
         template <typename Biquad>
@@ -83,6 +150,17 @@ namespace effects
         {
             const auto c = 1.0f / std::tan (juce::MathConstants<float>::pi * hz / (float) sampleRate);
             f.b0 = f.b1 = 1.0f / (1.0f + c);
+            f.b2 = 0.0f;
+            f.a1 = (1.0f - c) / (1.0f + c);
+            f.a2 = 0.0f;
+        }
+
+        template <typename Biquad>
+        void setFirstOrderHighPass (Biquad& f, double sampleRate, float hz)
+        {
+            const auto c = 1.0f / std::tan (juce::MathConstants<float>::pi * hz / (float) sampleRate);
+            f.b0 = c / (1.0f + c);
+            f.b1 = -f.b0;
             f.b2 = 0.0f;
             f.a1 = (1.0f - c) / (1.0f + c);
             f.a2 = 0.0f;
@@ -127,9 +205,6 @@ namespace effects
 
         delayLine.setMaximumDelayInSamples ((int) std::ceil (maxDelayMs * 0.001 * sampleRate) + 4);
         delayLine.prepare (spec);
-        phaser.prepare (spec);
-        phaser.setCentreFrequency (900.0f);
-        phaser.setFeedback (0.5f);
 
         for (auto* rotor : { &hornDelay, &drumDelay })
         {
@@ -159,8 +234,23 @@ namespace effects
             path.reconstruct1.copyCoefficients (path.antiAlias1);
             path.reconstruct2.copyCoefficients (path.antiAlias2);
         }
+        for (auto& path : carbonitePaths)
+        {
+            path = {};
+            setFirstOrderHighPass (path.inputHighPass, sampleRate, carbonite::lowCutHz);
+            setFirstOrderShelf (path.emphasis, sampleRate, carbonite::emphasisZeroHz, carbonite::emphasisPoleHz);
+            setFirstOrderShelf (path.deEmphasis, sampleRate, carbonite::emphasisPoleHz, carbonite::emphasisZeroHz);
+            setFirstOrderLowPass (path.antiAlias1, sampleRate, carbonite::filterHz);
+            setLowPass (path.antiAlias2, sampleRate, carbonite::filterHz, 1.0f);
+            path.reconstruct1.copyCoefficients (path.antiAlias1);
+            path.reconstruct2.copyCoefficients (path.antiAlias2);
+        }
         vortexEq = 1.0e9f;   // forces the EQ's coefficients to be worked out
         updateVortexEq (0.0f);
+        for (auto& channel : hadronStages)
+            for (auto& stage : channel)
+                stage = {};
+        std::fill (std::begin (hadronFeedback), std::end (hadronFeedback), 0.0f);
         for (auto& channel : vibeStages)
             for (auto& stage : channel)
                 stage = {};
@@ -199,18 +289,7 @@ namespace effects
                     mix.skip ((int) wet.getNumSamples());
                     break;
 
-                case Type::phaser:
-                {
-                    phaser.setRate (settings.rateHz);
-                    phaser.setDepth (settings.depth);
-                    phaser.setMix (settings.mix);
-                    juce::dsp::ProcessContextReplacing<float> context (wet);
-                    phaser.process (context);
-                    depth.skip ((int) wet.getNumSamples());
-                    mix.skip ((int) wet.getNumSamples());
-                    break;
-                }
-
+                case Type::phaser:           processHadron (wet, settings); break;
                 case Type::tremolo:          processTremolo (wet, settings); break;
                 case Type::dimension:        processDimension (wet, settings); break;
                 case Type::uniVibe:          processUniVibe (wet, settings); break;
@@ -219,6 +298,7 @@ namespace effects
                 case Type::harmonicTremolo:  processHarmonicTremolo (wet, settings); break;
                 case Type::autoPan:          processAutoPan (wet, settings); break;
                 case Type::doubler:          processDoubler (wet, settings); break;
+                case Type::carbonite:        processCarbonite (wet, settings); break;
             }
         });
     }
@@ -281,6 +361,93 @@ namespace effects
             {
                 auto* samples = block.getChannelPointer ((size_t) ch);
                 samples[i] += level * chorusOf (ch, samples[i], delaySamples);
+            }
+        }
+    }
+
+    float Modulation::hadronStageHz (float lfoVolts) noexcept
+    {
+        // The JFET's channel conducts more the further its gate is above
+        // pinch-off; with the 24k across it, the stage's resistance is set
+        // by both. The turn moves in step with the LFO's voltage.
+        const auto overPinchOff = std::max (0.0f, lfoVolts - hadron::referenceVolts - hadron::pinchOffVolts);
+        const auto conductance = hadron::conductancePerVolt * overPinchOff + 1.0f / hadron::parallelOhms;
+        return conductance / (juce::MathConstants<float>::twoPi * hadron::capacitor);
+    }
+
+    void Modulation::processHadron (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // The pedal: the guitar through four phase stages, swept together by
+        // the LFO, mixed half and half with the guitar itself, which cuts two
+        // moving notches. Only SPEED (RATE). BLOCK adds R28's feedback.
+        const auto numChannels = (int) block.getNumChannels();
+        const auto feedback = settings.hadronBlock ? hadron::blockFeedback : 0.0f;
+        const auto nyquistGuard = (float) sampleRate * 0.45f;
+
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
+        {
+            const auto phase = advanceLfo (settings.rateHz);
+            const auto rise = phase < hadron::riseFraction ? phase / hadron::riseFraction
+                                                           : (1.0f - phase) / (1.0f - hadron::riseFraction);
+            const auto volts = hadronLfoLowVolts + (hadronLfoHighVolts - hadronLfoLowVolts) * rise;
+            const auto t = std::tan (juce::MathConstants<float>::pi * std::min (hadronStageHz (volts), nyquistGuard) / (float) sampleRate);
+            const auto coefficient = (t - 1.0f) / (t + 1.0f);
+            depth.skip (1);
+            mix.skip (1);
+
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                auto* samples = block.getChannelPointer ((size_t) ch);
+                const auto dry = samples[i];
+                auto x = dry;
+                for (int s = 0; s < 4; ++s)
+                {
+                    auto& stage = hadronStages[ch][s];
+                    const auto y = coefficient * x + stage.x1 - coefficient * stage.y1;
+                    stage.x1 = x;
+                    stage.y1 = y;
+                    x = -y;
+                    if (s == 1)
+                        x -= feedback * hadronFeedback[ch];
+                }
+                hadronFeedback[ch] = x;
+                samples[i] = 0.5f * (dry + x);
+            }
+        }
+    }
+
+    float Modulation::carboniteDelayMs (float depth, float lfo) noexcept
+    {
+        const auto clockKHz = carbonite::centreClockKHz * (1.0f + depth * (carbonite::clockSwing * lfo + carbonite::clockBend * lfo * lfo));
+        return 1024.0f / (2.0f * clockKHz);
+    }
+
+    void Modulation::processCarbonite (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // The pedal: the guitar, plus the chorus path (a low cut, pre-emphasis,
+        // the filter into the chip, the chip's swept delay, the filter out of
+        // it, de-emphasis), mixed 50/50 at full level. Only RATE and DEPTH;
+        // one input and one output, so each side runs through its own copy.
+        const auto msToSamples = (float) sampleRate * 0.001f;
+        const auto numChannels = (int) block.getNumChannels();
+
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
+        {
+            const auto lfo = triangle (advanceLfo (settings.rateHz));
+            const auto delaySamples = carboniteDelayMs (depth.getNextValue(), lfo) * msToSamples;
+            mix.skip (1);
+
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                auto& path = carbonitePaths[ch];
+                auto* samples = block.getChannelPointer ((size_t) ch);
+                auto x = path.emphasis.process (path.inputHighPass.process (samples[i]));
+                x = carbonite::headroom * std::tanh (x / carbonite::headroom);
+                x = path.antiAlias2.process (path.antiAlias1.process (x));
+                delayLine.pushSample (ch, x);
+                x = delayLine.popSample (ch, delaySamples);
+                x = path.reconstruct2.process (path.reconstruct1.process (x));
+                samples[i] += path.deEmphasis.process (x);
             }
         }
     }
