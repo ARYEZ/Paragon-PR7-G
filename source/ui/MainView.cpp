@@ -345,13 +345,18 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     // AEON (the flanger) adds its pedal's MANUAL and RES.
     const auto isAeon = [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::flanger; };
     panels[modBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
-        { "MODULATION", { { ParamIDs::modOn, "ON" }, { ParamIDs::modType, "TYPE" }, { ParamIDs::modSync, "SYNC" },
+        { "MODULATION", { { ParamIDs::modOn, "ON" }, { ParamIDs::modType, "TYPE" }, { ParamIDs::modPosition, "POSITION" }, { ParamIDs::modSync, "SYNC" },
                           { ParamIDs::modManual, "MANUAL", isAeon, true },
                           { ParamIDs::modRate, "RATE", [this] { return rawValue (ParamIDs::modSync) < 0.5f; } },
                           { ParamIDs::modDepth, "DEPTH" },
                           { ParamIDs::modRes, "RES", isAeon, true },
                           { ParamIDs::modMix, "MIX", [this] {
-                              return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ParamIDs::modType))); } } } } });
+                              return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ParamIDs::modType))); } },
+                          // The Vortex's own controls: its EQ, and mono or stereo outputs.
+                          { ParamIDs::modEq, "EQ", [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::chorus; }, true },
+                          // STEREO needs two speakers after it, so only in POST (in PRE a single amp follows).
+                          { ParamIDs::modStereo, "STEREO", [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::chorus
+                                                                           && rawValue (ParamIDs::modPosition) < 0.5f; }, true } } } });
     panels[delayBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "DELAY", { { ParamIDs::delayOn, "ON" }, { ParamIDs::delayType, "TYPE" }, { ParamIDs::delaySync, "SYNC" },
                      { ParamIDs::delayTime, "TIME", [this] { return rawValue (ParamIDs::delaySync) < 0.5f; } },

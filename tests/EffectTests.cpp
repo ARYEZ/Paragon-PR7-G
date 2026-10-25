@@ -563,15 +563,122 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
     rig.set (ParamIDs::modOn, 1.0f);
     const auto input = sine (440.0, 0.3f, 1.0);
 
-    SECTION ("Chorus spreads the mono guitar across both speakers")
+    // The difference between two signals, sample by sample.
+    const auto minus = [] (const std::vector<float>& a, const std::vector<float>& b)
     {
-        rig.set (ParamIDs::modType, 0.0f);
+        std::vector<float> difference (std::min (a.size(), b.size()));
+        for (size_t i = 0; i < difference.size(); ++i)
+            difference[i] = a[i] - b[i];
+        return difference;
+    };
+
+    SECTION ("Vortex, MONO: the guitar untouched, the chorus added on top, the same both sides")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modMix, 0.0f);   // E.LEVEL down: just the guitar, exactly
+        const auto dryOnly = rig.run (input);
+        CHECK (maxAbsDifference (dryOnly[0], input, (size_t) (0.1 * sampleRate)) < 1.0e-6f);
+
+        rig.set (ParamIDs::modMix, 1.0f);
         const auto output = rig.run (input);
         REQUIRE (allFinite (output[0]));
-        std::vector<float> difference (output[0].size());
-        for (size_t i = 0; i < difference.size(); ++i)
-            difference[i] = output[0][i] - output[1][i];
-        CHECK (rms (difference, 0.2) > 0.05f * rms (output[0], 0.2));
+        CHECK (maxAbsDifference (output[0], output[1]) < 1.0e-6f);              // one chip: mono
+        CHECK (rms (minus (output[0], input), 0.2) > 0.5f * rms (input, 0.2));   // the chorus is there, at about the guitar's level
+    }
+
+    SECTION ("Vortex, STEREO: chorus alone on the left, the guitar alone on the right, as the pedal's A and B outputs")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);
+        rig.set (ParamIDs::modMix, 1.0f);
+        const auto output = rig.run (input);
+        REQUIRE (allFinite (output[0]));
+        CHECK (maxAbsDifference (output[1], input, (size_t) (0.1 * sampleRate)) < 1.0e-6f);
+        // The left is the chorus alone: at full E.LEVEL a little louder than
+        // the guitar (as the pedal's knob goes past an even mix), and not the guitar.
+        CHECK_THAT (dB (rms (output[0], 0.2) / rms (input, 0.2)), WithinAbs (3.5, 1.0));
+        CHECK (rms (minus (output[0], input), 0.2) > 0.3f * rms (input, 0.2));
+
+        // E.LEVEL down moves it towards the dry side, as on the pedal.
+        rig.set (ParamIDs::modMix, 0.25f);
+        const auto quieter = rig.run (input);
+        CHECK (dB (rms (quieter[0], 0.2) / rms (output[0], 0.2)) < -10.0f);
+    }
+
+    SECTION ("MOD in PRE is mono, as one amp follows it: STEREO only applies in POST")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);
+        rig.set (ParamIDs::modMix, 1.0f);
+        rig.set (ParamIDs::modPosition, (float) effects::Modulation::Position::pre);
+        const auto output = rig.run (input);
+        REQUIRE (allFinite (output[0]));
+        CHECK (maxAbsDifference (output[0], output[1]) < 1.0e-6f);
+        CHECK (rms (minus (output[0], input), 0.2) > 0.3f * rms (input, 0.2));   // and the chorus is there
+    }
+
+    SECTION ("Vortex: DEPTH bends the pitch, and the sweep is uneven, as the chip's clock is what's swept")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);   // the chorus alone, on the left
+        rig.set (ParamIDs::modMix, 1.0f);
+        rig.set (ParamIDs::modRate, 1.0f);
+        const auto tone = sine (1000.0, 0.3f, 2.0);
+
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto still = rig.run (tone)[0];
+        rig.set (ParamIDs::modDepth, 1.0f);
+        const auto swept = rig.run (tone)[0];
+
+        // With no depth the chorus is a steady (delayed) 1 kHz; with full
+        // depth its pitch wanders, so less of it stays exactly at 1 kHz.
+        CHECK (levelAt (still, 1000.0, 0.3) > 0.8f * rms (still, 0.3) * std::sqrt (2.0f));
+        CHECK (levelAt (swept, 1000.0, 0.3) < 0.6f * levelAt (still, 1000.0, 0.3));
+    }
+
+    SECTION ("Vortex: EQ shapes the chorus's treble, not the guitar's")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);
+        rig.set (ParamIDs::modMix, 1.0f);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto trebleOverMid = [&] (float eq)
+        {
+            rig.set (ParamIDs::modEq, eq);
+            const auto output = rig.run (sine (6000.0, 0.1f, 0.5));
+            const auto mid = rig.run (sine (500.0, 0.1f, 0.5));
+            CHECK (maxAbsDifference (output[1], sine (6000.0, 0.1f, 0.5), (size_t) (0.1 * sampleRate)) < 1.0e-6f);   // the dry side untouched
+            return dB (rms (output[0], 0.2) / rms (mid[0], 0.2));
+        };
+        const auto dark = trebleOverMid (-1.0f), flat = trebleOverMid (0.0f), bright = trebleOverMid (1.0f);
+        CHECK (bright - flat > 6.0f);
+        CHECK (flat - dark > 6.0f);
+    }
+
+    SECTION ("Vortex: the filters round the chorus's top end off, like the chip's")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);
+        rig.set (ParamIDs::modMix, 1.0f);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto chorusLevel = [&] (double hz) { return rms (rig.run (sine (hz, 0.1f, 0.5))[0], 0.2); };
+        CHECK (dB (chorusLevel (16000.0) / chorusLevel (1000.0)) < -20.0f);
+        CHECK_THAT (dB (chorusLevel (3000.0) / chorusLevel (300.0)), WithinAbs (0.0, 2.5));   // flat through the guitar's range
+    }
+
+    SECTION ("Vortex: clean at normal levels; a hot, bright signal rounds off, as the manual warns")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);
+        rig.set (ParamIDs::modMix, 1.0f);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto thirdHarmonic = [&] (float amplitude)
+        {
+            const auto output = rig.run (sine (1500.0, amplitude, 0.5))[0];
+            return dB (levelAt (output, 4500.0) / levelAt (output, 1500.0));
+        };
+        CHECK (thirdHarmonic (0.2f) < -45.0f);
+        CHECK (thirdHarmonic (0.9f) > -35.0f);
     }
 
     SECTION ("Tremolo pulses the volume at the rate setting")

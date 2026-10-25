@@ -366,3 +366,33 @@ TEST_CASE ("A project whose model file is missing keeps the path and says so", "
     // And the plugin still passes audio.
     CHECK (allFinite (restored.play (10)));
 }
+
+TEST_CASE ("MOD in PRE runs before the amp, so the amp works on the chorused sound", "[amp][mod]")
+{
+    // The amp is non-linear, so "chorus then amp" (a pedal into the amp)
+    // and "amp then chorus" (POST) come out differently.
+    const auto playWith = [] (float position)
+    {
+        TestRig rig;
+        rig.processor.loadAmpModel (wavenetModel);
+        rig.waitForLoads();
+        rig.set (ParamIDs::modOn, 1.0f);
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modMix, 0.7f);
+        rig.set (ParamIDs::modPosition, position);
+        return rig.play (400);
+    };
+    const auto post = playWith ((float) effects::Modulation::Position::post);
+    const auto pre = playWith ((float) effects::Modulation::Position::pre);
+    REQUIRE (allFinite (pre));
+    REQUIRE (allFinite (post));
+
+    double difference = 0.0, level = 0.0;
+    for (size_t i = post.size() / 4; i < post.size(); ++i)
+    {
+        difference += (double) (pre[i] - post[i]) * (pre[i] - post[i]);
+        level += (double) post[i] * post[i];
+    }
+    CHECK (std::sqrt (difference / level) > 0.05);
+}

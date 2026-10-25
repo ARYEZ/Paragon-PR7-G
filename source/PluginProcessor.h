@@ -258,6 +258,7 @@ private:
     // never shifts the guitar in time, crossfaded in over 20 ms.
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::None> bypassDelay { 8192 };
     juce::AudioBuffer<float> bypassDry;
+    juce::AudioBuffer<float> modPreScratch;   // MOD in PRE: the mono guitar on two channels, for the (stereo) block
     juce::SmoothedValue<float> bypassAmount;
 
     // The expression pedal's VOLUME, and the tuner's mute.

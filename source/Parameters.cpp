@@ -239,10 +239,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::freezeAttack, "Freeze Attack", skewed (10.0f, 5000.0f, 300.0f, 1.0f), 300.0f, v24, asTime));
     layout.add (makeFloat (ParamIDs::freezeRelease, "Freeze Release", skewed (50.0f, 8000.0f, 1500.0f, 1.0f), 1500.0f, v24, asTime));
 
-    // Added in PR7-G 0.33.0: AEON's MANUAL and RES knobs (0 to 10), as on the
-    // pedal it's modelled on. AEON took the old flanger's place in the list.
     constexpr int v25 = 25;
-    layout.add (makeFloat (ParamIDs::modManual, "AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v25, asKnob));
-    layout.add (makeFloat (ParamIDs::modRes, "AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v25, asKnob));
+    layout.add (makeFloat (ParamIDs::modEq, "Mod EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v25, [] (float value, int)
+    {
+        // As the pedal's knob reads: LO to HI, flat at noon.
+        const auto db = value * effects::Modulation::vortexEqRangeDb;
+        return std::abs (db) < 0.05f ? juce::String ("Flat") : (db > 0.0f ? "+" : "") + juce::String (db, 1) + " dB";
+    }));
+    layout.add (makeSwitch (ParamIDs::modStereo, "Mod Stereo", v25, false));   // off: mono; on: the pedal's two outputs
+
+    constexpr int v26 = 26;
+    layout.add (makeChoice (ParamIDs::modPosition, "Mod Position", v26, effects::Modulation::positionNames, 0));
+
+    // Added in PR7-G 0.35.0: AEON's MANUAL and RES knobs (0 to 10), as on the
+    // pedal it's modelled on. AEON took the old flanger's place in the list.
+    constexpr int v27 = 27;
+    layout.add (makeFloat (ParamIDs::modManual, "AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v27, asKnob));
+    layout.add (makeFloat (ParamIDs::modRes, "AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v27, asKnob));
     return layout;
 }

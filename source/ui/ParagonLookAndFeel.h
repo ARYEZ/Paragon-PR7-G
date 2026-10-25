@@ -82,6 +82,9 @@ public:
     // Drop-down lists: a long choice ("Multi-Tap", "1/8 triplet") squeezes to
     // fit a narrow box rather than being cut off with "...".
     void positionComboBoxText (juce::ComboBox&, juce::Label&) override;
+    // Knob values likewise: "0.80 Hz" squeezes into a narrow card rather than
+    // being cut off with "...".
+    juce::Label* createSliderTextBox (juce::Slider&) override;
 
     // The two-thumb MIN / MAX slider: a thin track with round glowing thumbs.
     void drawLinearSlider (juce::Graphics&, int x, int y, int width, int height,
