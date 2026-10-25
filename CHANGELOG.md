@@ -2,6 +2,11 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.32.2
+
+- **No more screws on the face plate.** The four screw heads in its corners are gone, for a cleaner front.
+- **The MIN light beside the expression pedal is gone too.** It lit when the pedal was fully back on its heel; the dock's EXPRESSION ASSIGN screen already shows where the pedal sits.
+
 ## 0.32.1
 
 - **The small EXPRESSION screen beside the pedal is gone.** The bigger one in the dock's EXPRESSION ASSIGN panel does the same job.
