@@ -342,10 +342,14 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                          { ParamIDs::rigLevel, "RIG LEVEL" } } } });
     panels[cabBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "CABINET (IR)", { { ParamIDs::cabOn, "ON" }, { ParamIDs::presence, "PRESENCE" } } } });
+    // AEON (the flanger) adds its pedal's MANUAL and RES.
+    const auto isAeon = [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::flanger; };
     panels[modBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "MODULATION", { { ParamIDs::modOn, "ON" }, { ParamIDs::modType, "TYPE" }, { ParamIDs::modPosition, "POSITION" }, { ParamIDs::modSync, "SYNC" },
+                          { ParamIDs::modManual, "MANUAL", isAeon, true },
                           { ParamIDs::modRate, "RATE", [this] { return rawValue (ParamIDs::modSync) < 0.5f; } },
                           { ParamIDs::modDepth, "DEPTH" },
+                          { ParamIDs::modRes, "RES", isAeon, true },
                           { ParamIDs::modMix, "MIX", [this] {
                               return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ParamIDs::modType))); } },
                           // The Vortex's own controls: its EQ, and mono or stereo outputs.

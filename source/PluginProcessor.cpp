@@ -316,7 +316,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                                       param (ParamIDs::modDepth) * (morphsDepth ? morph : 1.0f),
                                                       param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph),
                                                       param (ParamIDs::modEq),
-                                                      param (ParamIDs::modStereo) > 0.5f && ! modPre };
+                                                      param (ParamIDs::modStereo) > 0.5f && ! modPre,
+                                                      param (ParamIDs::modManual), param (ParamIDs::modRes) };
 
     // MOD in PRE: after the drive, into the amp, as a pedal on a board. The
     // block is stereo, so it runs on the mono guitar copied to both sides,
