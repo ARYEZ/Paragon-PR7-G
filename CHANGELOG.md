@@ -2,6 +2,11 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.36.1
+
+- **The Screamer drive is now called Banshee.** Only the name has changed: it sounds the same, and rigs and projects that used it get Banshee.
+- Footswitch 2's readout now names every drive model. Before, it said "Classic" for Muff Fuzz and Face Fuzz as well.
+
 ## 0.36.0
 
 - One build with both AEON (0.35.0) and MOD 2.
