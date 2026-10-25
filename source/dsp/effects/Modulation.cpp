@@ -54,8 +54,16 @@ namespace effects
             // the clock rate, and the LFO sweeps the clock, not the delay, so
             // the delay sweeps unevenly: further on the long side than the
             // short. The centre delay and how far DEPTH swings the clock are
-            // estimated.
-            constexpr float centreMs = 5.0f, maxClockSwing = 0.45f;
+            // estimated: about 3.9 to 13.3 ms at full DEPTH (widened from
+            // 3.4 to 9.1 ms after the owner found the first version weaker
+            // than the pedal).
+            constexpr float centreMs = 6.0f, maxClockSwing = 0.55f;
+
+            // E.LEVEL: turned fully up, the chorus is louder than the guitar
+            // (about +3.5 dB), as the pedal's knob goes past an even mix into
+            // a warbling, almost vibrato sound. It matches the guitar at about
+            // two thirds.
+            constexpr float maxEffectLevel = 1.5f;
 
             // EQ: the pedal's tone knob, on the chorus sound only: a treble
             // shelf (corner and range estimated).
@@ -259,7 +267,7 @@ namespace effects
             const auto lfo = triangle (advanceLfo (settings.rateHz));
             const auto clock = 1.0f + vortex::maxClockSwing * depth.getNextValue() * lfo;
             const auto delaySamples = vortex::centreMs / clock * msToSamples;
-            const auto level = mix.getNextValue();
+            const auto level = vortex::maxEffectLevel * mix.getNextValue();
 
             if (stereo)
             {

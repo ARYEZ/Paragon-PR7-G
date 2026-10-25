@@ -594,8 +594,9 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         const auto output = rig.run (input);
         REQUIRE (allFinite (output[0]));
         CHECK (maxAbsDifference (output[1], input, (size_t) (0.1 * sampleRate)) < 1.0e-6f);
-        // The left is the chorus alone: about as loud as the guitar, but not the guitar.
-        CHECK_THAT (dB (rms (output[0], 0.2) / rms (input, 0.2)), WithinAbs (0.0, 2.0));
+        // The left is the chorus alone: at full E.LEVEL a little louder than
+        // the guitar (as the pedal's knob goes past an even mix), and not the guitar.
+        CHECK_THAT (dB (rms (output[0], 0.2) / rms (input, 0.2)), WithinAbs (3.5, 1.0));
         CHECK (rms (minus (output[0], input), 0.2) > 0.3f * rms (input, 0.2));
 
         // E.LEVEL down moves it towards the dry side, as on the pedal.

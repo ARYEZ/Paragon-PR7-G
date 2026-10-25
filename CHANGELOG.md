@@ -2,6 +2,12 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.33.1
+
+- **Vortex is stronger**, closer to the real pedal turned up:
+  - **DEPTH** sweeps the delay wider: about 3.9 to 13.3 ms at full, up from 3.4 to 9.1 ms. That roughly doubles the pitch bend at every RATE: at 0.8 Hz, about ±90 cents at full DEPTH, up from ±40.
+  - **MIX** (E.LEVEL) now goes past an even mix, as the pedal's knob does. Full up, the chorus is about 3.5 dB louder than the guitar, for a warbling, almost vibrato sound. It matches the guitar at about two thirds.
+
 ## 0.33.0
 
 - **Vortex replaces the old Chorus**, the first of the modulation upgrades to model specific pedals. It's modelled on a classic late-'80s compact stereo chorus pedal, built from its schematic:
