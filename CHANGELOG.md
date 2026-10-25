@@ -2,6 +2,16 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.36.0
+
+- One build with both AEON (0.35.0) and MOD 2.
+- **MOD 2: run two modulation effects at once**, a chorus and a flanger for example.
+  - MOD 2 is a second, complete MOD block straight after MOD, with its own TYPE, POSITION, SYNC, RATE, DEPTH, MIX, and AEON's MANUAL and RES, and Vortex's EQ and STEREO.
+  - Click its new tile in the SIGNAL CHAIN (after MOD) to open its controls.
+  - It's off by default, set to AEON, so existing rigs and projects sound exactly as before. It's saved with each rig.
+  - Footswitch 3 still switches MOD. With MOD 2 on as well, its readout shows both types, e.g. "Vortex + AEON".
+- **The SIGNAL CHAIN's names read in full again.** The block icons are a little smaller, so all thirteen names fit, including "FILTER / PITCH" and "CABINET IR".
+
 ## 0.35.0
 
 - **Everything in one build:** AEON, plus Vortex, MOD PRE and the cleaner face (no screws, no MIN light) from 0.33.0 to 0.34.1.

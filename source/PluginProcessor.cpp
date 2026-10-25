@@ -102,6 +102,7 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     presence.prepare (sampleRate, preparedBlockSize);
     graphicEq.prepare (sampleRate, preparedBlockSize);
     modulation.prepare (sampleRate, preparedBlockSize);
+    modulation2.prepare (sampleRate, preparedBlockSize);
     delay.prepare (sampleRate, preparedBlockSize);
     reverb.prepare (sampleRate, preparedBlockSize);
     loFi.prepare (sampleRate, preparedBlockSize);
@@ -302,36 +303,48 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     // mix, so sweeping the pedal doesn't click.)
     const auto morph = expressionTarget == ExpressionTargets::morph ? pedal : 1.0f;
 
-    // Types with no dry/wet mix (tremolo, vibrato, auto-pan...) morph their depth instead.
-    const auto modType = (effects::Modulation::Type) (int) param (ParamIDs::modType);
-    const auto morphsDepth = ! effects::Modulation::usesMix (modType);
+    // MOD and MOD 2: the same block twice, one after the other, each with
+    // its own controls and position.
+    const auto modSettingsFor = [&] (const ParamIDs::ModIds& ids)
+    {
+        // Types with no dry/wet mix (tremolo, vibrato, auto-pan...) morph their depth instead.
+        const auto type = (effects::Modulation::Type) (int) param (ids.type);
+        const auto morphsDepth = ! effects::Modulation::usesMix (type);
 
-    // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
-    auto modRate = param (ParamIDs::modRate);
-    if (const auto sync = (int) param (ParamIDs::modSync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
-        modRate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
+        // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
+        auto rate = param (ids.rate);
+        if (const auto sync = (int) param (ids.sync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
+            rate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
 
-    const auto modPre = (int) param (ParamIDs::modPosition) == (int) effects::Modulation::Position::pre;
-    const effects::Modulation::Settings modSettings { isOn (ParamIDs::modOn), modType, modRate,
-                                                      param (ParamIDs::modDepth) * (morphsDepth ? morph : 1.0f),
-                                                      param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph),
-                                                      param (ParamIDs::modEq),
-                                                      param (ParamIDs::modStereo) > 0.5f && ! modPre,
-                                                      param (ParamIDs::modManual), param (ParamIDs::modRes) };
+        const auto pre = (int) param (ids.position) == (int) effects::Modulation::Position::pre;
+        return std::pair { effects::Modulation::Settings { isOn (ids.on), type, rate,
+                                                           param (ids.depth) * (morphsDepth ? morph : 1.0f),
+                                                           param (ids.mix) * (morphsDepth ? 1.0f : morph),
+                                                           param (ids.eq),
+                                                           param (ids.stereo) > 0.5f && ! pre,
+                                                           param (ids.manual), param (ids.res) },
+                           pre };
+    };
+    const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);
+    const auto [mod2Settings, mod2Pre] = modSettingsFor (ParamIDs::mod2Ids);
 
     // MOD in PRE: after the drive, into the amp, as a pedal on a board. The
     // block is stereo, so it runs on the mono guitar copied to both sides,
     // and the two sides are folded back to one for the (mono) amp.
-    if (modPre)
+    const auto processPre = [&] (effects::Modulation& block, const effects::Modulation::Settings& settings)
     {
         for (int channel = 0; channel < modPreScratch.getNumChannels(); ++channel)
             modPreScratch.copyFrom (channel, 0, mono, numSamples);
-        modulation.process (juce::dsp::AudioBlock<float> (modPreScratch).getSubBlock (0, (size_t) numSamples), modSettings);
+        block.process (juce::dsp::AudioBlock<float> (modPreScratch).getSubBlock (0, (size_t) numSamples), settings);
         const auto* left = modPreScratch.getReadPointer (0);
         const auto* right = modPreScratch.getReadPointer (1);
         for (int i = 0; i < numSamples; ++i)
             mono[i] = 0.5f * (left[i] + right[i]);
-    }
+    };
+    if (modPre)
+        processPre (modulation, modSettings);
+    if (mod2Pre)
+        processPre (modulation2, mod2Settings);
 
     amp.process (mono, numSamples, ampOn->load() > 0.5f, ampNormalise->load() > 0.5f);
     cab.process (mono, numSamples, cabOn->load() > 0.5f);
@@ -362,6 +375,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
 
     if (! modPre)
         modulation.process (stereoBlock, modSettings);
+    if (! mod2Pre)
+        modulation2.process (stereoBlock, mod2Settings);
     delay.process (stereoBlock, { isOn (ParamIDs::delayOn), param (ParamIDs::delayTime), (int) param (ParamIDs::delaySync),
                                   param (ParamIDs::delayFeedback), param (ParamIDs::delayTone), param (ParamIDs::delayMix) * morph,
                                   isOn (ParamIDs::delayPingPong), (effects::Delay::Type) (int) param (ParamIDs::delayType),

@@ -135,7 +135,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
           { "CABINET IR", Icons::Type::cabinet, ParagonColours::cab, ParamIDs::cabOn },
           { "EQ", Icons::Type::eq, ParagonColours::eq, ParamIDs::eqOn },
           { "GLITCH", Icons::Type::glitch, ParagonColours::glitch, ParamIDs::glitchOn },
-          { "MOD", Icons::Type::modulation, ParagonColours::modulation, ParamIDs::modOn },   // MODULATION: short, to fit twelve blocks
+          { "MOD", Icons::Type::modulation, ParagonColours::modulation, ParamIDs::modOn },   // MODULATION: short, to fit the blocks
+          { "MOD 2", Icons::Type::modulation, ParagonColours::modulation, ParamIDs::mod2On },
           { "DELAY", Icons::Type::delay, ParagonColours::delay, ParamIDs::delayOn },
           { "REVERB", Icons::Type::reverb, ParagonColours::reverb, ParamIDs::reverbOn },
           { "LO-FI", Icons::Type::loFi, ParagonColours::loFi, ParamIDs::lofiOn } }),
@@ -269,6 +270,9 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     footswitches[2] = std::make_unique<Footswitch> (3, "MODULATION", state, juce::StringArray { ParamIDs::modOn });
     footswitches[2]->describe = [this]
     {
+        // Both MOD blocks' types when MOD 2 is on too ("Vortex + Flanger").
+        if (rawValue (ParamIDs::mod2On) > 0.5f)
+            return valueText (ParamIDs::modType) + " + " + valueText (ParamIDs::mod2Type);
         return valueText (ParamIDs::modType) + "  " + valueText (rawValue (ParamIDs::modSync) > 0.5f ? ParamIDs::modSync : ParamIDs::modRate);
     };
     footswitches[3] = std::make_unique<Footswitch> (4, "REVERB / DELAY", state, juce::StringArray { ParamIDs::delayOn, ParamIDs::reverbOn });
@@ -342,21 +346,27 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                          { ParamIDs::rigLevel, "RIG LEVEL" } } } });
     panels[cabBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "CABINET (IR)", { { ParamIDs::cabOn, "ON" }, { ParamIDs::presence, "PRESENCE" } } } });
-    // AEON (the flanger) adds its pedal's MANUAL and RES.
-    const auto isAeon = [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::flanger; };
-    panels[modBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
-        { "MODULATION", { { ParamIDs::modOn, "ON" }, { ParamIDs::modType, "TYPE" }, { ParamIDs::modPosition, "POSITION" }, { ParamIDs::modSync, "SYNC" },
-                          { ParamIDs::modManual, "MANUAL", isAeon, true },
-                          { ParamIDs::modRate, "RATE", [this] { return rawValue (ParamIDs::modSync) < 0.5f; } },
-                          { ParamIDs::modDepth, "DEPTH" },
-                          { ParamIDs::modRes, "RES", isAeon, true },
-                          { ParamIDs::modMix, "MIX", [this] {
-                              return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ParamIDs::modType))); } },
-                          // The Vortex's own controls: its EQ, and mono or stereo outputs.
-                          { ParamIDs::modEq, "EQ", [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::chorus; }, true },
-                          // STEREO needs two speakers after it, so only in POST (in PRE a single amp follows).
-                          { ParamIDs::modStereo, "STEREO", [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::chorus
-                                                                           && rawValue (ParamIDs::modPosition) < 0.5f; }, true } } } });
+    // MOD and MOD 2: the same panel for each block's own controls.
+    const auto modPanel = [this, &state] (const juce::String& title, const ParamIDs::ModIds& ids)
+    {
+        const auto isVortex = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::chorus; };
+        // AEON (the flanger) adds its pedal's MANUAL and RES.
+        const auto isAeon = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::flanger; };
+        return std::make_unique<EffectPanel> (state, std::vector<Group> {
+            { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" }, { ids.sync, "SYNC" },
+                       { ids.manual, "MANUAL", isAeon, true },
+                       { ids.rate, "RATE", [this, ids] { return rawValue (ids.sync) < 0.5f; } },
+                       { ids.depth, "DEPTH" },
+                       { ids.res, "RES", isAeon, true },
+                       { ids.mix, "MIX", [this, ids] {
+                           return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ids.type))); } },
+                       // The Vortex's own controls: its EQ, and mono or stereo outputs.
+                       { ids.eq, "EQ", isVortex, true },
+                       // STEREO needs two speakers after it, so only in POST (in PRE a single amp follows).
+                       { ids.stereo, "STEREO", [this, ids, isVortex] { return isVortex() && rawValue (ids.position) < 0.5f; }, true } } } });
+    };
+    panels[modBlock] = modPanel ("MODULATION", ParamIDs::modIds);
+    panels[mod2Block] = modPanel ("MODULATION 2", ParamIDs::mod2Ids);
     panels[delayBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "DELAY", { { ParamIDs::delayOn, "ON" }, { ParamIDs::delayType, "TYPE" }, { ParamIDs::delaySync, "SYNC" },
                      { ParamIDs::delayTime, "TIME", [this] { return rawValue (ParamIDs::delaySync) < 0.5f; } },
@@ -384,9 +394,10 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
         { Icons::Type::drive, ParagonColours::drive },
         { Icons::Type::amp, ParagonColours::amp }, { Icons::Type::cabinet, ParagonColours::cab },
         { Icons::Type::eq, ParagonColours::eq }, { Icons::Type::glitch, ParagonColours::glitch },
-        { Icons::Type::modulation, ParagonColours::modulation }, { Icons::Type::delay, ParagonColours::delay },
+        { Icons::Type::modulation, ParagonColours::modulation }, { Icons::Type::modulation, ParagonColours::modulation },
+        { Icons::Type::delay, ParagonColours::delay },
         { Icons::Type::reverb, ParagonColours::reverb }, { Icons::Type::loFi, ParagonColours::loFi } };
-    const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "DELAY", "REVERB", "LO-FI" };
+    const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "MODULATION 2", "DELAY", "REVERB", "LO-FI" };
     for (size_t i = 0; i < panels.size(); ++i)
     {
         if (panels[i] == nullptr)
