@@ -66,7 +66,7 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     **Classic**, Paragon's original overdrive; **Muff Fuzz**, following the Big Muff's two clipping stages and
     mid-scooping tone stack (long, violin-like sustain); and **Face Fuzz**, following the silicon Fuzz Face's uneven
     clipping (raspy and round, cleaning up with the guitar's volume). Drive, tone, level; 8x oversampled to avoid harsh aliasing.
-  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), phaser, tremolo, Dimension chorus, Uni-Vibe, rotary
+  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), tremolo, Dimension chorus, Uni-Vibe, rotary
     (Leslie), vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and

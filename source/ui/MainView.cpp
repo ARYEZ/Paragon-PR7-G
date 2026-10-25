@@ -353,11 +353,14 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
         const auto isVortex = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::chorus; };
         // AEON (the flanger) adds its pedal's MANUAL and RES.
         const auto isAeon = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::flanger; };
+        // Hadron (the phaser) has SCRIPT / BLOCK, and only SPEED (RATE): no DEPTH.
+        const auto isHadron = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::phaser; };
         return std::make_unique<EffectPanel> (state, std::vector<Group> {
             { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" }, { ids.sync, "SYNC" },
                        { ids.manual, "MANUAL", isAeon, true },
+                       { ids.hadron, "CIRCUIT", isHadron, true },
                        { ids.rate, "RATE", [this, ids] { return rawValue (ids.sync) < 0.5f; } },
-                       { ids.depth, "DEPTH" },
+                       { ids.depth, "DEPTH", [isHadron] { return ! isHadron(); } },
                        { ids.res, "RES", isAeon, true },
                        { ids.mix, "MIX", [this, ids] {
                            return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ids.type))); } },

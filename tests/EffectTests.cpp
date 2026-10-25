@@ -801,6 +801,85 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (levelAt (swept, 1000.0, 0.3) < 0.8f * levelAt (still, 1000.0, 0.3));
     }
 
+    SECTION ("Hadron: each stage's turn sweeps about 330 Hz to 3 kHz, in step with the LFO's voltage")
+    {
+        CHECK_THAT (effects::Modulation::hadronStageHz (effects::Modulation::hadronLfoLowVolts), WithinAbs (330.0, 15.0));
+        CHECK_THAT (effects::Modulation::hadronStageHz (effects::Modulation::hadronLfoHighVolts), WithinAbs (3000.0, 50.0));
+    }
+
+    SECTION ("Hadron: the guitar plus the phase stages half and half cuts deep moving notches; MIX and DEPTH do nothing")
+    {
+        // White noise in: MIX and DEPTH change nothing.
+        juce::Random random (7);
+        std::vector<float> noise ((size_t) sampleRate);
+        for (auto& sample : noise)
+            sample = 0.2f * (random.nextFloat() * 2.0f - 1.0f);
+        const auto withSettings = [&] (float mixValue, float depthValue, float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modMix, mixValue);
+            fresh.set (ParamIDs::modDepth, depthValue);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return fresh.run (noise)[0];
+        };
+        const auto script = withSettings (0.5f, 0.5f, 0.0f);
+        REQUIRE (allFinite (script));
+        CHECK (maxAbsDifference (script, withSettings (1.0f, 0.0f, 0.0f)) < 1.0e-6f);
+
+        // A sine at a stage's 45-degree point (four stages: 180 degrees) is
+        // cancelled: with the LFO held low, a 137 Hz tone almost vanishes.
+        EffectRig slow;
+        slow.set (ParamIDs::modOn, 1.0f);
+        slow.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+        slow.set (ParamIDs::modRate, 0.05f);   // so slow it barely moves in the test
+        // (Aimed at where the LFO is halfway through the measurement, 0.225 s
+        // in: 0.05 Hz, rising for 65% of the cycle.)
+        const auto lfoVolts = effects::Modulation::hadronLfoLowVolts
+                            + (effects::Modulation::hadronLfoHighVolts - effects::Modulation::hadronLfoLowVolts) * (0.225f * 0.05f / 0.65f);
+        const auto notchHz = 0.4142 * effects::Modulation::hadronStageHz (lfoVolts);
+        const auto low = slow.run (sine (notchHz, 0.3f, 0.3))[0];
+        CHECK (dB (rms (low, 0.15) / 0.3f * std::sqrt (2.0f)) < -20.0f);
+    }
+
+    SECTION ("Hadron: BLOCK's feedback makes the sweep stronger, and stays stable")
+    {
+        juce::Random random (11);
+        std::vector<float> noise ((size_t) (2.0 * sampleRate));
+        for (auto& sample : noise)
+            sample = 0.2f * (random.nextFloat() * 2.0f - 1.0f);
+        const auto run = [&] (float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return fresh.run (noise)[0];
+        };
+        const auto script = run (0.0f), block = run (1.0f);
+        REQUIRE (allFinite (block));
+        CHECK (rms (minus (block, script), 0.2) > 0.1f * rms (script, 0.2));
+        CHECK (rms (block, 0.2) < 2.0f * rms (noise, 0.2));   // nothing runs away
+
+        // The mid hump: at the stages' turn, between the two notches, BLOCK
+        // is about 2.7 dB up where SCRIPT is flat.
+        const auto lfoVolts = effects::Modulation::hadronLfoLowVolts
+                            + (effects::Modulation::hadronLfoHighVolts - effects::Modulation::hadronLfoLowVolts) * (0.225f * 0.05f / 0.65f);
+        const auto tone = sine (effects::Modulation::hadronStageHz (lfoVolts), 0.2f, 0.3);
+        const auto levelWith = [&] (float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modRate, 0.05f);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return dB (rms (fresh.run (tone)[0], 0.15) / rms (tone, 0.15));
+        };
+        CHECK_THAT (levelWith (0.0f), WithinAbs (0.0, 0.5));
+        CHECK_THAT (levelWith (1.0f), WithinAbs (2.7, 0.7));
+    }
+
     SECTION ("Tremolo pulses the volume at the rate setting")
     {
         rig.set (ParamIDs::modType, 3.0f);

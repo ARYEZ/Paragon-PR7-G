@@ -11,7 +11,10 @@ namespace effects
     //                  compact stereo chorus pedal (see processVortex)
     //   flanger        AEON, modelled on the Boss BF-2 (see Aeon.h; PR7-G 0.35.0,
     //                  replacing the original generic flanger)
-    //   phaser, tremolo                          the originals (unchanged)
+    //   phaser         Hadron, modelled on the MXR Phase 90, with its
+    //                  SCRIPT and BLOCK circuits (see processHadron; PR7-G
+    //                  0.38.0, replacing the original generic phaser)
+    //   tremolo        the original (unchanged)
     //   dimension      Roland Dimension D / Boss CE-1 style dual chorus
     //   uniVibe        Shin-ei Uni-Vibe: four uneven phase stages, lamp LFO
     //   rotary         Leslie speaker: horn and drum rotors, Doppler, stereo mics
@@ -28,7 +31,7 @@ namespace effects
     public:
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Type { chorus, flanger, phaser, tremolo, dimension, uniVibe, rotary, vibrato, harmonicTremolo, autoPan, doubler, carbonite };
-        static inline const juce::StringArray typeNames { "Vortex", "AEON", "Phaser", "Tremolo", "Dimension Chorus", "Uni-Vibe",
+        static inline const juce::StringArray typeNames { "Vortex", "AEON", "Hadron", "Tremolo", "Dimension Chorus", "Uni-Vibe",
                                                           "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler", "Carbonite" };
 
         // Where the block sits: POST (after the amp and cab) or PRE (after the
@@ -36,11 +39,15 @@ namespace effects
         enum class Position { post, pre };
         static inline const juce::StringArray positionNames { "Post", "Pre" };
 
+        // Hadron's two circuits: SCRIPT (the original) and BLOCK (with the
+        // feedback resistor added later). Saved by number: only append.
+        static inline const juce::StringArray hadronCircuitNames { "Script", "Block" };
+
         // Types for which MIX means something (the others are fully "wet" by nature).
         static bool usesMix (Type type) noexcept
         {
-            // (AEON and Carbonite have none: their pedals mix dry and wet 50/50.)
-            return type == Type::chorus || type == Type::phaser || type == Type::dimension
+            // (AEON, Hadron and Carbonite have none: their pedals mix dry and wet 50/50.)
+            return type == Type::chorus || type == Type::dimension
                 || type == Type::uniVibe || type == Type::rotary || type == Type::doubler;
         }
 
@@ -54,6 +61,7 @@ namespace effects
             float eq = 0.0f;      // Vortex's EQ: -1 (darker) to 1 (brighter), on the chorus sound only
             bool stereoOutputs = false;   // Vortex: chorus left and dry right, as the pedal's A and B jacks
             float manual = 5.0f, resonance = 5.0f;   // AEON's MANUAL and RES, 0 to 10
+            bool hadronBlock = false;   // Hadron: the BLOCK circuit (false: SCRIPT)
         };
 
         // The Vortex's EQ: how much it cuts or boosts the chorus's
@@ -64,6 +72,11 @@ namespace effects
         // LFO's sweep (-1 to 1) (for tests).
         static float carboniteDelayMs (float depth, float lfo) noexcept;
 
+        // Hadron: where each phase stage's turn sits (its 90-degree point),
+        // in Hz, for the LFO's voltage at the transistors' gates (for tests).
+        static float hadronStageHz (float lfoVolts) noexcept;
+        static constexpr float hadronLfoLowVolts = 3.1f, hadronLfoHighVolts = 3.4f;
+
         Modulation();
         void prepare (double sampleRate, int maxBlockSize);
         void process (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -71,6 +84,7 @@ namespace effects
     private:
         void processVortex (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void updateVortexEq (float eq) noexcept;
+        void processHadron (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processCarbonite (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processTremolo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processDimension (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -84,7 +98,6 @@ namespace effects
 
         double sampleRate = 48000.0;
         juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delayLine;
-        juce::dsp::Phaser<float> phaser;
         float lfoPhase = 0.0f;   // 0 to 1
         juce::SmoothedValue<float> depth, mix;
         BypassFade bypass;
@@ -119,6 +132,9 @@ namespace effects
         VortexPath vortexPaths[maxChannels];
         float vortexEq = 0.0f;
 
+        // One first-order all-pass stage's memory (Hadron, Uni-Vibe).
+        struct AllPassState { float x1 = 0.0f, y1 = 0.0f; };
+
         // Carbonite: the same kind of chorus path, with its own filters.
         struct CarbonitePath
         {
@@ -126,8 +142,12 @@ namespace effects
         };
         CarbonitePath carbonitePaths[maxChannels];
 
+        // Hadron: four phase stages per channel, and what the BLOCK
+        // circuit's feedback resistor carries back from the last one.
+        AllPassState hadronStages[maxChannels][4] {};
+        float hadronFeedback[maxChannels] {};
+
         // Uni-Vibe: four first-order all-pass stages per channel, and the lamp's glow.
-        struct AllPassState { float x1 = 0.0f, y1 = 0.0f; };
         AllPassState vibeStages[maxChannels][4] {};
         float lampGlow = 0.0f;
 
