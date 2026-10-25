@@ -673,6 +673,13 @@ void ParagonLookAndFeel::positionComboBoxText (juce::ComboBox& box, juce::Label&
     label.setMinimumHorizontalScale (0.6f);
 }
 
+juce::Label* ParagonLookAndFeel::createSliderTextBox (juce::Slider& slider)
+{
+    auto* label = LookAndFeel_V4::createSliderTextBox (slider);
+    label->setMinimumHorizontalScale (0.6f);
+    return label;
+}
+
 int ParagonLookAndFeel::getSliderThumbRadius (juce::Slider& slider)
 {
     if (slider.getProperties()[eqFaderProperty])

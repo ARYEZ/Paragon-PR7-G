@@ -120,6 +120,17 @@ namespace ParamIDs
     inline constexpr auto glitchChaos    = "glitchChaos";
     inline constexpr auto glitchMix      = "glitchMix";
 
+    // Version 25: the Vortex's EQ (its tone knob, on the chorus sound
+    // only) and STEREO: off is mono, on is the pedal's two outputs (chorus
+    // left, dry right).
+    inline constexpr auto modEq     = "modEq";
+    inline constexpr auto modStereo = "modStereo";
+
+    // Version 26: where the MOD block sits. POST (after the amp and cab, as
+    // before) or PRE: after the drive and before the amp, where a chorus
+    // pedal goes on a pedalboard, so the amp works on the modulated sound.
+    inline constexpr auto modPosition = "modPosition";
+
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)
     inline constexpr auto octOn          = "octOn";            // the OCTAVER

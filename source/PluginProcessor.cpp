@@ -91,6 +91,7 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     preparedBlockSize = juce::jmax (1, samplesPerBlock);
     bypassDelay.prepare ({ sampleRate, (juce::uint32) preparedBlockSize, 1 });
     bypassDry.setSize (1, preparedBlockSize);
+    modPreScratch.setSize (effects::maxChannels, preparedBlockSize);
     bypassAmount.reset (sampleRate, gainRampSeconds);
     bypassAmount.setCurrentAndTargetValue (isOn (ParamIDs::bypass) ? 1.0f : 0.0f);
     amp.prepare (sampleRate, preparedBlockSize);
@@ -296,6 +297,41 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     drive.process (monoBlock, { isOn (ParamIDs::driveOn), (effects::Drive::Model) (int) param (ParamIDs::driveModel),
                                 param (ParamIDs::driveGain), param (ParamIDs::driveTone), param (ParamIDs::driveLevel) });
 
+    // MORPH FX: the pedal blends the time effects in, from dry at the heel
+    // to each effect's own MIX setting at the toe. (The effects smooth their
+    // mix, so sweeping the pedal doesn't click.)
+    const auto morph = expressionTarget == ExpressionTargets::morph ? pedal : 1.0f;
+
+    // Types with no dry/wet mix (tremolo, vibrato, auto-pan...) morph their depth instead.
+    const auto modType = (effects::Modulation::Type) (int) param (ParamIDs::modType);
+    const auto morphsDepth = ! effects::Modulation::usesMix (modType);
+
+    // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
+    auto modRate = param (ParamIDs::modRate);
+    if (const auto sync = (int) param (ParamIDs::modSync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
+        modRate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
+
+    const auto modPre = (int) param (ParamIDs::modPosition) == (int) effects::Modulation::Position::pre;
+    const effects::Modulation::Settings modSettings { isOn (ParamIDs::modOn), modType, modRate,
+                                                      param (ParamIDs::modDepth) * (morphsDepth ? morph : 1.0f),
+                                                      param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph),
+                                                      param (ParamIDs::modEq),
+                                                      param (ParamIDs::modStereo) > 0.5f && ! modPre };
+
+    // MOD in PRE: after the drive, into the amp, as a pedal on a board. The
+    // block is stereo, so it runs on the mono guitar copied to both sides,
+    // and the two sides are folded back to one for the (mono) amp.
+    if (modPre)
+    {
+        for (int channel = 0; channel < modPreScratch.getNumChannels(); ++channel)
+            modPreScratch.copyFrom (channel, 0, mono, numSamples);
+        modulation.process (juce::dsp::AudioBlock<float> (modPreScratch).getSubBlock (0, (size_t) numSamples), modSettings);
+        const auto* left = modPreScratch.getReadPointer (0);
+        const auto* right = modPreScratch.getReadPointer (1);
+        for (int i = 0; i < numSamples; ++i)
+            mono[i] = 0.5f * (left[i] + right[i]);
+    }
+
     amp.process (mono, numSamples, ampOn->load() > 0.5f, ampNormalise->load() > 0.5f);
     cab.process (mono, numSamples, cabOn->load() > 0.5f);
     presence.process (monoBlock, param (ParamIDs::presence));
@@ -323,23 +359,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                  .getSubBlock ((size_t) start, (size_t) numSamples)
                                  .getSubsetChannelBlock (0, (size_t) juce::jmin (numOutputChannels, effects::maxChannels));
 
-    // MORPH FX: the pedal blends the time effects in, from dry at the heel
-    // to each effect's own MIX setting at the toe. (The effects smooth their
-    // mix, so sweeping the pedal doesn't click.)
-    const auto morph = expressionTarget == ExpressionTargets::morph ? pedal : 1.0f;
-
-    // Types with no dry/wet mix (tremolo, vibrato, auto-pan...) morph their depth instead.
-    const auto modType = (effects::Modulation::Type) (int) param (ParamIDs::modType);
-    const auto morphsDepth = ! effects::Modulation::usesMix (modType);
-
-    // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
-    auto modRate = param (ParamIDs::modRate);
-    if (const auto sync = (int) param (ParamIDs::modSync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
-        modRate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
-
-    modulation.process (stereoBlock, { isOn (ParamIDs::modOn), modType, modRate,
-                                       param (ParamIDs::modDepth) * (morphsDepth ? morph : 1.0f),
-                                       param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph) });
+    if (! modPre)
+        modulation.process (stereoBlock, modSettings);
     delay.process (stereoBlock, { isOn (ParamIDs::delayOn), param (ParamIDs::delayTime), (int) param (ParamIDs::delaySync),
                                   param (ParamIDs::delayFeedback), param (ParamIDs::delayTone), param (ParamIDs::delayMix) * morph,
                                   isOn (ParamIDs::delayPingPong), (effects::Delay::Type) (int) param (ParamIDs::delayType),

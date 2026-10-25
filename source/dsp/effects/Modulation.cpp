@@ -12,7 +12,6 @@ namespace effects
         {
             float centreMs, sweepMs, feedback;
         };
-        constexpr DelaySweep chorusSweep { 14.0f, 6.0f, 0.0f };
         constexpr DelaySweep flangerSweep { 3.0f, 2.5f, 0.6f };   // feedback gives the flanger its "jet" ring
 
         constexpr float maxDelayMs = 40.0f;
@@ -24,6 +23,106 @@ namespace effects
 
         // A triangle wave from a 0-1 phase, -1 to 1: the Dimension's LFO shape.
         float triangle (float phase) { phase -= std::floor (phase); return 4.0f * std::abs (phase - 0.5f) - 1.0f; }
+
+        // The Vortex, modelled on the schematic of a late-'80s Japanese
+        // compact stereo chorus (a 1024-stage bucket-brigade delay chip and its
+        // clock driver). Values marked "from the circuit" are worked out from
+        // the schematic's parts; "estimated" ones aren't printed on it and are
+        // set by ear and by typical designs of the time.
+        namespace vortex
+        {
+            // Pre-emphasis before the delay chip (and the exact opposite after
+            // it): the input op-amp's 47k / 10k / 6.8 nF network lifts the
+            // treble about 15 dB, from about 410 Hz up to 2.3 kHz (from the
+            // circuit). Boosting treble before the noisy chip and cutting it
+            // after keeps hiss down, and is a large part of this chorus's
+            // clear, glassy sound.
+            constexpr float emphasisZeroHz = 410.0f, emphasisPoleHz = 2340.0f;
+
+            // That op-amp has two diodes across its feedback, so a hot signal
+            // (its boosted treble first) is softly limited, as the pedal's
+            // manual warns. The level at which it starts is estimated: a
+            // normal level stays clean, a loud bright one rounds off.
+            constexpr float diodeKnee = 2.2f;
+
+            // The filters either side of the chip (three-pole, from the
+            // circuit's three 10k resistors and capacitors), cutting at about
+            // 9 kHz (estimated from their values): the chorus sound's top end.
+            constexpr float filterHz = 9000.0f;
+
+            // The delay. The chip's delay is its 1024 stages divided by twice
+            // the clock rate, and the LFO sweeps the clock, not the delay, so
+            // the delay sweeps unevenly: further on the long side than the
+            // short. The centre delay and how far DEPTH swings the clock are
+            // estimated: about 3.9 to 13.3 ms at full DEPTH (widened from
+            // 3.4 to 9.1 ms after the owner found the first version weaker
+            // than the pedal).
+            constexpr float centreMs = 6.0f, maxClockSwing = 0.55f;
+
+            // E.LEVEL: turned fully up, the chorus is louder than the guitar
+            // (about +3.5 dB), as the pedal's knob goes past an even mix into
+            // a warbling, almost vibrato sound. It matches the guitar at about
+            // two thirds.
+            constexpr float maxEffectLevel = 1.5f;
+
+            // EQ: the pedal's tone knob, on the chorus sound only: a treble
+            // shelf (corner and range estimated).
+            constexpr float eqHz = 2000.0f;
+        }
+
+        // Biquad coefficients (bilinear transform), written into an existing
+        // filter so nothing is allocated.
+        template <typename Biquad>
+        void setFirstOrderShelf (Biquad& f, double sampleRate, float zeroHz, float poleHz)
+        {
+            // H(s) = (1 + s / wz) / (1 + s / wp)
+            const auto k = 2.0f * (float) sampleRate;
+            const auto wz = twoPi * zeroHz, wp = twoPi * poleHz;
+            const auto norm = 1.0f + k / wp;
+            f.b0 = (1.0f + k / wz) / norm;
+            f.b1 = (1.0f - k / wz) / norm;
+            f.b2 = 0.0f;
+            f.a1 = (1.0f - k / wp) / norm;
+            f.a2 = 0.0f;
+        }
+
+        template <typename Biquad>
+        void setFirstOrderLowPass (Biquad& f, double sampleRate, float hz)
+        {
+            const auto c = 1.0f / std::tan (juce::MathConstants<float>::pi * hz / (float) sampleRate);
+            f.b0 = f.b1 = 1.0f / (1.0f + c);
+            f.b2 = 0.0f;
+            f.a1 = (1.0f - c) / (1.0f + c);
+            f.a2 = 0.0f;
+        }
+
+        template <typename Biquad>
+        void setLowPass (Biquad& f, double sampleRate, float hz, float q)
+        {
+            const auto w = twoPi * hz / (float) sampleRate;
+            const auto alpha = std::sin (w) / (2.0f * q), cosW = std::cos (w);
+            const auto a0 = 1.0f + alpha;
+            f.b0 = f.b2 = (1.0f - cosW) / 2.0f / a0;
+            f.b1 = (1.0f - cosW) / a0;
+            f.a1 = -2.0f * cosW / a0;
+            f.a2 = (1.0f - alpha) / a0;
+        }
+
+        template <typename Biquad>
+        void setHighShelf (Biquad& f, double sampleRate, float hz, float gainDb)
+        {
+            // RBJ cookbook high shelf, slope 1.
+            const auto a = std::pow (10.0f, gainDb / 40.0f);
+            const auto w = twoPi * hz / (float) sampleRate;
+            const auto cosW = std::cos (w), alpha = std::sin (w) / 2.0f * std::sqrt (2.0f);
+            const auto sqrtA = 2.0f * std::sqrt (a) * alpha;
+            const auto a0 = (a + 1.0f) - (a - 1.0f) * cosW + sqrtA;
+            f.b0 = a * ((a + 1.0f) + (a - 1.0f) * cosW + sqrtA) / a0;
+            f.b1 = -2.0f * a * ((a - 1.0f) + (a + 1.0f) * cosW) / a0;
+            f.b2 = a * ((a + 1.0f) + (a - 1.0f) * cosW - sqrtA) / a0;
+            f.a1 = 2.0f * ((a - 1.0f) - (a + 1.0f) * cosW) / a0;
+            f.a2 = ((a + 1.0f) - (a - 1.0f) * cosW - sqrtA) / a0;
+        }
     }
 
     Modulation::Modulation() : delayLine (8192), hornDelay (2048), drumDelay (2048) {}
@@ -58,6 +157,19 @@ namespace effects
         hornTone = lampGlow = 0.0f;
         std::fill (std::begin (feedbackSample), std::end (feedbackSample), 0.0f);
         std::fill (std::begin (dimensionTone), std::end (dimensionTone), 0.0f);
+        for (auto& path : vortexPaths)
+        {
+            path = {};
+            setFirstOrderShelf (path.emphasis, sampleRate, vortex::emphasisZeroHz, vortex::emphasisPoleHz);
+            setFirstOrderShelf (path.deEmphasis, sampleRate, vortex::emphasisPoleHz, vortex::emphasisZeroHz);   // the exact inverse
+            // Three-pole Butterworth either side of the chip: one pole, then a pole pair.
+            setFirstOrderLowPass (path.antiAlias1, sampleRate, vortex::filterHz);
+            setLowPass (path.antiAlias2, sampleRate, vortex::filterHz, 1.0f);
+            path.reconstruct1.copyCoefficients (path.antiAlias1);
+            path.reconstruct2.copyCoefficients (path.antiAlias2);
+        }
+        vortexEq = 1.0e9f;   // forces the EQ's coefficients to be worked out
+        updateVortexEq (0.0f);
         for (auto& channel : vibeStages)
             for (auto& stage : channel)
                 stage = {};
@@ -81,6 +193,9 @@ namespace effects
             switch (settings.type)
             {
                 case Type::chorus:
+                    processVortex (wet, settings);
+                    break;
+
                 case Type::flanger:
                     processDelayBased (wet, settings);
                     break;
@@ -109,9 +224,71 @@ namespace effects
         });
     }
 
+    void Modulation::updateVortexEq (float eq) noexcept
+    {
+        if (std::abs (eq - vortexEq) < 1.0e-4f)
+            return;
+        vortexEq = eq;
+        for (auto& path : vortexPaths)
+            setHighShelf (path.eq, sampleRate, vortex::eqHz, eq * vortexEqRangeDb);
+    }
+
+    void Modulation::processVortex (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // The pedal's chorus path: pre-emphasis and its diode limiting, the
+        // filter into the delay chip, the chip's swept delay, the filter out
+        // of it, de-emphasis, then EQ. The dry guitar is never touched: the
+        // chorus is mixed in on top of it at E.LEVEL (the MIX knob).
+        //
+        // MONO (the pedal's OUTPUT A alone): guitar plus chorus, on both sides.
+        // STEREO (A and B): the chorus alone on the left and the guitar alone
+        // on the right, so the chorus happens between the speakers. As on the
+        // pedal, turning E.LEVEL down moves the sound towards the dry side.
+        updateVortexEq (settings.eq);
+        const auto msToSamples = (float) sampleRate * 0.001f;
+        const auto numChannels = (int) block.getNumChannels();
+        const auto stereo = settings.stereoOutputs && numChannels > 1;
+
+        const auto chorusOf = [&] (int ch, float input, float delaySamples)
+        {
+            auto& path = vortexPaths[ch];
+            auto x = path.emphasis.process (input);
+            x = vortex::diodeKnee * std::tanh (x / vortex::diodeKnee);
+            x = path.antiAlias2.process (path.antiAlias1.process (x));
+            delayLine.pushSample (ch, x);
+            x = delayLine.popSample (ch, delaySamples);
+            x = path.reconstruct2.process (path.reconstruct1.process (x));
+            return path.eq.process (path.deEmphasis.process (x));
+        };
+
+        for (size_t i = 0; i < block.getNumSamples(); ++i)
+        {
+            // One chip and one triangle LFO: both sides sweep together.
+            const auto lfo = triangle (advanceLfo (settings.rateHz));
+            const auto clock = 1.0f + vortex::maxClockSwing * depth.getNextValue() * lfo;
+            const auto delaySamples = vortex::centreMs / clock * msToSamples;
+            const auto level = vortex::maxEffectLevel * mix.getNextValue();
+
+            if (stereo)
+            {
+                // The pedal has one input: feed it both sides (normally the same).
+                const auto input = 0.5f * (block.getSample (0, (int) i) + block.getSample (1, (int) i));
+                block.setSample (0, (int) i, level * chorusOf (0, input, delaySamples));
+                block.setSample (1, (int) i, input);
+                continue;
+            }
+
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                auto* samples = block.getChannelPointer ((size_t) ch);
+                samples[i] += level * chorusOf (ch, samples[i], delaySamples);
+            }
+        }
+    }
+
     void Modulation::processDelayBased (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
     {
-        const auto& sweep = settings.type == Type::flanger ? flangerSweep : chorusSweep;
+        const auto& sweep = flangerSweep;
         const auto msToSamples = (float) sampleRate * 0.001f;
         const auto numChannels = (int) block.getNumChannels();
 
