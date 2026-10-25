@@ -105,7 +105,7 @@ std::vector<Rig> makeFactoryRigs()
 
         make ("Jet Flanger", D, 1, "Modulation,Drive", {
             { driveOn, 1 }, { driveGain, 3 },
-            { modOn, 1 }, { modType, flanger }, { modRate, 0.2f }, { modDepth, 0.8f }, { modMix, 0.5f } }),
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.2f }, { modDepth, 0.8f }, { modManual, 5 }, { modRes, 7 } }),
 
         make ("Leslie Spin", D, 2, "Modulation,Clean", {
             { compOn, 1 }, { compThreshold, -20 }, { compRatio, 3 },
@@ -254,7 +254,7 @@ std::vector<Rig> makeFactoryRigs()
         // and light compression.
         make ("Run Like Hell (Floyd)", E, 5, "Song,Clean,Delay,Modulation", {
             { compOn, 1 }, { compThreshold, -22 }, { compRatio, 3 }, { compLevel, 2 },
-            { modOn, 1 }, { modType, flanger }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.4f },
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.3f }, { modDepth, 0.5f }, { modManual, 4 }, { modRes, 3 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 380 }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
             { reverbOn, 1 }, { reverbType, room }, { reverbMix, 0.12f } }),
 

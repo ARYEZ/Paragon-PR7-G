@@ -350,10 +350,14 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     const auto modPanel = [this, &state] (const juce::String& title, const ParamIDs::ModIds& ids)
     {
         const auto isVortex = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::chorus; };
+        // AEON (the flanger) adds its pedal's MANUAL and RES.
+        const auto isAeon = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::flanger; };
         return std::make_unique<EffectPanel> (state, std::vector<Group> {
             { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" }, { ids.sync, "SYNC" },
+                       { ids.manual, "MANUAL", isAeon, true },
                        { ids.rate, "RATE", [this, ids] { return rawValue (ids.sync) < 0.5f; } },
                        { ids.depth, "DEPTH" },
+                       { ids.res, "RES", isAeon, true },
                        { ids.mix, "MIX", [this, ids] {
                            return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ids.type))); } },
                        // The Vortex's own controls: its EQ, and mono or stereo outputs.

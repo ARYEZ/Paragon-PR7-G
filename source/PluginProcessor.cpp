@@ -321,7 +321,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                                            param (ids.depth) * (morphsDepth ? morph : 1.0f),
                                                            param (ids.mix) * (morphsDepth ? 1.0f : morph),
                                                            param (ids.eq),
-                                                           param (ids.stereo) > 0.5f && ! pre },
+                                                           param (ids.stereo) > 0.5f && ! pre,
+                                                           param (ids.manual), param (ids.res) },
                            pre };
     };
     const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);

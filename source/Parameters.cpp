@@ -252,16 +252,24 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     constexpr int v26 = 26;
     layout.add (makeChoice (ParamIDs::modPosition, "Mod Position", v26, effects::Modulation::positionNames, 0));
 
-    // MOD 2: the same controls as MOD (a flanger by default, to pair with MOD's chorus).
+    // Added in PR7-G 0.35.0: AEON's MANUAL and RES knobs (0 to 10), as on the
+    // pedal it's modelled on. AEON took the old flanger's place in the list.
     constexpr int v27 = 27;
-    layout.add (makeSwitch (ParamIDs::mod2On, "Mod 2 On", v27, false));
-    layout.add (makeChoice (ParamIDs::mod2Type, "Mod 2 Type", v27, effects::Modulation::typeNames, (int) effects::Modulation::Type::flanger));
-    layout.add (makeFloat (ParamIDs::mod2Rate, "Mod 2 Rate", skewed (0.05f, 10.0f, 1.0f, 0.01f), 0.3f, v27, asHz));
-    layout.add (makeFloat (ParamIDs::mod2Depth, "Mod 2 Depth", { 0.0f, 1.0f, 0.01f }, 0.45f, v27, asPercent));
-    layout.add (makeFloat (ParamIDs::mod2Mix, "Mod 2 Mix", { 0.0f, 1.0f, 0.01f }, 0.5f, v27, asPercent));
-    layout.add (makeChoice (ParamIDs::mod2Sync, "Mod 2 Sync", v27, effects::Delay::syncNames, 0));
-    layout.add (makeFloat (ParamIDs::mod2Eq, "Mod 2 EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v27, asVortexEq));
-    layout.add (makeSwitch (ParamIDs::mod2Stereo, "Mod 2 Stereo", v27, false));
-    layout.add (makeChoice (ParamIDs::mod2Position, "Mod 2 Position", v27, effects::Modulation::positionNames, 0));
+    layout.add (makeFloat (ParamIDs::modManual, "AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v27, asKnob));
+    layout.add (makeFloat (ParamIDs::modRes, "AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v27, asKnob));
+
+    // Added in PR7-G 0.36.0. MOD 2: the same controls as MOD (a flanger by default, to pair with MOD's chorus).
+    constexpr int v28 = 28;
+    layout.add (makeSwitch (ParamIDs::mod2On, "Mod 2 On", v28, false));
+    layout.add (makeChoice (ParamIDs::mod2Type, "Mod 2 Type", v28, effects::Modulation::typeNames, (int) effects::Modulation::Type::flanger));
+    layout.add (makeFloat (ParamIDs::mod2Rate, "Mod 2 Rate", skewed (0.05f, 10.0f, 1.0f, 0.01f), 0.3f, v28, asHz));
+    layout.add (makeFloat (ParamIDs::mod2Depth, "Mod 2 Depth", { 0.0f, 1.0f, 0.01f }, 0.45f, v28, asPercent));
+    layout.add (makeFloat (ParamIDs::mod2Mix, "Mod 2 Mix", { 0.0f, 1.0f, 0.01f }, 0.5f, v28, asPercent));
+    layout.add (makeChoice (ParamIDs::mod2Sync, "Mod 2 Sync", v28, effects::Delay::syncNames, 0));
+    layout.add (makeFloat (ParamIDs::mod2Eq, "Mod 2 EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v28, asVortexEq));
+    layout.add (makeSwitch (ParamIDs::mod2Stereo, "Mod 2 Stereo", v28, false));
+    layout.add (makeChoice (ParamIDs::mod2Position, "Mod 2 Position", v28, effects::Modulation::positionNames, 0));
+    layout.add (makeFloat (ParamIDs::mod2Manual, "Mod 2 AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v28, asKnob));
+    layout.add (makeFloat (ParamIDs::mod2Res, "Mod 2 AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v28, asKnob));
     return layout;
 }

@@ -2,14 +2,28 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.36.0
+
+- One build with both AEON (0.35.0) and MOD 2.
+- **MOD 2: run two modulation effects at once**, a chorus and a flanger for example.
+  - MOD 2 is a second, complete MOD block straight after MOD, with its own TYPE, POSITION, SYNC, RATE, DEPTH, MIX, and AEON's MANUAL and RES, and Vortex's EQ and STEREO.
+  - Click its new tile in the SIGNAL CHAIN (after MOD) to open its controls.
+  - It's off by default, set to AEON, so existing rigs and projects sound exactly as before. It's saved with each rig.
+  - Footswitch 3 still switches MOD. With MOD 2 on as well, its readout shows both types, e.g. "Vortex + AEON".
+- **The SIGNAL CHAIN's names read in full again.** The block icons are a little smaller, so all thirteen names fit, including "FILTER / PITCH" and "CABINET IR".
+
 ## 0.35.0
 
-- **MOD 2: run two modulation effects at once**, a chorus and a flanger for example.
-  - MOD 2 is a second, complete MOD block straight after MOD, with its own TYPE, POSITION, SYNC, RATE, DEPTH, MIX, and Vortex's EQ and STEREO.
-  - Click its new tile in the SIGNAL CHAIN (after MOD) to open its controls.
-  - It's off by default, set to Flanger, so existing rigs and projects sound exactly as before. It's saved with each rig.
-  - Footswitch 3 still switches MOD. With MOD 2 on as well, its readout shows both types, e.g. "Vortex + Flanger".
-- **The SIGNAL CHAIN's names read in full again.** The block icons are a little smaller, so all thirteen names fit, including "FILTER / PITCH" and "CABINET IR".
+- **Everything in one build:** AEON, plus Vortex, MOD PRE and the cleaner face (no screws, no MIN light) from 0.33.0 to 0.34.1.
+- **AEON replaces the generic flanger:** a flanger modelled on the Boss BF-2, built stage by stage from its schematic with the real component values. It's the same model as in PR7-B 0.11.0, alongside Vortex (0.33.0) in the chorus slot, and the first in a plan to model a specific pedal for each modulation effect.
+  - **The pedal's four knobs:** MANUAL (the delay time), DEPTH, RATE and RES (resonance). MIX is greyed out, because the pedal always mixes dry and wet 50/50, which makes the notches deep.
+  - **The delay:** a bucket-brigade chip (BBD) model, 13 ms down to 1 ms across MANUAL, the pedal's specified range. The old flanger only reached 0.5 to 5.5 ms, so AEON sweeps much lower and deeper. At full DEPTH, MANUAL does nothing, as the pedal's manual says.
+  - **The sweep:** a triangle LFO, from one cycle every 16 s to 10 per second. At fast RATE settings the sweep gets narrower, as on the pedal, where a capacitor smooths it.
+  - **RES:** rings the peaks hardest in the treble, the BF-2's metallic "zing", without howling.
+  - **Mono, like the pedal:** both sides get the same sound. The old flanger swept the left and right sides a quarter-cycle apart.
+  - **Your sound:** rigs and projects that used the old flanger now get AEON, with MANUAL and RES at 5. Expect it to be louder (up to about 6 dB on the comb's peaks), because dry and wet add at full level.
+  - **Two details are estimates,** because the schematic can't show them: how much signal the BBD chip and its output stage lose, and where the factory set the RES trimmer. Both are set so full RES rings hard without howling.
+- **Jet Flanger (D1) and Run Like Hell (E5)** now use AEON: RES high for the jet, gentle for the Floyd part.
 
 ## 0.34.1
 

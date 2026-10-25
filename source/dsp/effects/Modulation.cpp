@@ -6,14 +6,6 @@ namespace effects
     {
         constexpr float twoPi = juce::MathConstants<float>::twoPi;
 
-        // Delay times in milliseconds: the centre of the sweep and how far
-        // full depth swings either side of it.
-        struct DelaySweep
-        {
-            float centreMs, sweepMs, feedback;
-        };
-        constexpr DelaySweep flangerSweep { 3.0f, 2.5f, 0.6f };   // feedback gives the flanger its "jet" ring
-
         constexpr float maxDelayMs = 40.0f;
 
         // A one-pole low-pass coefficient for a cutoff, and a smoothing
@@ -155,7 +147,6 @@ namespace effects
         hornHz = 0.8f;
         drumHz = 0.7f;
         hornTone = lampGlow = 0.0f;
-        std::fill (std::begin (feedbackSample), std::end (feedbackSample), 0.0f);
         std::fill (std::begin (dimensionTone), std::end (dimensionTone), 0.0f);
         for (auto& path : vortexPaths)
         {
@@ -174,6 +165,7 @@ namespace effects
             for (auto& stage : channel)
                 stage = {};
         bypass.prepare (sampleRate, maxBlockSize);
+        aeon.prepare (sampleRate, maxBlockSize);
     }
 
     float Modulation::advanceLfo (float rateHz) noexcept
@@ -190,6 +182,11 @@ namespace effects
             depth.setTargetValue (settings.depth);
             mix.setTargetValue (settings.mix);
 
+            // Switched to AEON: start with its delay empty, not holding old echoes.
+            if (settings.type != lastType && settings.type == Type::flanger)
+                aeon.reset();
+            lastType = settings.type;
+
             switch (settings.type)
             {
                 case Type::chorus:
@@ -197,7 +194,9 @@ namespace effects
                     break;
 
                 case Type::flanger:
-                    processDelayBased (wet, settings);
+                    aeon.process (wet, { settings.manual, settings.depth, settings.rateHz, settings.resonance });
+                    depth.skip ((int) wet.getNumSamples());
+                    mix.skip ((int) wet.getNumSamples());
                     break;
 
                 case Type::phaser:
@@ -282,35 +281,6 @@ namespace effects
             {
                 auto* samples = block.getChannelPointer ((size_t) ch);
                 samples[i] += level * chorusOf (ch, samples[i], delaySamples);
-            }
-        }
-    }
-
-    void Modulation::processDelayBased (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
-    {
-        const auto& sweep = flangerSweep;
-        const auto msToSamples = (float) sampleRate * 0.001f;
-        const auto numChannels = (int) block.getNumChannels();
-
-        for (size_t i = 0; i < block.getNumSamples(); ++i)
-        {
-            const auto phase = advanceLfo (settings.rateHz);
-            const auto depthNow = depth.getNextValue();
-            const auto mixNow = mix.getNextValue();
-
-            for (int ch = 0; ch < numChannels; ++ch)
-            {
-                // Right channel's LFO runs a quarter-cycle behind the left.
-                const auto lfo = std::sin (twoPi * (phase + 0.25f * (float) ch));
-                const auto delayMs = sweep.centreMs + sweep.sweepMs * depthNow * lfo;
-
-                auto* samples = block.getChannelPointer ((size_t) ch);
-                const auto dry = samples[i];
-                delayLine.pushSample (ch, dry + feedbackSample[ch] * sweep.feedback);
-                const auto delayed = delayLine.popSample (ch, delayMs * msToSamples);
-                feedbackSample[ch] = delayed;
-
-                samples[i] = dry * (1.0f - mixNow) + delayed * mixNow;
             }
         }
     }

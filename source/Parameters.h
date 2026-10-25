@@ -31,6 +31,9 @@ namespace ParamIDs
     inline constexpr auto modRate        = "modRate";
     inline constexpr auto modDepth       = "modDepth";
     inline constexpr auto modMix         = "modMix";
+    // AEON's (the flanger's) MANUAL and RES; it shares RATE and DEPTH.
+    inline constexpr auto modManual      = "modManual";
+    inline constexpr auto modRes         = "modRes";
 
     inline constexpr auto delayOn        = "delayOn";
     inline constexpr auto delayTime      = "delayTime";
@@ -143,14 +146,16 @@ namespace ParamIDs
     inline constexpr auto mod2Eq       = "mod2Eq";
     inline constexpr auto mod2Stereo   = "mod2Stereo";
     inline constexpr auto mod2Position = "mod2Position";
+    inline constexpr auto mod2Manual   = "mod2Manual";
+    inline constexpr auto mod2Res      = "mod2Res";
 
     // A MOD block's controls, so MOD and MOD 2 share their code.
     struct ModIds
     {
-        const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position;
+        const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position, *manual, *res;
     };
-    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition };
-    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position };
+    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition, modManual, modRes };
+    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position, mod2Manual, mod2Res };
 
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)
