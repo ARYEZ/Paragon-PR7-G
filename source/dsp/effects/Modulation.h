@@ -28,6 +28,11 @@ namespace effects
         static inline const juce::StringArray typeNames { "Vortex", "Flanger", "Phaser", "Tremolo", "Dimension Chorus", "Uni-Vibe",
                                                           "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler" };
 
+        // Where the block sits: POST (after the amp and cab) or PRE (after the
+        // drive, before the amp, like a pedal). Saved by number: only append.
+        enum class Position { post, pre };
+        static inline const juce::StringArray positionNames { "Post", "Pre" };
+
         // Types for which MIX means something (the others are fully "wet" by nature).
         static bool usesMix (Type type) noexcept
         {

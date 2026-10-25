@@ -246,6 +246,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         const auto db = value * effects::Modulation::vortexEqRangeDb;
         return std::abs (db) < 0.05f ? juce::String ("Flat") : (db > 0.0f ? "+" : "") + juce::String (db, 1) + " dB";
     }));
-    layout.add (makeChoice (ParamIDs::modStereo, "Mod Output", v25, { "Mono", "Stereo" }, 0));
+    layout.add (makeSwitch (ParamIDs::modStereo, "Mod Stereo", v25, false));   // off: mono; on: the pedal's two outputs
+
+    constexpr int v26 = 26;
+    layout.add (makeChoice (ParamIDs::modPosition, "Mod Position", v26, effects::Modulation::positionNames, 0));
     return layout;
 }

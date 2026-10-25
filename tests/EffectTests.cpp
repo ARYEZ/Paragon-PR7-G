@@ -605,6 +605,18 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (dB (rms (quieter[0], 0.2) / rms (output[0], 0.2)) < -10.0f);
     }
 
+    SECTION ("MOD in PRE is mono, as one amp follows it: STEREO only applies in POST")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modStereo, 1.0f);
+        rig.set (ParamIDs::modMix, 1.0f);
+        rig.set (ParamIDs::modPosition, (float) effects::Modulation::Position::pre);
+        const auto output = rig.run (input);
+        REQUIRE (allFinite (output[0]));
+        CHECK (maxAbsDifference (output[0], output[1]) < 1.0e-6f);
+        CHECK (rms (minus (output[0], input), 0.2) > 0.3f * rms (input, 0.2));   // and the chorus is there
+    }
+
     SECTION ("Vortex: DEPTH bends the pitch, and the sweep is uneven, as the chip's clock is what's swept")
     {
         rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);

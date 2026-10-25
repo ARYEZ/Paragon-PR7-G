@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.34.0
+
+- **MOD can go before the amp:** a new **POSITION** switch, like GLITCH's.
+  - **POST** (as before): after the amp and cab, a studio-style effect on the finished tone.
+  - **PRE:** after the drive and into the amp, where a chorus pedal sits on a pedalboard. The amp works on the modulated sound, so the warble, the swirl and the chorus's treble all come through stronger, as with a real pedal into an amp.
+  - PRE is mono, because one amp follows it, as with a single pedal into a single amp. STEREO only applies in POST.
+- Vortex's OUTPUT choice is now a **STEREO** on/off switch: off is mono, on is the pedal's two outputs. Switching saves room on the panel.
+
 ## 0.33.1
 
 - **Vortex is stronger**, closer to the real pedal turned up:
