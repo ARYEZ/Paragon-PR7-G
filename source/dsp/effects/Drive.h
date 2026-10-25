@@ -52,7 +52,7 @@ namespace effects
     public:
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Model { classic, screamer, muff, face };
-        static inline const juce::StringArray modelNames { "Classic", "Screamer (TS)", "Muff Fuzz", "Face Fuzz" };
+        static inline const juce::StringArray modelNames { "Classic", "Banshee", "Muff Fuzz", "Face Fuzz" };
 
         struct Settings
         {
