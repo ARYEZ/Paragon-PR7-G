@@ -5,7 +5,7 @@
 
 namespace effects
 {
-    // Footswitch 3: the modulation block, after the graphic EQ. Eleven types:
+    // Footswitch 3: the modulation block, after the graphic EQ. Twelve types:
     //
     //   chorus         "Vortex": modelled on a late-'80s Japanese
     //                  compact stereo chorus pedal (see processVortex)
@@ -19,14 +19,17 @@ namespace effects
     //   harmonicTremolo  Fender brownface: lows and highs pulse in turn
     //   autoPan        sweeps between the speakers at constant loudness
     //   doubler        two extra "takes" of the part, one each side (ADT)
+    //   carbonite      modelled on the Boss CE-2: the late-'70s compact
+    //                  chorus, darker and tighter than Vortex (see processCarbonite;
+    //                  PR7-G 0.37.0)
     //
     class Modulation
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Type { chorus, flanger, phaser, tremolo, dimension, uniVibe, rotary, vibrato, harmonicTremolo, autoPan, doubler };
+        enum class Type { chorus, flanger, phaser, tremolo, dimension, uniVibe, rotary, vibrato, harmonicTremolo, autoPan, doubler, carbonite };
         static inline const juce::StringArray typeNames { "Vortex", "AEON", "Phaser", "Tremolo", "Dimension Chorus", "Uni-Vibe",
-                                                          "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler" };
+                                                          "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler", "Carbonite" };
 
         // Where the block sits: POST (after the amp and cab) or PRE (after the
         // drive, before the amp, like a pedal). Saved by number: only append.
@@ -36,7 +39,7 @@ namespace effects
         // Types for which MIX means something (the others are fully "wet" by nature).
         static bool usesMix (Type type) noexcept
         {
-            // (AEON has none: the pedal mixes dry and wet 50/50.)
+            // (AEON and Carbonite have none: their pedals mix dry and wet 50/50.)
             return type == Type::chorus || type == Type::phaser || type == Type::dimension
                 || type == Type::uniVibe || type == Type::rotary || type == Type::doubler;
         }
@@ -57,6 +60,10 @@ namespace effects
         // treble at either end of the knob (for tests).
         static constexpr float vortexEqRangeDb = 10.0f;
 
+        // Carbonite's delay in ms, for a DEPTH (0 to 1) and a point in the
+        // LFO's sweep (-1 to 1) (for tests).
+        static float carboniteDelayMs (float depth, float lfo) noexcept;
+
         Modulation();
         void prepare (double sampleRate, int maxBlockSize);
         void process (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -64,6 +71,7 @@ namespace effects
     private:
         void processVortex (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void updateVortexEq (float eq) noexcept;
+        void processCarbonite (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processTremolo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processDimension (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processUniVibe (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -110,6 +118,13 @@ namespace effects
         };
         VortexPath vortexPaths[maxChannels];
         float vortexEq = 0.0f;
+
+        // Carbonite: the same kind of chorus path, with its own filters.
+        struct CarbonitePath
+        {
+            Biquad inputHighPass, emphasis, antiAlias1, antiAlias2, reconstruct1, reconstruct2, deEmphasis;
+        };
+        CarbonitePath carbonitePaths[maxChannels];
 
         // Uni-Vibe: four first-order all-pass stages per channel, and the lamp's glow.
         struct AllPassState { float x1 = 0.0f, y1 = 0.0f; };

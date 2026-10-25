@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.37.0
+
+- **Carbonite, a new chorus:** modelled on the Boss CE-2, the late-'70s compact chorus behind countless '80s clean tones. Pick it in MOD or MOD 2's TYPE list (at the bottom, so your saved rigs keep their types).
+  - **Warmer and darker than Vortex:** the filters either side of its delay chip stop at about 6.6 kHz, against Vortex's 9 kHz, and a low cut at about 48 Hz keeps the chorus off the deep bass.
+  - **A tighter, faster sweep:** the delay sits at about 3.4 ms and sweeps about 2.2 to 4.5 ms at full DEPTH, from a real pedal's measured clock. The swing is lopsided, further one way than the other, as the pedal's clock is.
+  - **The pedal's two knobs:** RATE and DEPTH. MIX is greyed out, because the pedal always mixes dry and wet 50/50. Mono, like the pedal: each side gets the same treatment.
+  - **What's a guess:** how hard a loud signal can drive the chip before it rounds off, and the LFO's exact speed range (RATE uses the block's usual range). Real CE-2s also differ from each other by tens of percent; this follows one measured pedal.
+
 ## 0.36.1
 
 - **The Screamer drive is now called Banshee.** Only the name has changed: it sounds the same, and rigs and projects that used it get Banshee.

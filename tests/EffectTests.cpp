@@ -726,6 +726,81 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (thirdHarmonic (0.9f) > -35.0f);
     }
 
+    SECTION ("Carbonite: the guitar plus the chorus at full level, mono, and MIX does nothing (the pedal's is fixed 50/50)")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modMix, 0.0f);
+        const auto output = rig.run (input);
+        REQUIRE (allFinite (output[0]));
+        CHECK (maxAbsDifference (output[0], output[1]) < 1.0e-6f);
+        CHECK (rms (minus (output[0], input), 0.2) > 0.5f * rms (input, 0.2));   // the chorus is there, near the guitar's level
+        // (Fresh plugins, so both sweeps start at the same point.)
+        const auto withMix = [&] (float mixValue)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+            fresh.set (ParamIDs::modMix, mixValue);
+            return fresh.run (input)[0];
+        };
+        CHECK (maxAbsDifference (withMix (0.0f), withMix (1.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("Carbonite: the delay sits at 3.4 ms and sweeps 2.2 to 4.5 ms at full DEPTH, from a real pedal's clock")
+    {
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (0.0f, 0.7f), WithinAbs (3.41, 0.01));
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (1.0f, -1.0f), WithinAbs (4.53, 0.05));
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (1.0f, 1.0f), WithinAbs (2.20, 0.05));
+
+        // With DEPTH down, an impulse's echo arrives 3.4 ms later.
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        std::vector<float> click ((size_t) (0.1 * sampleRate), 0.0f);
+        click[(size_t) (0.05 * sampleRate)] = 0.5f;
+        const auto output = rig.run (click)[0];
+        const auto echo = minus (output, click);
+        const auto peak = std::distance (echo.begin(), std::max_element (echo.begin(), echo.end(),
+                                                                        [] (float a, float b) { return std::abs (a) < std::abs (b); }));
+        const auto delayMs = 1000.0 * (double) (peak - (long) (0.05 * sampleRate)) / sampleRate;
+        CHECK_THAT (delayMs, WithinAbs (3.41 + 0.1, 0.25));   // (plus the filters' own small delay)
+    }
+
+    SECTION ("Carbonite is darker than Vortex: its filters stop at 6.6 kHz, not 9 kHz")
+    {
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto chorusTreble = [&] (effects::Modulation::Type type)
+        {
+            rig.set (ParamIDs::modType, (float) type);
+            rig.set (ParamIDs::modStereo, 1.0f);   // Vortex: its chorus alone on the left
+            rig.set (ParamIDs::modMix, 1.0f);
+            const auto chorusOf = [&] (double hz)
+            {
+                const auto tone = sine (hz, 0.1f, 0.5);
+                const auto out = rig.run (tone)[0];
+                return type == effects::Modulation::Type::carbonite ? rms (minus (out, tone), 0.2) : rms (out, 0.2);
+            };
+            return dB (chorusOf (10000.0) / chorusOf (1000.0));
+        };
+        const auto carbonite = chorusTreble (effects::Modulation::Type::carbonite);
+        const auto vortex = chorusTreble (effects::Modulation::Type::chorus);
+        CHECK (carbonite < -18.0f);
+        CHECK (carbonite < vortex - 8.0f);
+    }
+
+    SECTION ("Carbonite: DEPTH bends the pitch")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modRate, 1.0f);
+        const auto tone = sine (1000.0, 0.3f, 2.0);
+        const auto chorusWith = [&] (float depthValue)
+        {
+            rig.set (ParamIDs::modDepth, depthValue);
+            return minus (rig.run (tone)[0], tone);
+        };
+        const auto still = chorusWith (0.0f), swept = chorusWith (1.0f);
+        CHECK (levelAt (swept, 1000.0, 0.3) < 0.8f * levelAt (still, 1000.0, 0.3));
+    }
+
     SECTION ("Tremolo pulses the volume at the rate setting")
     {
         rig.set (ParamIDs::modType, 3.0f);
