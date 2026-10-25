@@ -339,7 +339,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
 
     modulation.process (stereoBlock, { isOn (ParamIDs::modOn), modType, modRate,
                                        param (ParamIDs::modDepth) * (morphsDepth ? morph : 1.0f),
-                                       param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph) });
+                                       param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph),
+                                       param (ParamIDs::modEq), param (ParamIDs::modStereo) > 0.5f });
     delay.process (stereoBlock, { isOn (ParamIDs::delayOn), param (ParamIDs::delayTime), (int) param (ParamIDs::delaySync),
                                   param (ParamIDs::delayFeedback), param (ParamIDs::delayTone), param (ParamIDs::delayMix) * morph,
                                   isOn (ParamIDs::delayPingPong), (effects::Delay::Type) (int) param (ParamIDs::delayType),

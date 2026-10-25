@@ -120,6 +120,11 @@ namespace ParamIDs
     inline constexpr auto glitchChaos    = "glitchChaos";
     inline constexpr auto glitchMix      = "glitchMix";
 
+    // Version 25: the Vortex's EQ (its tone knob, on the chorus sound
+    // only) and OUTPUT: mono, or the pedal's two outputs (chorus left, dry right).
+    inline constexpr auto modEq     = "modEq";
+    inline constexpr auto modStereo = "modStereo";
+
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)
     inline constexpr auto octOn          = "octOn";            // the OCTAVER

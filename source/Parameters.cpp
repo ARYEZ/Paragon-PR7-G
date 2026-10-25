@@ -238,5 +238,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::freezeLevel, "Freeze Level", { 0.0f, 1.0f, 0.01f }, 0.7f, v24, asPercent));
     layout.add (makeFloat (ParamIDs::freezeAttack, "Freeze Attack", skewed (10.0f, 5000.0f, 300.0f, 1.0f), 300.0f, v24, asTime));
     layout.add (makeFloat (ParamIDs::freezeRelease, "Freeze Release", skewed (50.0f, 8000.0f, 1500.0f, 1.0f), 1500.0f, v24, asTime));
+
+    constexpr int v25 = 25;
+    layout.add (makeFloat (ParamIDs::modEq, "Mod EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v25, [] (float value, int)
+    {
+        // As the pedal's knob reads: LO to HI, flat at noon.
+        const auto db = value * effects::Modulation::vortexEqRangeDb;
+        return std::abs (db) < 0.05f ? juce::String ("Flat") : (db > 0.0f ? "+" : "") + juce::String (db, 1) + " dB";
+    }));
+    layout.add (makeChoice (ParamIDs::modStereo, "Mod Output", v25, { "Mono", "Stereo" }, 0));
     return layout;
 }

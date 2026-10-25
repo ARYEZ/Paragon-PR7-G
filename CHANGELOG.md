@@ -2,6 +2,21 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.33.0
+
+- **Vortex replaces the old Chorus**, the first of the modulation upgrades to model specific pedals. It's modelled on a classic late-'80s compact stereo chorus pedal, built from its schematic:
+  - **Bucket-brigade delay:** the delay sweeps the way a delay chip's does when its clock is swept, further on the long side than the short. The LFO is a smooth triangle wave.
+  - **Pre-emphasis and de-emphasis:** treble is lifted about 15 dB before the delay and cut back after, which gives the clear, glassy sound. A very loud, bright signal rounds off in that stage, as the original's manual warns.
+  - **Filters either side of the delay** roll the chorus's top end off above about 9 kHz.
+- **MIX now works as the pedal's E.LEVEL:** the guitar stays at full level and the chorus is added on top. Before, MIX faded the guitar down as the chorus came up.
+- **New controls, shown only for Vortex:**
+  - **EQ:** the pedal's tone knob, about ±10 dB of treble on the chorus sound only.
+  - **OUTPUT:**
+    - **MONO**, the pedal's main output alone: guitar plus chorus on both sides.
+    - **STEREO**, its two outputs: chorus alone on the left, guitar alone on the right, so the chorus happens between the speakers. As on the pedal, turning MIX down moves the sound towards the dry side.
+- Rigs and projects that used Chorus now use Vortex, in MONO. They'll be a little fuller, since the guitar no longer drops as MIX goes up.
+- Knob values in narrow cards (e.g. "0.80 Hz") squeeze to fit instead of being cut off with "…".
+
 ## 0.32.1
 
 - **The small EXPRESSION screen beside the pedal is gone.** The bigger one in the dock's EXPRESSION ASSIGN panel does the same job.
