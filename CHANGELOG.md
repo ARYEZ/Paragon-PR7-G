@@ -2,6 +2,10 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.34.1
+
+- One build with everything: Vortex and the MOD block's PRE position (0.33.0 to 0.34.0), plus 0.32.2's cleaner face (no screws, no MIN light). Until now, those had only been released separately.
+
 ## 0.34.0
 
 - **MOD can go before the amp:** a new **POSITION** switch, like GLITCH's.
