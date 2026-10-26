@@ -34,7 +34,7 @@ namespace
     constexpr float pedalWah = 2;      // the expression pedal's WAH / FILTER setting
     constexpr float glitchKillswitch = 4;
     constexpr int E = 4;               // bank E: rigs inspired by particular songs
-    constexpr float muffFuzz = 2, faceFuzz = 3;   // OD / DISTORTION's MODEL
+    constexpr float cosmonaut = 2, faceFuzz = 3;   // OD / DISTORTION's MODEL
     constexpr float digitalDelay = 0;
     constexpr float xpCryWah = 1, xpUpOctave = 12, xpOctDownOctUp = 20, xpUp4thUp5th = 23;   // Whammy-Wah programs 02, 13, 21 and 24
     constexpr float pedalWhammyWah = 6;   // the expression pedal's WHAMMY-WAH setting
@@ -231,10 +231,11 @@ std::vector<Rig> makeFactoryRigs()
         // the rest is in his hands (vibrato, bends, note choice).
 
         // "Comfortably Numb" solos: a Big Muff-style fuzz (sustain about 70%,
-        // tone 30-40%) into a delay of about 370 ms, through a subtly mixed
+        // tone 30-40%; Cosmonaut, the Green Russian, stands in for his
+        // earlier US ones, its LEVEL set to match) into a delay of about 370 ms, through a subtly mixed
         // rotating speaker (his Yamaha RA-200), with studio reverb.
         make ("Numb Solo (Floyd)", E, 3, "Song,Lead,Fuzz", {
-            { driveOn, 1 }, { driveModel, muffFuzz }, { driveGain, 7 }, { driveTone, 3.5f }, { driveLevel, 1 },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 7 }, { driveTone, 3.5f }, { driveLevel, -1.5f },
             { modOn, 1 }, { modType, rotary }, { modRate, 0.9f }, { modDepth, 0.5f }, { modMix, 0.3f },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 370 }, { delayFeedback, 0.3f }, { delayMix, 0.25f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.18f } }),

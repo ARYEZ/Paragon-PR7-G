@@ -28,7 +28,7 @@ namespace effects
         constexpr float toneCornerHz = 723.0f;
         constexpr float diodeVolts = 0.6f;         // about where a silicon diode starts conducting
         constexpr float screamerOutputScale = 0.35f;   // so LEVEL 0 dB is roughly the guitar's own level
-        constexpr float muffOutputScale = 0.82f;       // the same for the fuzzes
+        constexpr float cosmonautOutputScale = 0.25f;  // the same for the fuzzes, at SUSTAIN noon
         constexpr float faceOutputScale = 0.29f;
 
         float onePoleCoefficient (double rate, float hz)
@@ -73,6 +73,7 @@ namespace effects
         screamerTone.reset (sampleRate, 0.02);
         screamerLevel.reset (sampleRate, 0.02);
         fuzzStates.fill (0.0f);
+        cosmonaut.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         fuzzGain.reset (sampleRate, 0.02);
         fuzzTone.reset (sampleRate, 0.02);
         fuzzLevel.reset (sampleRate, 0.02);
@@ -104,12 +105,13 @@ namespace effects
                 toneFilter.reset();
                 clipLowPassState = toneState = outputCouplingState = 0.0f;
                 fuzzStates.fill (0.0f);
+                cosmonaut.reset();
             }
 
             switch (settings.model)
             {
                 case Model::screamer: processScreamer (block, settings); break;
-                case Model::muff:     processMuff (block, settings); break;
+                case Model::muff:     processCosmonaut (block, settings); break;
                 case Model::face:     processFace (block, settings); break;
                 case Model::classic:  processClassic (block, settings); break;
             }
@@ -199,60 +201,26 @@ namespace effects
         }
     }
 
-    void Drive::processMuff (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    void Drive::processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
     {
+        // SUSTAIN and TONE are the pedal's pots; their positions glide (per block) so turning them doesn't click.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzTone.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.tone) / 10.0f);
+        fuzzLevel.setTargetValue (cosmonautOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
         const auto numSamples = (int) block.getNumSamples();
-        auto* samples = block.getChannelPointer (0);
-        auto& [inputCut, stage1Top, coupling, stage2Top, toneLow, toneHigh, outputCoupling, unused] = fuzzStates;
-        juce::ignoreUnused (unused);
+        cosmonaut.setSustain (fuzzGain.skip (numSamples));
+        cosmonaut.setTone (fuzzTone.skip (numSamples));
 
-        // SUSTAIN: each stage's gain, from about 12 to 34 dB.
-        const auto knob = juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f;
-        fuzzGain.setTargetValue (juce::Decibels::decibelsToGain (12.0f + 22.0f * knob));
-
-        // The input coupling: a low cut at 100 Hz, so low notes don't flub.
-        const auto inputCutCoefficient = onePoleCoefficient (sampleRate, 100.0f);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            inputCut += (samples[i] - inputCut) * inputCutCoefficient;
-            samples[i] -= inputCut;
-        }
-
-        // At 8x the rate: two stages of gain and diode clipping, each with its
-        // top softened (as the transistors' capacitors do), coupled between
-        // them by a low cut that keeps the second stage from farting out.
+        // The three clipping-capable stages at 8x the rate, against aliasing.
         auto upsampled = oversampling.processSamplesUp (block);
-        const auto fastRate = sampleRate * (double) oversampling.getOversamplingFactor();
-        const auto top1 = onePoleCoefficient (fastRate, 5000.0f), top2 = onePoleCoefficient (fastRate, 3500.0f);
-        const auto couplingCut = onePoleCoefficient (fastRate, 80.0f);
         auto* fast = upsampled.getChannelPointer (0);
         for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
-        {
-            const auto gain = fuzzGain.getNextValue();
-            stage1Top += (fast[i] * gain - stage1Top) * top1;
-            auto x = diodeClip (stage1Top);
-            coupling += (x - coupling) * couplingCut;
-            x = (x - coupling) * gain;
-            stage2Top += (x - stage2Top) * top2;
-            fast[i] = diodeClip (stage2Top);
-        }
+            fast[i] = (float) cosmonaut.clip (fast[i]);
         oversampling.processSamplesDown (block);
 
-        // The tone stack: a low-pass (400 Hz) and a high-pass (1.1 kHz) blended
-        // by TONE, so it runs from warm and woolly through a mid scoop to bright.
-        const auto lowCoefficient = onePoleCoefficient (sampleRate, 400.0f), highCoefficient = onePoleCoefficient (sampleRate, 1100.0f);
-        const auto outputCouplingCoefficient = onePoleCoefficient (sampleRate, 20.0f);
-        fuzzTone.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.tone) / 10.0f);
-        fuzzLevel.setTargetValue (muffOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        auto* samples = block.getChannelPointer (0);
         for (int i = 0; i < numSamples; ++i)
-        {
-            toneLow += (samples[i] - toneLow) * lowCoefficient;
-            toneHigh += (samples[i] - toneHigh) * highCoefficient;
-            const auto tone = fuzzTone.getNextValue();
-            const auto mixed = toneLow * (1.0f - tone) + (samples[i] - toneHigh) * tone * 1.6f;   // the high path is the quieter one
-            outputCoupling += (mixed - outputCoupling) * outputCouplingCoefficient;
-            samples[i] = (mixed - outputCoupling) * fuzzLevel.getNextValue();
-        }
+            samples[i] = (float) cosmonaut.finish (samples[i]) * fuzzLevel.getNextValue();
     }
 
     void Drive::processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept

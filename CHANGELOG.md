@@ -2,6 +2,17 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.41.0
+
+- **Cosmonaut replaces Muff Fuzz:** a fuzz modelled stage by stage on the mid-'90s green Russian Big Muff (the "Green Russian" / Civil War), using the part values traced from a real unit. The thick, bassy wall of fuzz of stoner, doom and sludge.
+  - **Four transistor stages, as on the pedal:** an input stage, SUSTAIN, two clipping stages, the tone stack and an output stage. Each stage uses the pedal's real resistors and capacitors and is worked out sample by sample.
+  - **The fat bottom end:** in the clipping stages, the diodes sit behind a small 0.047 uF capacitor, so they clip the bass much less than the mids and highs. A low E comes out about 4 dB cleaner than a note two octaves up, and much louder. The US Big Muffs use a 1 uF there and clip everything alike.
+  - **Massive sustain:** picking ten times harder makes the mids barely 1 dB louder.
+  - **The tone stack:** the pedal's own (3.9 nF and 22k for treble, 20k and 10 nF for bass, a 100k TONE pot). It always scoops the mids, most at noon.
+  - **SUSTAIN raises the level, as on the pedal:** at LEVEL 0 dB it matches your guitar at noon, about 1 dB quieter at 2 and about 5 dB louder at 9.
+  - **What's a guess:** each transistor is treated as an amplifier of about 31 times (its 12k and 390 ohm resistors) that swings up to 4 V; the real transistors' gain varies, as it does between real pedals.
+  - **Your rigs:** rigs and projects that used Muff Fuzz now get Cosmonaut. Expect a thicker, bassier and slightly louder fuzz. The factory "Numb Solo (Floyd)" rig's LEVEL is lowered to match.
+
 ## 0.40.1
 
 - **Faster SYNC settings:** 1/16 dotted, 1/16 triplet and **1/32**, for MOD, MOD 2 and DELAY. They're at the bottom of the SYNC list, so saved rigs keep their settings. Synced modulation can now run up to 40 cycles a second (it stopped at 20), so 1/32 keeps up at fast tempos.

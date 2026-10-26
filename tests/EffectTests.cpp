@@ -387,7 +387,7 @@ TEST_CASE ("GLITCH: each mode chops, repeats or smears the guitar as it says", "
     }
 }
 
-TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face clips unevenly and cleans up", "[effects][drive]")
+TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; Face clips unevenly and cleans up", "[effects][drive]")
 {
     const auto play = [] (effects::Drive::Model model, float amplitude, float drive = 5.0f, float tone = 5.0f, double hz = 220.0)
     {
@@ -401,17 +401,38 @@ TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face c
         return output;
     };
 
-    SECTION ("At LEVEL 0 dB both sit near the guitar's own level, at any FUZZ / SUSTAIN")
+    SECTION ("At LEVEL 0 dB both sit near the guitar's own level; Cosmonaut gets louder with SUSTAIN, as the pedal does")
     {
-        for (const auto model : { effects::Drive::Model::muff, effects::Drive::Model::face })
-            for (const auto drive : { 2.0f, 5.0f, 9.0f })
-            {
-                INFO ("model " << (int) model << ", drive " << drive);
-                CHECK (std::abs (dB (rms (play (model, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
-            }
+        for (const auto drive : { 2.0f, 5.0f, 9.0f })
+        {
+            INFO ("Face, drive " << drive);
+            CHECK (std::abs (dB (rms (play (effects::Drive::Model::face, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
+        }
+        const auto cosmonautDb = [&] (float drive) { return dB (rms (play (effects::Drive::Model::muff, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f))); };
+        CHECK_THAT (cosmonautDb (5.0f), WithinAbs (0.0, 1.5));
+        CHECK (cosmonautDb (9.0f) > cosmonautDb (2.0f));
+        CHECK (cosmonautDb (9.0f) - cosmonautDb (2.0f) < 8.0f);
     }
 
-    SECTION ("Muff clips both halves alike (odd harmonics); Face clips one harder (a strong 2nd)")
+    SECTION ("Cosmonaut: the bass is clipped far less than the mids (the 0.047 uF in series with its diodes)")
+    {
+        // The share of the output that is harmonics: a low E against a note two octaves up.
+        const auto distortion = [&] (double hz)
+        {
+            const auto output = play (effects::Drive::Model::muff, 0.2f, 7.0f, 5.0f, hz);
+            const auto fundamental = levelAt (output, hz, 0.3);
+            return dB ((levelAt (output, 3.0 * hz, 0.3) + levelAt (output, 5.0 * hz, 0.3)) / fundamental);
+        };
+        CHECK (distortion (82.4) < distortion (330.0) - 3.0f);
+    }
+
+    SECTION ("Cosmonaut compresses: ten times the picking strength is far less than ten times louder")
+    {
+        const auto level = [&] (float amplitude) { return rms (play (effects::Drive::Model::muff, amplitude, 7.0f, 5.0f, 1000.0), 0.3); };
+        CHECK (dB (level (0.3f) / level (0.03f)) < 8.0f);
+    }
+
+    SECTION ("Cosmonaut clips both halves alike (odd harmonics); Face clips one harder (a strong 2nd)")
     {
         const auto secondToThird = [&] (effects::Drive::Model model)
         {
@@ -431,7 +452,7 @@ TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face c
         CHECK (harmonics (0.3f) > harmonics (0.01f) + 10.0f);
     }
 
-    SECTION ("Muff's TONE scoops the mids at noon")
+    SECTION ("Cosmonaut's TONE scoops the mids at noon")
     {
         // A quiet 1 kHz tone (still fuzzed), against 250 Hz, through the tone stack.
         const auto midsAgainstLows = [&] (float tone)
