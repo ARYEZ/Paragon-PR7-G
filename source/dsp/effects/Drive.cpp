@@ -4,20 +4,7 @@ namespace effects
 {
     namespace
     {
-        constexpr float maxDriveDb = 40.0f;
-        constexpr float lowCutHz = 120.0f;
-
-        // Shifting the curve slightly off-centre clips the two halves of the
-        // wave differently, which adds the even harmonics that make tube-style
-        // overdrive sound warm rather than fizzy.
-        constexpr float bias = 0.15f;
-        const float biasOffset = std::tanh (bias);
-
-        // Turning the drive up pushes the clipped signal towards full scale.
-        // Taking back half the drive gain keeps the pedal at roughly the
-        // guitar's own level at any drive setting, so Level 0 dB is unity
-        // and the Level knob is a real boost or cut into the amp.
-        constexpr float driveCompensation = 0.5f;
+        constexpr float rabidOutputScale = 0.37f;      // so LEVEL 0 dB is roughly the guitar's own level, at noon
 
         // TS808 component values: the op-amp's gain is 1 + (51k + DRIVE pot)
         // / 4.7k above the 4.7k / 0.047 uF corner (720 Hz); the 51 pF across
@@ -50,11 +37,6 @@ namespace effects
         return x / std::pow (1.0f + std::pow (ratio, 2.5f), 0.4f);
     }
 
-    float Drive::shape (float x) noexcept
-    {
-        return std::tanh (x + bias) - biasOffset;
-    }
-
     void Drive::prepare (double newSampleRate, int maxBlockSize)
     {
         sampleRate = newSampleRate;
@@ -80,14 +62,7 @@ namespace effects
         fuzzTone.reset (sampleRate, 0.02);
         fuzzLevel.reset (sampleRate, 0.02);
 
-        lowCut.coefficients = juce::dsp::IIR::Coefficients<float>::makeFirstOrderHighPass (sampleRate, lowCutHz);
-        toneFilter.coefficients = juce::dsp::IIR::Coefficients<float>::makeLowPass (sampleRate, 4000.0f);
-        lowCut.prepare (spec);
-        toneFilter.prepare (spec);
-        lastTone = -1.0f;
-
-        inputGain.reset (sampleRate, 0.02);
-        outputGain.reset (sampleRate, 0.02);
+        rabid.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
         bypass.prepare (sampleRate, maxBlockSize);
     }
 
@@ -103,8 +78,7 @@ namespace effects
                 screamerLowCut.reset();
                 screamerOversampling.reset();
                 oversampling.reset();
-                lowCut.reset();
-                toneFilter.reset();
+                rabid.reset();
                 clipLowPassState = toneState = outputCouplingState = 0.0f;
                 fuzzStates.fill (0.0f);
                 cosmonaut.reset();
@@ -116,39 +90,30 @@ namespace effects
                 case Model::skyline:  processScreamer (block, settings, skylineAttackHz (settings.attack), settings.gate); break;
                 case Model::muff:     processCosmonaut (block, settings); break;
                 case Model::face:     processFace (block, settings); break;
-                case Model::classic:  processClassic (block, settings); break;
+                case Model::rabid:    processRabid (block, settings); break;
             }
         });
     }
 
-    void Drive::processClassic (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    void Drive::processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
     {
-        // Tone: a high cut from 1 kHz (dark) to 12 kHz (bright). Retuned
-        // in place only when the knob moves: no allocation.
-        if (! juce::approximatelyEqual (settings.tone, lastTone))
-        {
-            *toneFilter.coefficients = juce::dsp::IIR::ArrayCoefficients<float>::makeLowPass (
-                sampleRate, knobToFrequency (settings.tone, 1000.0f, 12000.0f), 0.707f);
-            lastTone = settings.tone;
-        }
-
-        juce::dsp::ProcessContextReplacing<float> context (block);
-        lowCut.process (context);
-
-        const auto driveDb = maxDriveDb * juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f;
-        inputGain.setTargetValue (juce::Decibels::decibelsToGain (driveDb));
-        inputGain.applyGain (block.getChannelPointer (0), (int) block.getNumSamples());
+        // DISTORTION and FILTER are the pedal's pots; their positions glide (per block) so turning them doesn't click.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzTone.setTargetValue (1.0f - juce::jlimit (0.0f, 10.0f, settings.tone) / 10.0f);   // FILTER: up is darker
+        fuzzLevel.setTargetValue (rabidOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        rabid.setDistortion (fuzzGain.skip (numSamples));
+        rabid.setFilter (fuzzTone.skip (numSamples));
 
         auto upsampled = oversampling.processSamplesUp (block);
-        auto* samples = upsampled.getChannelPointer (0);
+        auto* fast = upsampled.getChannelPointer (0);
         for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
-            samples[i] = shape (samples[i]);
+            fast[i] = (float) rabid.process (fast[i]);
         oversampling.processSamplesDown (block);
 
-        toneFilter.process (context);
-
-        outputGain.setTargetValue (juce::Decibels::decibelsToGain (settings.levelDb - driveDb * driveCompensation));
-        outputGain.applyGain (block.getChannelPointer (0), (int) block.getNumSamples());
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] *= fuzzLevel.getNextValue();
     }
 
     float Drive::skylineAttackHz (int attack) noexcept

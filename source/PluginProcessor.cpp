@@ -903,7 +903,7 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
         parameter.setProperty ("value", value, nullptr);
         state.appendChild (parameter, nullptr);
     };
-    addIfMissing (ParamIDs::driveModel, (int) effects::Drive::Model::classic);    // before the drive had a MODEL
+    addIfMissing (ParamIDs::driveModel, (int) effects::Drive::Model::rabid);      // before the drive had a MODEL (then the original overdrive)
     addIfMissing (ParamIDs::reverbType, (int) effects::Reverb::Type::classic);    // before the reverb had a TYPE
     parameters.replaceState (state);
 

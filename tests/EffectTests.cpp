@@ -479,41 +479,62 @@ TEST_CASE ("Noise gate silences signal below its threshold", "[effects][comp]")
     CHECK_THAT (dB (rms (rig.runMono (note), 0.5) / rms (note, 0.5)), WithinAbs (0.0, 0.5));
 }
 
-TEST_CASE ("Overdrive adds harmonics, and oversampling keeps aliasing down", "[effects][drive]")
+TEST_CASE ("Rabid: the RAT 2's op-amp gain, symmetric diodes and FILTER", "[effects][drive]")
 {
     EffectRig rig;
     rig.set (ParamIDs::driveOn, 1.0f);
-    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::classic);
-    rig.set (ParamIDs::driveTone, 10.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::rabid);
 
-    SECTION ("Harmonics: odd from clipping, even from the asymmetry")
+    SECTION ("Two diodes clip both halves alike: odd harmonics, little even")
     {
         rig.set (ParamIDs::driveGain, 7.0f);
-        const auto output = rig.runMono (sine (1000.0, 0.3f, 0.5));
+        rig.set (ParamIDs::driveTone, 10.0f);
+        const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
         REQUIRE (allFinite (output));
-        const auto fundamental = levelAt (output, 1000.0);
-        CHECK (dB (levelAt (output, 3000.0) / fundamental) > -30.0f);
-        CHECK (dB (levelAt (output, 2000.0) / fundamental) > -40.0f);
+        const auto fundamental = levelAt (output, 220.0);
+        CHECK (dB (levelAt (output, 660.0) / fundamental) > -20.0f);
+        CHECK (dB (levelAt (output, 440.0) / fundamental) < -35.0f);
     }
 
-    SECTION ("Aliasing")
+    SECTION ("Aliasing stays down at full DISTORTION")
     {
-        // A 5 kHz note at full drive makes harmonics at 15, 25, 35 kHz...
-        // Without oversampling, 35 kHz folds back to 13 kHz (48 - 35), a
-        // frequency that isn't musically related to the note.
         rig.set (ParamIDs::driveGain, 10.0f);
+        rig.set (ParamIDs::driveTone, 10.0f);
         const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
         CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
     }
 
-    SECTION ("Drive 0 at level 0 dB is close to unity; level adds gain")
+    SECTION ("TONE down (the FILTER turned up) darkens it")
     {
-        rig.set (ParamIDs::driveGain, 0.0f);
-        const auto input = sine (1000.0, 0.1f, 0.5);
-        CHECK_THAT (dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2)), WithinAbs (0.0, 1.0));
+        const auto trebleShare = [&] (float tone)
+        {
+            rig.set (ParamIDs::driveGain, 6.0f);
+            rig.set (ParamIDs::driveTone, tone);
+            const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
+            return dB ((levelAt (output, 3080.0) + levelAt (output, 3520.0)) / levelAt (output, 220.0));
+        };
+        CHECK (trebleShare (0.0f) < trebleShare (10.0f) - 15.0f);
+    }
 
-        rig.set (ParamIDs::driveLevel, 6.0f);
-        CHECK_THAT (dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2)), WithinAbs (6.0, 1.0));
+    SECTION ("At noon, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+
+    SECTION ("At full DISTORTION the op-amp runs out of bandwidth: a quiet 4 kHz gets far less gain than 500 Hz")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        rig.set (ParamIDs::driveTone, 10.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.0003f, 0.5);   // quiet enough not to clip
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CHECK (dB (gainAt (4000.0)) < dB (gainAt (500.0)) - 6.0f);
     }
 }
 
@@ -1403,7 +1424,7 @@ TEST_CASE ("The doubler adds a take on each side", "[effects][mod]")
     CHECK (rms (output[0], 0.2) < 2.0f * rms (input, 0.2));
 }
 
-TEST_CASE ("Projects saved before the drive MODEL keep the original overdrive", "[effects][drive]")
+TEST_CASE ("Projects saved before the drive MODEL load the first model (now Rabid)", "[effects][drive]")
 {
     EffectRig original;
     juce::MemoryBlock saved;
@@ -1427,7 +1448,7 @@ TEST_CASE ("Projects saved before the drive MODEL keep the original overdrive", 
         rig.processor.setStateInformation (state.getData(), (int) state.getSize());
         return juce::roundToInt (rig.processor.getParameters().getRawParameterValue (ParamIDs::driveModel)->load());
     };
-    CHECK (modelAfterLoading (older) == (int) effects::Drive::Model::classic);
+    CHECK (modelAfterLoading (older) == (int) effects::Drive::Model::rabid);
     CHECK (modelAfterLoading (saved) == (int) effects::Drive::Model::screamer);
 }
 

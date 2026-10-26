@@ -2,6 +2,19 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.43.0
+
+- **Rabid replaces Classic:** a distortion modelled on the ProCo RAT 2, from its published build schematic (the RAT 2 parts list, cross-checked against other builders' layouts). Rigs and projects that used Classic, and projects from before the MODEL menu, now get Rabid.
+  - **The op-amp is the sound.** The RAT's LM308 is a slow chip, and that's modelled:
+    - **It runs out of speed at high gain.** At full DISTORTION it amplifies a quiet 500 Hz about 4 times more than a quiet 4 kHz, rolling the fizz off the top, as the real pedal does. Our figures match the reference circuit model's (47 dB at 4 kHz).
+    - **It can only swing so fast** (0.3 V per microsecond), so hard-driven edges are sloped rather than razor-sharp, which takes the buzz off.
+    - **It runs out of room** at about 3 V either way.
+  - **DISTORTION** (DRIVE) is the pedal's 100k pot in the op-amp's feedback, against its two legs to ground (560 ohms with 4.7 uF, and 47 ohms with 2.2 uF). Those legs make it bassier at low settings and push the mids as it goes up.
+  - **Two silicon diodes** after the op-amp, through 1k and 4.7 uF, clip both halves of the wave alike.
+  - **FILTER** (TONE) is the pedal's 1.5k plus 100k pot into 3.3 nF, from wide open to about 475 Hz. **It's turned round to match the other models: TONE up is brighter.** On a real RAT, FILTER up is darker.
+  - **LEVEL 0 dB** matches your guitar at DISTORTION and TONE noon.
+  - **What's a guess:** the op-amp's exact speed and swing (the chips vary), and its output stage is treated as perfect.
+
 ## 0.42.0
 
 - **Skyline, a new drive:** inspired by the Horizon Devices Precision Drive, the modern metal "tightener" in front of a high-gain amp. It's the last MODEL in OD / DISTORTION.
