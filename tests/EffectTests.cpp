@@ -921,6 +921,27 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (biggestStep < 0.03f);
     }
 
+    SECTION ("Razor only turns the volume up and down: every sample is the guitar's, scaled between 0 and 1")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::tremolo);
+        rig.set (ParamIDs::modRate, 16.0f);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modWave, 10.0f);
+        const auto note = sine (82.4, 0.3f, 1.0);   // low E
+        const auto output = rig.runMono (note);
+        int checked = 0;
+        for (size_t i = (size_t) (0.2 * sampleRate); i < output.size(); ++i)
+        {
+            if (std::abs (note[i]) < 0.05f)
+                continue;
+            const auto gain = output[i] / note[i];
+            REQUIRE (gain > -1.0e-4f);
+            REQUIRE (gain < 1.0f + 1.0e-4f);
+            ++checked;
+        }
+        CHECK (checked > 10000);
+    }
+
     SECTION ("Razor pulses the volume at the rate setting, full DEPTH from silence to full")
     {
         rig.set (ParamIDs::modType, 3.0f);

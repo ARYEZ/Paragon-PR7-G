@@ -315,7 +315,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
         // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
         auto rate = param (ids.rate);
         if (const auto sync = (int) param (ids.sync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
-            rate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
+            rate = juce::jlimit (0.02f, 40.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);   // 1/32 at 300 BPM
 
         const auto pre = (int) param (ids.position) == (int) effects::Modulation::Position::pre;
         return std::pair { effects::Modulation::Settings { isOn (ids.on), type, rate,

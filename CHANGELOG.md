@@ -2,6 +2,10 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.40.1
+
+- **Faster SYNC settings:** 1/16 dotted, 1/16 triplet and **1/32**, for MOD, MOD 2 and DELAY. They're at the bottom of the SYNC list, so saved rigs keep their settings. Synced modulation can now run up to 40 cycles a second (it stopped at 20), so 1/32 keeps up at fast tempos.
+
 ## 0.40.0
 
 - **Choose where your NAM amps and cab IRs live:** a new **AMP & CAB FOLDERS** section on the SETTINGS page, with a CHOOSE button for each (and an x to forget it).
