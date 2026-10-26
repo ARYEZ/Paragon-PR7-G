@@ -2,6 +2,13 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.40.0
+
+- **Choose where your NAM amps and cab IRs live:** a new **AMP & CAB FOLDERS** section on the SETTINGS page, with a CHOOSE button for each (and an x to forget it).
+  - **The AMP and CABINET browsers open there**, instead of in Documents. If the loaded file is in a folder inside it, the browser opens on that folder.
+  - **Rigs find files that have moved.** If a rig or project points at a model or IR that isn't where it was saved (a new computer, or you've reorganised), PR7-G looks in your folder, and every folder inside it, for a file with the same name, and loads that. Save the rig again to keep the new location.
+  - **Saved on this computer**, like the finish, so every PR7-G in every project uses them.
+
 ## 0.39.0
 
 - **Razor replaces the generic tremolo:** modelled on the Boss TR-2, the standard tremolo pedal since 1997. Its three knobs are RATE, DEPTH and a new **WAVE** knob (shown only for Razor).

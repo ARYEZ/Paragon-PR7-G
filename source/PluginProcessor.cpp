@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "PluginEditor.h"
 
@@ -471,10 +472,13 @@ void ParagonX1AudioProcessor::loadAmpModel (const juce::File& file)
     loading.loading = true;
     setStatus (ampStatus, loading);
 
-    loader.addJob ([this, file]
+    loader.addJob ([this, requested = file]
     {
         auto status = getAmpStatus();
         status.loading = false;
+
+        // Moved since the rig was saved? Look in the NAM amps folder by name.
+        const auto file = LibraryFolders::locate (LibraryFolders::Kind::amps, requested);
 
         if (! file.existsAsFile())
         {
@@ -524,10 +528,13 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
     loading.loading = true;
     setStatus (cabStatus, loading);
 
-    loader.addJob ([this, file]
+    loader.addJob ([this, requested = file]
     {
         auto status = getCabStatus();
         status.loading = false;
+
+        // Moved since the rig was saved? Look in the cab IRs folder by name.
+        const auto file = LibraryFolders::locate (LibraryFolders::Kind::cabs, requested);
 
         if (! file.existsAsFile())
         {

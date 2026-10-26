@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "PluginProcessor.h"
 
@@ -395,4 +396,62 @@ TEST_CASE ("MOD in PRE runs before the amp, so the amp works on the chorused sou
         level += (double) post[i] * post[i];
     }
     CHECK (std::sqrt (difference / level) > 0.05);
+}
+
+TEST_CASE ("A rig whose amp or cab file has moved finds it in the chosen folders, by name", "[state][folders]")
+{
+    // A "library" with the files in a folder inside it, as players sort them.
+    const auto library = tempFile ("library");
+    library.deleteRecursively();
+    const auto irs = library.getChildFile ("Cabs").getChildFile ("4x12");
+    const auto amps = library.getChildFile ("Amps").getChildFile ("High Gain");
+    irs.createDirectory();
+    amps.createDirectory();
+    std::vector<float> ir (32, 0.0f);
+    ir[0] = 1.0f;
+    const auto movedIr = writeWav (irs.getChildFile ("V30 SM57.wav"), ir);
+    const auto movedModel = amps.getChildFile ("wavenet.nam");
+    REQUIRE (wavenetModel.copyFileTo (movedModel));
+
+    // The rig still points at where they used to be.
+    const auto oldIr = tempFile ("old place").getChildFile ("V30 SM57.wav");
+    const auto oldModel = tempFile ("old place").getChildFile ("wavenet.nam");
+
+    SECTION ("With no folders chosen, the rig reports them missing, as before")
+    {
+        LibraryFolders::set (LibraryFolders::Kind::amps, {}, false);
+        LibraryFolders::set (LibraryFolders::Kind::cabs, {}, false);
+        TestRig rig;
+        rig.processor.loadAmpModel (oldModel);
+        rig.processor.loadCabinetIR (oldIr);
+        rig.waitForLoads();
+        CHECK (rig.processor.getAmpStatus().error.contains ("Can't find"));
+        CHECK (rig.processor.getCabStatus().error.contains ("Can't find"));
+    }
+
+    SECTION ("With the folders chosen, both load from their new places")
+    {
+        LibraryFolders::set (LibraryFolders::Kind::amps, library.getChildFile ("Amps"), false);
+        LibraryFolders::set (LibraryFolders::Kind::cabs, library.getChildFile ("Cabs"), false);
+        TestRig rig;
+        rig.processor.loadAmpModel (oldModel);
+        rig.processor.loadCabinetIR (oldIr);
+        rig.waitForLoads();
+        CHECK (rig.processor.getAmpStatus().file == movedModel);
+        CHECK (rig.processor.getAmpStatus().error.isEmpty());
+        CHECK (rig.processor.getCabStatus().file == movedIr);
+        CHECK (rig.processor.getCabStatus().error.isEmpty());
+    }
+
+    SECTION ("A file that is where the rig says is loaded from there, not the folder")
+    {
+        LibraryFolders::set (LibraryFolders::Kind::amps, library.getChildFile ("Amps"), false);
+        TestRig rig;
+        rig.processor.loadAmpModel (wavenetModel);
+        rig.waitForLoads();
+        CHECK (rig.processor.getAmpStatus().file == wavenetModel);
+    }
+
+    LibraryFolders::set (LibraryFolders::Kind::amps, {}, false);
+    LibraryFolders::set (LibraryFolders::Kind::cabs, {}, false);
 }

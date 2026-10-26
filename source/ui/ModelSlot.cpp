@@ -55,9 +55,14 @@ bool ModelSlot::matchesWildcard (const juce::File& file) const
 
 void ModelSlot::chooseFile()
 {
-    const auto startFolder = status.file != juce::File()
-                               ? status.file.getParentDirectory()
-                               : juce::File::getSpecialLocation (juce::File::userDocumentsDirectory);
+    // The chosen folder (or the loaded file's own folder inside it); with
+    // no folder chosen, the loaded file's folder, or Documents.
+    const auto library = libraryFolder ? libraryFolder() : juce::File();
+    const auto loadedFolder = status.file != juce::File() ? status.file.getParentDirectory() : juce::File();
+    const auto startFolder = library.isDirectory()
+                               ? (loadedFolder.isAChildOf (library) || loadedFolder == library ? loadedFolder : library)
+                               : loadedFolder != juce::File() ? loadedFolder
+                                                              : juce::File::getSpecialLocation (juce::File::userDocumentsDirectory);
 
     chooser = std::make_unique<juce::FileChooser> ("Load " + title.toLowerCase(), startFolder, wildcard);
     chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,

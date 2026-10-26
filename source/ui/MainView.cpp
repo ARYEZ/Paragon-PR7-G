@@ -1,5 +1,6 @@
 #include "MainView.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "ui/Logo.h"
 #include "dsp/effects/Modulation.h"
@@ -235,6 +236,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     ampSlot.onLoad = [this] (const juce::File& file) { audioProcessor.loadAmpModel (file); };
     ampSlot.onClear = [this] { audioProcessor.clearAmpModel(); };
     ampSlot.onTitleClicked = [this] { selectBlock (ampBlock); };
+    ampSlot.libraryFolder = [] { return LibraryFolders::get (LibraryFolders::Kind::amps); };
+    cabSlot.libraryFolder = [] { return LibraryFolders::get (LibraryFolders::Kind::cabs); };
     cabSlot.onLoad = [this] (const juce::File& file) { audioProcessor.loadCabinetIR (file); };
     cabSlot.onClear = [this] { audioProcessor.clearCabinetIR(); };
     cabSlot.onTitleClicked = [this] { selectBlock (cabBlock); };
