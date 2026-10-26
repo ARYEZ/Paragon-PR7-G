@@ -2,6 +2,16 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.42.0
+
+- **Skyline, a new drive:** inspired by the Horizon Devices Precision Drive, the modern metal "tightener" in front of a high-gain amp. It's the last MODEL in OD / DISTORTION.
+  - **At heart it's a Tube Screamer.** It's built on Banshee's circuit model. With ATTACK on 7 and GATE off, it is exactly Banshee.
+  - **ATTACK**, an 8-way switch: the capacitor that decides how much bass reaches the clipping. Builders tracing the pedal found eight, from 470 nF down to 33 nF. Against the circuit's 4.7k, that cuts the bass from about 70 Hz (position 1: full, low-mid punch) to about 1 kHz (position 8: very tight, all pick attack). A Tube Screamer is fixed at position 7.
+  - **GATE**: a noise gate on the pedal that listens to your guitar, not the drive, so the drive's own hiss can't hold it open. Fully down it's off; turning it up raises the threshold and closes it faster and harder.
+  - **TONE** is the pedal's BRIGHT knob.
+  - **What's a guess:** the gate's exact behaviour (its circuit hasn't been published), and any gain or output difference from a Tube Screamer. Horizon says its VOLUME at 6 equals a Tube Screamer at 10; use LEVEL for more.
+- Banshee's bass cut is now worked out from its parts (4.7k and 47 nF: 720.5 Hz) instead of a rounded 720 Hz. You won't hear the difference.
+
 ## 0.41.0
 
 - **Cosmonaut replaces Muff Fuzz:** a fuzz modelled stage by stage on the mid-'90s green Russian Big Muff (the "Green Russian" / Civil War), using the part values traced from a real unit. The thick, bassy wall of fuzz of stoner, doom and sludge.

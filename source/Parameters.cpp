@@ -281,5 +281,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     constexpr int v30 = 30;
     layout.add (makeFloat (ParamIDs::modWave, "Razor Wave", { 0.0f, 10.0f, 0.1f }, 0.0f, v30, asKnob));
     layout.add (makeFloat (ParamIDs::mod2Wave, "Mod 2 Razor Wave", { 0.0f, 10.0f, 0.1f }, 0.0f, v30, asKnob));
+
+    // Added in PR7-G 0.42.0: Skyline's ATTACK (8 positions, 7 is the TS808's) and GATE.
+    constexpr int v31 = 31;
+    layout.add (makeChoice (ParamIDs::driveAttack, "Skyline Attack", v31, effects::Drive::skylineAttackNames, effects::Drive::skylineTubeScreamerAttack));
+    layout.add (makeFloat (ParamIDs::driveGate, "Skyline Gate", { 0.0f, 10.0f, 0.1f }, 0.0f, v31, asKnob));
     return layout;
 }

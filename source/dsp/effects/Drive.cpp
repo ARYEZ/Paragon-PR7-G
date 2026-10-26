@@ -23,7 +23,6 @@ namespace effects
         // / 4.7k above the 4.7k / 0.047 uF corner (720 Hz); the 51 pF across
         // the feedback softens the very top; the 1k / 0.22 uF after the
         // diodes is the fixed treble cut the TONE knob works against.
-        constexpr float screamerLowCutHz = 720.0f;
         constexpr float feedbackR = 51.0e3f, drivePotR = 500.0e3f, groundR = 4.7e3f, feedbackC = 51.0e-12f;
         constexpr float toneCornerHz = 723.0f;
         constexpr float diodeVolts = 0.6f;         // about where a silicon diode starts conducting
@@ -65,8 +64,11 @@ namespace effects
         oversampling.reset();
         screamerOversampling.initProcessing ((size_t) maxBlockSize);
         screamerOversampling.reset();
-        screamerPaths.setSize (2, maxBlockSize);
-        screamerLowCut.coefficients = juce::dsp::IIR::Coefficients<float>::makeFirstOrderHighPass (sampleRate, screamerLowCutHz);
+        screamerPaths.setSize (3, maxBlockSize);   // clean, clipping path, and Skyline's gate
+        screamerLowCutNow = skylineAttackHz (skylineTubeScreamerAttack);   // the TS808's 4.7k and 47 nF: 720 Hz
+        gateEnvelope = 0.0f;
+        gateGain = 1.0f;
+        screamerLowCut.coefficients = juce::dsp::IIR::Coefficients<float>::makeFirstOrderHighPass (sampleRate, screamerLowCutNow);
         screamerLowCut.prepare (spec);
         clipLowPassState = toneState = outputCouplingState = 0.0f;
         screamerGain.reset (sampleRate, 0.02);
@@ -110,7 +112,8 @@ namespace effects
 
             switch (settings.model)
             {
-                case Model::screamer: processScreamer (block, settings); break;
+                case Model::screamer: processScreamer (block, settings, skylineAttackHz (skylineTubeScreamerAttack), 0.0f); break;
+                case Model::skyline:  processScreamer (block, settings, skylineAttackHz (settings.attack), settings.gate); break;
                 case Model::muff:     processCosmonaut (block, settings); break;
                 case Model::face:     processFace (block, settings); break;
                 case Model::classic:  processClassic (block, settings); break;
@@ -148,10 +151,49 @@ namespace effects
         outputGain.applyGain (block.getChannelPointer (0), (int) block.getNumSamples());
     }
 
-    void Drive::processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    float Drive::skylineAttackHz (int attack) noexcept
+    {
+        const auto nanofarads = skylineAttackNanofarads[(size_t) juce::jlimit (0, (int) std::size (skylineAttackNanofarads) - 1, attack)];
+        return 1.0f / (juce::MathConstants<float>::twoPi * groundR * nanofarads * 1.0e-9f);
+    }
+
+    void Drive::processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept
     {
         const auto numSamples = (int) block.getNumSamples();
         auto* samples = block.getChannelPointer (0);
+
+        // The capacitor in the clipping stage's 4.7k leg (Skyline's ATTACK),
+        // retuned in place when it changes: no allocation.
+        if (! juce::approximatelyEqual (lowCutHz, screamerLowCutNow))
+        {
+            *screamerLowCut.coefficients = juce::dsp::IIR::ArrayCoefficients<float>::makeFirstOrderHighPass (sampleRate, lowCutHz);
+            screamerLowCutNow = lowCutHz;
+        }
+
+        // Skyline's GATE listens to the guitar itself, before the drive, so
+        // the hiss the drive adds can't hold it open. (Worked out here, applied at the end.)
+        auto* gateGains = screamerPaths.getWritePointer (2);
+        if (gate > 0.0f)
+        {
+            const auto g = juce::jlimit (0.0f, 10.0f, gate) / 10.0f;
+            const auto threshold = juce::Decibels::decibelsToGain (-75.0f + 35.0f * g);   // -75 to -40 dB
+            const auto ratio = 1.5f + 4.5f * g;                                          // how hard it closes: 1.5 to 6
+            const auto release = 1.0f - std::exp (-1.0f / ((0.15f - 0.13f * g) * (float) sampleRate));   // 150 ms (loose) to 20 ms (fast)
+            const auto attackCoefficient = 1.0f - std::exp (-1.0f / (0.0005f * (float) sampleRate));
+            const auto follow = 1.0f - std::exp (-1.0f / (0.005f * (float) sampleRate));
+            for (int i = 0; i < numSamples; ++i)
+            {
+                gateEnvelope += (std::abs (samples[i]) - gateEnvelope) * follow;
+                const auto target = gateEnvelope >= threshold ? 1.0f : std::pow (gateEnvelope / threshold, ratio - 1.0f);
+                gateGain += (target - gateGain) * (target > gateGain ? attackCoefficient : release);
+                gateGains[i] = gateGain;
+            }
+        }
+        else
+        {
+            gateGain = 1.0f;
+            std::fill (gateGains, gateGains + numSamples, 1.0f);
+        }
 
         // DRIVE is a 500k audio-taper (logarithmic) pot, as on the pedal.
         const auto knob = juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f;
@@ -163,7 +205,7 @@ namespace effects
         // signal the diodes will clip.
         screamerPaths.copyFrom (0, 0, samples, numSamples);
         screamerPaths.copyFrom (1, 0, samples, numSamples);
-        auto paths = juce::dsp::AudioBlock<float> (screamerPaths).getSubBlock (0, (size_t) numSamples);
+        auto paths = juce::dsp::AudioBlock<float> (screamerPaths).getSubsetChannelBlock (0, 2).getSubBlock (0, (size_t) numSamples);
         auto clipPathBlock = paths.getSingleChannelBlock (1);
         juce::dsp::ProcessContextReplacing<float> clipContext (clipPathBlock);
         screamerLowCut.process (clipContext);
@@ -197,7 +239,7 @@ namespace effects
             toneState += (summed[i] - toneState) * toneCut;
             const auto toned = toneState + screamerTone.getNextValue() * (summed[i] - toneState);
             outputCouplingState += (toned - outputCouplingState) * coupling;
-            samples[i] = (toned - outputCouplingState) * screamerLevel.getNextValue();
+            samples[i] = (toned - outputCouplingState) * screamerLevel.getNextValue() * gateGains[i];
         }
     }
 

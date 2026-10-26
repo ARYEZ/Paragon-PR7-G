@@ -38,6 +38,16 @@ namespace effects
     // the long sustain, a small capacitor lets the bass through less
     // clipped, and the passive tone stack always scoops the mids.
     //
+    // SKYLINE is inspired by the Horizon Devices Precision Drive, a modern
+    // metal take on the TS808 above (PR7-G 0.42.0). The same circuit, with:
+    //
+    //   - ATTACK: an 8-way switch choosing the capacitor in the clipping
+    //     stage's 4.7k leg (470 nF down to 33 nF, from builders' traces of
+    //     the pedal), so the bass reaching the diodes is cut from about 70 Hz
+    //     (full, low-mid punch) to about 1 kHz (tight, pick attack). The
+    //     TS808's 47 nF is position 7. TONE is its BRIGHT knob.
+    //   - GATE: a gate on the pedal's output, listening to the guitar.
+    //
     // FACE FUZZ follows the silicon Fuzz Face (Gilmour's earlier sound):
     //
     //   x -> pickup loading (a soft treble cut) -> gain -> asymmetric clip -> treble cut (TONE) -> level
@@ -50,8 +60,17 @@ namespace effects
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { classic, screamer, muff, face };
-        static inline const juce::StringArray modelNames { "Classic", "Banshee", "Cosmonaut", "Face Fuzz" };
+        enum class Model { classic, screamer, muff, face, skyline };
+        static inline const juce::StringArray modelNames { "Classic", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline" };
+
+        // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
+        // Saved by number: only append.
+        static constexpr float skylineAttackNanofarads[] = { 470.0f, 330.0f, 220.0f, 100.0f, 82.0f, 68.0f, 47.0f, 33.0f };
+        static inline const juce::StringArray skylineAttackNames { "1", "2", "3", "4", "5", "6", "7", "8" };
+        static constexpr int skylineTubeScreamerAttack = 6;   // 47 nF, the TS808's value
+
+        // Where Skyline's ATTACK cuts the bass into the diodes, in Hz (for tests).
+        static float skylineAttackHz (int attack) noexcept;
 
         struct Settings
         {
@@ -60,6 +79,8 @@ namespace effects
             float drive = 5.0f;      // 0 to 10
             float tone = 5.0f;       // 0 to 10
             float levelDb = 0.0f;
+            int attack = skylineTubeScreamerAttack;   // Skyline's ATTACK, 0 to 7
+            float gate = 0.0f;                        // Skyline's GATE, 0 (off) to 10 (fast and hard)
         };
 
         Drive();
@@ -72,7 +93,7 @@ namespace effects
 
     private:
         void processClassic (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
         void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
@@ -87,6 +108,8 @@ namespace effects
         juce::dsp::Oversampling<float> screamerOversampling;
         juce::AudioBuffer<float> screamerPaths;
         juce::dsp::IIR::Filter<float> screamerLowCut;
+        float screamerLowCutNow = 0.0f;
+        float gateEnvelope = 0.0f, gateGain = 1.0f;   // Skyline's gate
         float clipLowPassState = 0.0f, toneState = 0.0f, outputCouplingState = 0.0f;
         juce::SmoothedValue<float> screamerGain, screamerTone, screamerLevel;
         // Cosmonaut's circuit, and Face Fuzz's one-pole filters (pickup
