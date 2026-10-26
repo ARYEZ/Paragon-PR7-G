@@ -342,8 +342,11 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                               { ParamIDs::fpInterval, "INTERVAL", fpIs (effects::FilterPitch::Type::pitchShifter) },
                               { ParamIDs::fpXpProgram, "PROGRAM", fpIs (effects::FilterPitch::Type::whammyWah) },
                               { ParamIDs::fpMix, "MIX" } } } });
+    // Skyline adds its pedal's ATTACK and GATE.
+    const auto isSkyline = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::skyline; };
     panels[driveBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "OVERDRIVE", { { ParamIDs::driveOn, "ON" }, { ParamIDs::driveModel, "MODEL" }, { ParamIDs::driveGain, "DRIVE" }, { ParamIDs::driveTone, "TONE" },
+                         { ParamIDs::driveAttack, "ATTACK", isSkyline, true }, { ParamIDs::driveGate, "GATE", isSkyline, true },
                          { ParamIDs::driveLevel, "LEVEL" } } } });
     panels[ampBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "AMP (NAM)", { { ParamIDs::ampOn, "ON" }, { ParamIDs::ampNormalise, "NORMALISE" }, { ParamIDs::presence, "PRESENCE" },

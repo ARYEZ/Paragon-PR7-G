@@ -74,6 +74,8 @@ namespace ParamIDs
     // Version 10: the drive's model (Tube Screamer or the original), and
     // the FILTER / PITCH block: auto-wah and pitch shifter.
     inline constexpr auto driveModel    = "driveModel";
+    inline constexpr auto driveAttack   = "driveAttack";   // Skyline's ATTACK (PR7-G 0.42.0)
+    inline constexpr auto driveGate     = "driveGate";     // Skyline's GATE
     inline constexpr auto fpOn          = "fpOn";
     inline constexpr auto fpType        = "fpType";
     inline constexpr auto fpSensitivity = "fpSensitivity";   // auto-wah

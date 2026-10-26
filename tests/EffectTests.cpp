@@ -517,6 +517,61 @@ TEST_CASE ("Overdrive adds harmonics, and oversampling keeps aliasing down", "[e
     }
 }
 
+TEST_CASE ("Skyline: a Tube Screamer whose ATTACK sets the bass into the clipping, with a gate", "[effects][drive]")
+{
+    const auto play = [] (float model, const std::vector<float>& input, float attack, float gate = 0.0f, float drive = 6.0f)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, model);
+        rig.set (ParamIDs::driveGain, drive);
+        rig.set (ParamIDs::driveAttack, attack);
+        rig.set (ParamIDs::driveGate, gate);
+        const auto output = rig.runMono (input);
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto skyline = (float) effects::Drive::Model::skyline, banshee = (float) effects::Drive::Model::screamer;
+
+    SECTION ("ATTACK's eight capacitors against the 4.7k cut the bass from about 70 Hz to about 1 kHz")
+    {
+        CHECK_THAT (effects::Drive::skylineAttackHz (0), WithinAbs (72.0, 1.0));     // 470 nF
+        CHECK_THAT (effects::Drive::skylineAttackHz (6), WithinAbs (720.0, 5.0));    // 47 nF, the TS808
+        CHECK_THAT (effects::Drive::skylineAttackHz (7), WithinAbs (1026.0, 5.0));   // 33 nF
+    }
+
+    SECTION ("On ATTACK 7 with the gate off it is exactly the Tube Screamer (Banshee)")
+    {
+        const auto input = sine (196.0, 0.3f, 0.5);
+        CHECK (maxAbsDifference (play (skyline, input, (float) effects::Drive::skylineTubeScreamerAttack),
+                                 play (banshee, input, 0.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("ATTACK 1 lets far more of a low E into the clipping than ATTACK 8")
+    {
+        const auto lowE = sine (82.4, 0.3f, 0.6);
+        const auto harmonics = [&] (float attack)
+        {
+            const auto output = play (skyline, lowE, attack);
+            return dB ((levelAt (output, 3.0 * 82.4, 0.3) + levelAt (output, 5.0 * 82.4, 0.3)) / levelAt (output, 82.4, 0.3));
+        };
+        CHECK (harmonics (0.0f) > harmonics (7.0f) + 6.0f);
+    }
+
+    SECTION ("GATE silences quiet hiss but lets playing through")
+    {
+        juce::Random random (3);
+        std::vector<float> hiss ((size_t) (0.6 * sampleRate));
+        for (auto& sample : hiss)
+            sample = 0.0003f * (random.nextFloat() * 2.0f - 1.0f);   // about -75 dB
+        const auto open = play (skyline, hiss, 6.0f, 0.0f), gated = play (skyline, hiss, 6.0f, 8.0f);
+        CHECK (dB (rms (gated, 0.3) / rms (open, 0.3)) < -20.0f);
+
+        const auto note = sine (196.0, 0.2f, 0.6);
+        CHECK_THAT (dB (rms (play (skyline, note, 6.0f, 8.0f), 0.3) / rms (play (skyline, note, 6.0f, 0.0f), 0.3)), WithinAbs (0.0, 0.5));
+    }
+}
+
 TEST_CASE ("The Screamer drive behaves like a Tube Screamer", "[effects][drive]")
 {
     EffectRig rig;

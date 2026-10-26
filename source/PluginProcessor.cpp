@@ -297,7 +297,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
         glitch.process (monoBlock, glitchSettings, getTempoBpm(), songBeats);
 
     drive.process (monoBlock, { isOn (ParamIDs::driveOn), (effects::Drive::Model) (int) param (ParamIDs::driveModel),
-                                param (ParamIDs::driveGain), param (ParamIDs::driveTone), param (ParamIDs::driveLevel) });
+                                param (ParamIDs::driveGain), param (ParamIDs::driveTone), param (ParamIDs::driveLevel),
+                                (int) param (ParamIDs::driveAttack), param (ParamIDs::driveGate) });
 
     // MORPH FX: the pedal blends the time effects in, from dry at the heel
     // to each effect's own MIX setting at the toe. (The effects smooth their
