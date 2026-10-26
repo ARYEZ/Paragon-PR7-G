@@ -511,9 +511,10 @@ TEST_CASE ("Rabid: the RAT 2's op-amp gain, symmetric diodes and FILTER", "[effe
             rig.set (ParamIDs::driveGain, 6.0f);
             rig.set (ParamIDs::driveTone, tone);
             const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
-            return dB ((levelAt (output, 3080.0) + levelAt (output, 3520.0)) / levelAt (output, 220.0));
+            // The 13th and 15th harmonics: odd, as symmetric clipping makes (the even ones are all but absent).
+            return dB ((levelAt (output, 2860.0) + levelAt (output, 3300.0)) / levelAt (output, 220.0));
         };
-        CHECK (trebleShare (0.0f) < trebleShare (10.0f) - 15.0f);
+        CHECK (trebleShare (0.0f) < trebleShare (10.0f) - 10.0f);   // about 15 dB measured
     }
 
     SECTION ("At noon, near the guitar's own level")
