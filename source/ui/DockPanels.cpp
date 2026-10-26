@@ -1,5 +1,6 @@
 #include "DockPanels.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "ui/Finish.h"
 #include "ui/ParagonLookAndFeel.h"
@@ -345,6 +346,39 @@ SettingsPage::SettingsPage (ParagonX1AudioProcessor& p)
 
     for (auto* component : std::initializer_list<juce::Component*> { &reference, &muteWhileTuning, &ccBox, &openFolder, &pearlWhite, &pearlWhiteNeon, &pearlBlack })
         addAndMakeVisible (component);
+
+    folderRows[0].label = "NAM AMPS";
+    folderRows[1].label = "CAB IRS";
+    for (int row = 0; row < 2; ++row)
+    {
+        auto& r = folderRows[row];
+        const auto kind = (LibraryFolders::Kind) row;
+        styleButton (r.choose, false);
+        styleButton (r.forget, false);
+        r.choose.setTooltip ("Choose the folder where your " + juce::String (row == 0 ? "NAM amp models" : "cabinet IRs") + " are");
+        r.forget.setTooltip ("Forget this folder");
+        r.choose.onClick = [this, row] { chooseFolder (row); };
+        r.forget.onClick = [this, kind] { LibraryFolders::set (kind, {}); repaint(); };
+        addAndMakeVisible (r.choose);
+        addAndMakeVisible (r.forget);
+    }
+}
+
+void SettingsPage::chooseFolder (int row)
+{
+    const auto kind = (LibraryFolders::Kind) row;
+    const auto current = LibraryFolders::get (kind);
+    folderChooser = std::make_unique<juce::FileChooser> ("Choose the folder with your " + juce::String (row == 0 ? "NAM amp models" : "cabinet IRs"),
+                                                         current.isDirectory() ? current : juce::File::getSpecialLocation (juce::File::userDocumentsDirectory));
+    folderChooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
+                                [this, kind] (const juce::FileChooser& chooser)
+                                {
+                                    if (const auto folder = chooser.getResult(); folder.isDirectory())
+                                    {
+                                        LibraryFolders::set (kind, folder);
+                                        repaint();
+                                    }
+                                });
 }
 
 SettingsPage::~SettingsPage()
@@ -389,6 +423,29 @@ void SettingsPage::paint (juce::Graphics& g)
     section (finishArea, "FINISH",
              "The unit's colour: pearl white with black keys, or pearl white or pearl black with neon pink-to-orange keys. "
              "Saved on this computer, so every Paragon PR7-G you open uses it.");
+    section (foldersArea, "AMP & CAB FOLDERS",
+             "Where your NAM amps and cab IRs are. The AMP and CABINET browsers open here, and a rig whose file has moved finds it here by name, "
+             "in any folder inside. Saved on this computer.");
+    for (const auto& r : folderRows)
+    {
+        const auto folder = LibraryFolders::get ((LibraryFolders::Kind) (&r - folderRows));
+        g.setColour (ParagonColours::text);
+        g.setFont (juce::FontOptions (13.0f, juce::Font::bold));
+        g.drawText (r.label, r.labelArea, juce::Justification::centredLeft, false);
+        g.setColour (folder.isDirectory() ? ParagonColours::accent : ParagonColours::textDim);
+        g.setFont (juce::FontOptions (13.0f));
+        // A long path loses its start, not its end: the folder's own name is what matters.
+        auto path = folder != juce::File() ? folder.getFullPathName() : juce::String ("Not set");
+        const auto fits = [&] (const juce::String& text)
+        {
+            return juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), text) < (float) r.pathArea.getWidth() * 1.8f;
+        };
+        const auto separator = juce::File::getSeparatorString();
+        while (! fits (path) && path.fromFirstOccurrenceOf (separator, false, false).contains (separator))
+            path = juce::String (juce::CharPointer_UTF8 ("\xe2\x80\xa6")) + path.fromFirstOccurrenceOf (separator, false, false)
+                                                                                 .fromFirstOccurrenceOf (separator, true, false);
+        g.drawFittedText (path, r.pathArea, juce::Justification::centredLeft, 2, 0.9f);
+    }
     section (rigsArea, "RIGS", "Your rigs are files in this folder, so you can back them up or share them:\n"
                                + processor.getRigLibrary().getFolder().getFullPathName());
     section (aboutArea, "ABOUT",
@@ -406,8 +463,22 @@ void SettingsPage::resized()
     tunerArea = top.removeFromLeft (third);
     expressionArea = top.withTrimmedLeft (12).removeFromLeft (third);
     finishArea = top.withTrimmedLeft (24 + third);
-    rigsArea = area.removeFromLeft (area.getWidth() / 2 - 6);
-    aboutArea = area.withTrimmedLeft (12);
+    rigsArea = area.removeFromLeft (third);
+    foldersArea = area.withTrimmedLeft (12).removeFromLeft (third);
+    aboutArea = area.withTrimmedLeft (24 + third);
+
+    auto folderControls = foldersArea.reduced (24, 18).withTrimmedTop (84);
+    for (auto& r : folderRows)
+    {
+        auto line = folderControls.removeFromTop (34);
+        folderControls.removeFromTop (8);
+        r.labelArea = line.removeFromLeft (84);
+        r.forget.setBounds (line.removeFromRight (30).withSizeKeepingCentre (30, 30));
+        line.removeFromRight (6);
+        r.choose.setBounds (line.removeFromRight (90).withSizeKeepingCentre (90, 30));
+        line.removeFromRight (10);
+        r.pathArea = line;
+    }
 
     auto tunerControls = tunerArea.reduced (24, 18).withTrimmedTop (90);
     reference.setBounds (tunerControls.removeFromTop (32).withWidth (juce::jmin (420, tunerControls.getWidth())));

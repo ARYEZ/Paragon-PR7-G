@@ -387,7 +387,7 @@ TEST_CASE ("GLITCH: each mode chops, repeats or smears the guitar as it says", "
     }
 }
 
-TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face clips unevenly and cleans up", "[effects][drive]")
+TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; Face clips unevenly and cleans up", "[effects][drive]")
 {
     const auto play = [] (effects::Drive::Model model, float amplitude, float drive = 5.0f, float tone = 5.0f, double hz = 220.0)
     {
@@ -401,17 +401,38 @@ TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face c
         return output;
     };
 
-    SECTION ("At LEVEL 0 dB both sit near the guitar's own level, at any FUZZ / SUSTAIN")
+    SECTION ("At LEVEL 0 dB both sit near the guitar's own level; Cosmonaut gets louder with SUSTAIN, as the pedal does")
     {
-        for (const auto model : { effects::Drive::Model::muff, effects::Drive::Model::face })
-            for (const auto drive : { 2.0f, 5.0f, 9.0f })
-            {
-                INFO ("model " << (int) model << ", drive " << drive);
-                CHECK (std::abs (dB (rms (play (model, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
-            }
+        for (const auto drive : { 2.0f, 5.0f, 9.0f })
+        {
+            INFO ("Face, drive " << drive);
+            CHECK (std::abs (dB (rms (play (effects::Drive::Model::face, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
+        }
+        const auto cosmonautDb = [&] (float drive) { return dB (rms (play (effects::Drive::Model::muff, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f))); };
+        CHECK_THAT (cosmonautDb (5.0f), WithinAbs (0.0, 1.5));
+        CHECK (cosmonautDb (9.0f) > cosmonautDb (2.0f));
+        CHECK (cosmonautDb (9.0f) - cosmonautDb (2.0f) < 8.0f);
     }
 
-    SECTION ("Muff clips both halves alike (odd harmonics); Face clips one harder (a strong 2nd)")
+    SECTION ("Cosmonaut: the bass is clipped far less than the mids (the 0.047 uF in series with its diodes)")
+    {
+        // The share of the output that is harmonics: a low E against a note two octaves up.
+        const auto distortion = [&] (double hz)
+        {
+            const auto output = play (effects::Drive::Model::muff, 0.2f, 7.0f, 5.0f, hz);
+            const auto fundamental = levelAt (output, hz, 0.3);
+            return dB ((levelAt (output, 3.0 * hz, 0.3) + levelAt (output, 5.0 * hz, 0.3)) / fundamental);
+        };
+        CHECK (distortion (82.4) < distortion (330.0) - 3.0f);
+    }
+
+    SECTION ("Cosmonaut compresses: ten times the picking strength is far less than ten times louder")
+    {
+        const auto level = [&] (float amplitude) { return rms (play (effects::Drive::Model::muff, amplitude, 7.0f, 5.0f, 1000.0), 0.3); };
+        CHECK (dB (level (0.3f) / level (0.03f)) < 8.0f);
+    }
+
+    SECTION ("Cosmonaut clips both halves alike (odd harmonics); Face clips one harder (a strong 2nd)")
     {
         const auto secondToThird = [&] (effects::Drive::Model model)
         {
@@ -431,7 +452,7 @@ TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face c
         CHECK (harmonics (0.3f) > harmonics (0.01f) + 10.0f);
     }
 
-    SECTION ("Muff's TONE scoops the mids at noon")
+    SECTION ("Cosmonaut's TONE scoops the mids at noon")
     {
         // A quiet 1 kHz tone (still fuzzed), against 250 Hz, through the tone stack.
         const auto midsAgainstLows = [&] (float tone)
@@ -880,7 +901,69 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK_THAT (levelWith (1.0f), WithinAbs (2.7, 0.7));
     }
 
-    SECTION ("Tremolo pulses the volume at the rate setting")
+    SECTION ("Razor's WAVE: a triangle, a trapezoid at noon, nearly a square fully up")
+    {
+        // The share of each cycle spent at (near) full volume or the deepest dip.
+        const auto flatShare = [] (float wave)
+        {
+            int flat = 0;
+            for (int i = 0; i < 1000; ++i)
+            {
+                const auto v = effects::Modulation::razorShape ((float) i / 1000.0f, wave);
+                flat += (v < 0.02f || v > 0.98f) ? 1 : 0;
+            }
+            return (float) flat / 1000.0f;
+        };
+        CHECK (flatShare (0.0f) < 0.05f);
+        CHECK_THAT (flatShare (5.0f), WithinAbs (0.82, 0.05));
+        CHECK (flatShare (10.0f) > 0.95f);
+    }
+
+    SECTION ("Razor: WAVE fully up chops on and off, without clicks")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::tremolo);
+        rig.set (ParamIDs::modRate, 4.0f);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modWave, 10.0f);
+        const auto output = rig.runMono (input);
+        // Mostly fully on or fully off: few 10 ms windows in between.
+        int between = 0, windows = 0;
+        for (double t = 0.2; t < 0.95; t += 0.01, ++windows)
+        {
+            const auto level = rms (output, t, t + 0.01) / rms (input, 0.2);
+            between += (level > 0.1f && level < 0.9f) ? 1 : 0;
+        }
+        CHECK ((float) between / (float) windows < 0.2f);
+        // The chop is rounded off (C4): no sample jumps by more than the
+        // input itself could.
+        float biggestStep = 0.0f;
+        for (size_t i = (size_t) (0.2 * sampleRate); i < output.size(); ++i)
+            biggestStep = std::max (biggestStep, std::abs (output[i] - output[i - 1]));
+        CHECK (biggestStep < 0.03f);
+    }
+
+    SECTION ("Razor only turns the volume up and down: every sample is the guitar's, scaled between 0 and 1")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::tremolo);
+        rig.set (ParamIDs::modRate, 16.0f);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modWave, 10.0f);
+        const auto note = sine (82.4, 0.3f, 1.0);   // low E
+        const auto output = rig.runMono (note);
+        int checked = 0;
+        for (size_t i = (size_t) (0.2 * sampleRate); i < output.size(); ++i)
+        {
+            if (std::abs (note[i]) < 0.05f)
+                continue;
+            const auto gain = output[i] / note[i];
+            REQUIRE (gain > -1.0e-4f);
+            REQUIRE (gain < 1.0f + 1.0e-4f);
+            ++checked;
+        }
+        CHECK (checked > 10000);
+    }
+
+    SECTION ("Razor pulses the volume at the rate setting, full DEPTH from silence to full")
     {
         rig.set (ParamIDs::modType, 3.0f);
         rig.set (ParamIDs::modRate, 4.0f);

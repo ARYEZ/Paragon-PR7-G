@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "PluginEditor.h"
 
@@ -314,7 +315,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
         // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
         auto rate = param (ids.rate);
         if (const auto sync = (int) param (ids.sync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
-            rate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
+            rate = juce::jlimit (0.02f, 40.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);   // 1/32 at 300 BPM
 
         const auto pre = (int) param (ids.position) == (int) effects::Modulation::Position::pre;
         return std::pair { effects::Modulation::Settings { isOn (ids.on), type, rate,
@@ -323,7 +324,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                                            param (ids.eq),
                                                            param (ids.stereo) > 0.5f && ! pre,
                                                            param (ids.manual), param (ids.res),
-                                                           param (ids.hadron) > 0.5f },
+                                                           param (ids.hadron) > 0.5f, param (ids.wave) },
                            pre };
     };
     const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);
@@ -471,10 +472,13 @@ void ParagonX1AudioProcessor::loadAmpModel (const juce::File& file)
     loading.loading = true;
     setStatus (ampStatus, loading);
 
-    loader.addJob ([this, file]
+    loader.addJob ([this, requested = file]
     {
         auto status = getAmpStatus();
         status.loading = false;
+
+        // Moved since the rig was saved? Look in the NAM amps folder by name.
+        const auto file = LibraryFolders::locate (LibraryFolders::Kind::amps, requested);
 
         if (! file.existsAsFile())
         {
@@ -524,10 +528,13 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
     loading.loading = true;
     setStatus (cabStatus, loading);
 
-    loader.addJob ([this, file]
+    loader.addJob ([this, requested = file]
     {
         auto status = getCabStatus();
         status.loading = false;
+
+        // Moved since the rig was saved? Look in the cab IRs folder by name.
+        const auto file = LibraryFolders::locate (LibraryFolders::Kind::cabs, requested);
 
         if (! file.existsAsFile())
         {

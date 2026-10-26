@@ -101,7 +101,19 @@ private:
     juce::ComboBox ccBox;
     juce::TextButton openFolder { "OPEN RIGS FOLDER" };
     juce::TextButton pearlWhite { "PEARL WHITE" }, pearlWhiteNeon { "WHITE + NEON" }, pearlBlack { "PEARL BLACK" };
-    juce::Rectangle<int> tunerArea, expressionArea, finishArea, rigsArea, aboutArea;
+    juce::Rectangle<int> tunerArea, expressionArea, finishArea, rigsArea, foldersArea, aboutArea;
+
+    // AMP & CAB FOLDERS: where the NAM amps and cab IRs are, for each a
+    // CHOOSE button and an x to forget it.
+    struct FolderRow
+    {
+        juce::String label;
+        juce::TextButton choose { "CHOOSE" }, forget { "x" };
+        juce::Rectangle<int> labelArea, pathArea;
+    };
+    FolderRow folderRows[2];
+    std::unique_ptr<juce::FileChooser> folderChooser;
+    void chooseFolder (int row);
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override { showFinish(); }
     void showFinish();

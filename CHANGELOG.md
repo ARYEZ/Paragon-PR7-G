@@ -2,6 +2,38 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.41.0
+
+- **Cosmonaut replaces Muff Fuzz:** a fuzz modelled stage by stage on the mid-'90s green Russian Big Muff (the "Green Russian" / Civil War), using the part values traced from a real unit. The thick, bassy wall of fuzz of stoner, doom and sludge.
+  - **Four transistor stages, as on the pedal:** an input stage, SUSTAIN, two clipping stages, the tone stack and an output stage. Each stage uses the pedal's real resistors and capacitors and is worked out sample by sample.
+  - **The fat bottom end:** in the clipping stages, the diodes sit behind a small 0.047 uF capacitor, so they clip the bass much less than the mids and highs. A low E comes out about 4 dB cleaner than a note two octaves up, and much louder. The US Big Muffs use a 1 uF there and clip everything alike.
+  - **Massive sustain:** picking ten times harder makes the mids barely 1 dB louder.
+  - **The tone stack:** the pedal's own (3.9 nF and 22k for treble, 20k and 10 nF for bass, a 100k TONE pot). It always scoops the mids, most at noon.
+  - **SUSTAIN raises the level, as on the pedal:** at LEVEL 0 dB it matches your guitar at noon, about 1 dB quieter at 2 and about 5 dB louder at 9.
+  - **What's a guess:** each transistor is treated as an amplifier of about 31 times (its 12k and 390 ohm resistors) that swings up to 4 V; the real transistors' gain varies, as it does between real pedals.
+  - **Your rigs:** rigs and projects that used Muff Fuzz now get Cosmonaut. Expect a thicker, bassier and slightly louder fuzz. The factory "Numb Solo (Floyd)" rig's LEVEL is lowered to match.
+
+## 0.40.1
+
+- **Faster SYNC settings:** 1/16 dotted, 1/16 triplet and **1/32**, for MOD, MOD 2 and DELAY. They're at the bottom of the SYNC list, so saved rigs keep their settings. Synced modulation can now run up to 40 cycles a second (it stopped at 20), so 1/32 keeps up at fast tempos.
+
+## 0.40.0
+
+- **Choose where your NAM amps and cab IRs live:** a new **AMP & CAB FOLDERS** section on the SETTINGS page, with a CHOOSE button for each (and an x to forget it).
+  - **The AMP and CABINET browsers open there**, instead of in Documents. If the loaded file is in a folder inside it, the browser opens on that folder.
+  - **Rigs find files that have moved.** If a rig or project points at a model or IR that isn't where it was saved (a new computer, or you've reorganised), PR7-G looks in your folder, and every folder inside it, for a file with the same name, and loads that. Save the rig again to keep the new location.
+  - **Saved on this computer**, like the finish, so every PR7-G in every project uses them.
+
+## 0.39.0
+
+- **Razor replaces the generic tremolo:** modelled on the Boss TR-2, the standard tremolo pedal since 1997. Its three knobs are RATE, DEPTH and a new **WAVE** knob (shown only for Razor).
+  - **WAVE** shapes the pulse, as on the pedal: fully down, a smooth triangle (the classic amp-style throb); at noon, a trapezoid that holds full and low volume for most of each cycle; fully up, almost a square: the hard, machine-gun on-off chop.
+  - **How:** like the pedal's circuit, WAVE turns up the gain of the oscillator's last stage, so its triangle clips flat into a trapezoid and then nearly a square. A capacitor rounds the corners off, so even the hardest chop doesn't click.
+  - **DEPTH** sets how far the volume dips. The guitar is at full volume only at the top of each pulse, so like the pedal, Razor sounds a little quieter when it's on.
+  - **RATE:** the pedal's spec is one pulse every 90 to 900 ms (about 1.1 to 11 per second). The RATE knob keeps its wider range, and SYNC still locks it to the tempo.
+  - **What's a guess:** how far WAVE fully up pushes into clipping, and how much the capacitor rounds the corners. Both are set from how the pedal is described: nearly on and off fully up, but no clicks.
+  - **Your rigs:** rigs and projects that used the Tremolo now get Razor, with WAVE down (a triangle). That's close to the old tremolo's smooth sine pulse, a touch more pointed.
+
 ## 0.38.0
 
 - **Hadron replaces the generic phaser:** modelled on the MXR Phase 90, the phaser behind so many hard-rock and metal leads, built from its circuit's real parts.

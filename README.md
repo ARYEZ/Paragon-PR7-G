@@ -63,10 +63,10 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     or a **Talk Box**: the amp's sound, after the cab, shaped into vowels (oo to ee) by the expression pedal (TALK BOX),
     with RESONANCE and MIX.
   - **2 OD / Distortion:** four models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
-    **Classic**, Paragon's original overdrive; **Muff Fuzz**, following the Big Muff's two clipping stages and
-    mid-scooping tone stack (long, violin-like sustain); and **Face Fuzz**, following the silicon Fuzz Face's uneven
+    **Classic**, Paragon's original overdrive; **Cosmonaut**, modelled stage by stage on the '90s green Russian
+    Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); and **Face Fuzz**, following the silicon Fuzz Face's uneven
     clipping (raspy and round, cleaning up with the guitar's volume). Drive, tone, level; 8x oversampled to avoid harsh aliasing.
-  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), tremolo, Dimension chorus, Uni-Vibe, rotary
+  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Dimension chorus, Uni-Vibe, rotary
     (Leslie), vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and

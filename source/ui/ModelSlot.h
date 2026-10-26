@@ -23,6 +23,10 @@ public:
     std::function<void (const juce::File&)> onLoad;
     std::function<void()> onClear;
 
+    // The folder chosen on the SETTINGS page for this kind of file, if any:
+    // the file browser opens there.
+    std::function<juce::File()> libraryFolder;
+
     void setStatus (const SlotStatus& newStatus);
 
     void paint (juce::Graphics&) override;

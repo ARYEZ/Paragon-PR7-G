@@ -14,7 +14,9 @@ namespace effects
     //   phaser         Hadron, modelled on the MXR Phase 90, with its
     //                  SCRIPT and BLOCK circuits (see processHadron; PR7-G
     //                  0.38.0, replacing the original generic phaser)
-    //   tremolo        the original (unchanged)
+    //   tremolo        Razor, modelled on the Boss TR-2, with its WAVE knob
+    //                  (see processRazor; PR7-G 0.39.0, replacing the
+    //                  original sine tremolo)
     //   dimension      Roland Dimension D / Boss CE-1 style dual chorus
     //   uniVibe        Shin-ei Uni-Vibe: four uneven phase stages, lamp LFO
     //   rotary         Leslie speaker: horn and drum rotors, Doppler, stereo mics
@@ -31,7 +33,7 @@ namespace effects
     public:
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Type { chorus, flanger, phaser, tremolo, dimension, uniVibe, rotary, vibrato, harmonicTremolo, autoPan, doubler, carbonite };
-        static inline const juce::StringArray typeNames { "Vortex", "AEON", "Hadron", "Tremolo", "Dimension Chorus", "Uni-Vibe",
+        static inline const juce::StringArray typeNames { "Vortex", "AEON", "Hadron", "Razor", "Dimension Chorus", "Uni-Vibe",
                                                           "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler", "Carbonite" };
 
         // Where the block sits: POST (after the amp and cab) or PRE (after the
@@ -62,6 +64,7 @@ namespace effects
             bool stereoOutputs = false;   // Vortex: chorus left and dry right, as the pedal's A and B jacks
             float manual = 5.0f, resonance = 5.0f;   // AEON's MANUAL and RES, 0 to 10
             bool hadronBlock = false;   // Hadron: the BLOCK circuit (false: SCRIPT)
+            float wave = 0.0f;          // Razor's WAVE, 0 (triangle) to 10 (square)
         };
 
         // The Vortex's EQ: how much it cuts or boosts the chorus's
@@ -77,6 +80,10 @@ namespace effects
         static float hadronStageHz (float lfoVolts) noexcept;
         static constexpr float hadronLfoLowVolts = 3.1f, hadronLfoHighVolts = 3.4f;
 
+        // Razor's volume, 0 to 1, at a point in the LFO's cycle (0 to 1),
+        // before the corner-rounding capacitor (for tests).
+        static float razorShape (float phase, float wave) noexcept;
+
         Modulation();
         void prepare (double sampleRate, int maxBlockSize);
         void process (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -86,7 +93,7 @@ namespace effects
         void updateVortexEq (float eq) noexcept;
         void processHadron (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processCarbonite (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processTremolo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processRazor (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processDimension (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processUniVibe (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processRotary (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -146,6 +153,9 @@ namespace effects
         // circuit's feedback resistor carries back from the last one.
         AllPassState hadronStages[maxChannels][4] {};
         float hadronFeedback[maxChannels] {};
+
+        // Razor: the LFO after its corner-rounding capacitor.
+        float razorLfo = 0.0f;
 
         // Uni-Vibe: four first-order all-pass stages per channel, and the lamp's glow.
         AllPassState vibeStages[maxChannels][4] {};

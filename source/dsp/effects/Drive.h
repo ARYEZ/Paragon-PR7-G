@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Cosmonaut.h"
 #include "EffectUtils.h"
 
 namespace effects
@@ -31,13 +32,11 @@ namespace effects
     // drive a high note is close to a square wave, whose harmonics reach far
     // enough that 4x still let audible fold-back through.
     //
-    // MUFF FUZZ follows the Big Muff's circuit (David Gilmour's lead sound):
-    //
-    //   x -> low cut -> [gain -> diode clip] -> [gain -> diode clip] -> tone stack -> level
-    //
-    // Two clipping stages one after the other give its long, violin-like
-    // sustain (DRIVE is its SUSTAIN). Its tone stack blends a low-pass and a
-    // high-pass with one knob, so the middle of TONE scoops the mids.
+    // COSMONAUT is modelled on the green Russian Big Muff, stage by stage
+    // from its circuit (see Cosmonaut.h; PR7-G 0.41.0, replacing the
+    // original "Muff Fuzz"). DRIVE is its SUSTAIN: two clipping stages give
+    // the long sustain, a small capacitor lets the bass through less
+    // clipped, and the passive tone stack always scoops the mids.
     //
     // FACE FUZZ follows the silicon Fuzz Face (Gilmour's earlier sound):
     //
@@ -52,7 +51,7 @@ namespace effects
     public:
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Model { classic, screamer, muff, face };
-        static inline const juce::StringArray modelNames { "Classic", "Banshee", "Muff Fuzz", "Face Fuzz" };
+        static inline const juce::StringArray modelNames { "Classic", "Banshee", "Cosmonaut", "Face Fuzz" };
 
         struct Settings
         {
@@ -74,7 +73,7 @@ namespace effects
     private:
         void processClassic (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processMuff (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
@@ -90,9 +89,9 @@ namespace effects
         juce::dsp::IIR::Filter<float> screamerLowCut;
         float clipLowPassState = 0.0f, toneState = 0.0f, outputCouplingState = 0.0f;
         juce::SmoothedValue<float> screamerGain, screamerTone, screamerLevel;
-        // The fuzzes' one-pole filters: Muff (input cut, two stages' tops and
-        // the coupling between them, tone stack) and Face (pickup loading,
-        // the transistors' top, the output coupling, tone).
+        // Cosmonaut's circuit, and Face Fuzz's one-pole filters (pickup
+        // loading, the transistors' top, the output coupling, tone).
+        Cosmonaut cosmonaut;
         std::array<float, 8> fuzzStates {};
         juce::SmoothedValue<float> fuzzGain, fuzzTone, fuzzLevel;
         Model lastModel = Model::screamer;

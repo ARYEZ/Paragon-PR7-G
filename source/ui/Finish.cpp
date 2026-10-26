@@ -1,5 +1,6 @@
 #include "Finish.h"
 
+#include "LibraryFolders.h"
 #include "ParagonLookAndFeel.h"
 
 namespace Finish
@@ -8,15 +9,7 @@ namespace Finish
     {
         constexpr auto settingKey = "chassisFinish";
 
-        juce::PropertiesFile::Options settingsOptions()
-        {
-            juce::PropertiesFile::Options options;
-            options.applicationName = "Paragon PR7-G";
-            options.folderName = "Paragon";
-            options.filenameSuffix = "settings";
-            options.osxLibrarySubFolder = "Application Support";
-            return options;
-        }
+        juce::PropertiesFile::Options settingsOptions() { return LibraryFolders::settingsOptions(); }
 
         struct State
         {

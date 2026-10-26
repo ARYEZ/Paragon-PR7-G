@@ -1,5 +1,6 @@
 #include "MainView.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "ui/Logo.h"
 #include "dsp/effects/Modulation.h"
@@ -235,6 +236,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     ampSlot.onLoad = [this] (const juce::File& file) { audioProcessor.loadAmpModel (file); };
     ampSlot.onClear = [this] { audioProcessor.clearAmpModel(); };
     ampSlot.onTitleClicked = [this] { selectBlock (ampBlock); };
+    ampSlot.libraryFolder = [] { return LibraryFolders::get (LibraryFolders::Kind::amps); };
+    cabSlot.libraryFolder = [] { return LibraryFolders::get (LibraryFolders::Kind::cabs); };
     cabSlot.onLoad = [this] (const juce::File& file) { audioProcessor.loadCabinetIR (file); };
     cabSlot.onClear = [this] { audioProcessor.clearCabinetIR(); };
     cabSlot.onTitleClicked = [this] { selectBlock (cabBlock); };
@@ -355,12 +358,15 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
         const auto isAeon = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::flanger; };
         // Hadron (the phaser) has SCRIPT / BLOCK, and only SPEED (RATE): no DEPTH.
         const auto isHadron = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::phaser; };
+        // Razor (the tremolo) adds the pedal's WAVE knob.
+        const auto isRazor = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::tremolo; };
         return std::make_unique<EffectPanel> (state, std::vector<Group> {
             { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" }, { ids.sync, "SYNC" },
                        { ids.manual, "MANUAL", isAeon, true },
                        { ids.hadron, "CIRCUIT", isHadron, true },
                        { ids.rate, "RATE", [this, ids] { return rawValue (ids.sync) < 0.5f; } },
                        { ids.depth, "DEPTH", [isHadron] { return ! isHadron(); } },
+                       { ids.wave, "WAVE", isRazor, true },
                        { ids.res, "RES", isAeon, true },
                        { ids.mix, "MIX", [this, ids] {
                            return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ids.type))); } },

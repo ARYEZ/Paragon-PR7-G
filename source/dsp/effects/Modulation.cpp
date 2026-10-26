@@ -129,6 +129,26 @@ namespace effects
             constexpr float blockFeedback = stageOhms / r28Ohms;
         }
 
+        // Razor, modelled on the Boss TR-2: a triangle LFO into a VCA. The
+        // WAVE knob raises the gain of the LFO's last stage, so the triangle
+        // clips flat against the stage's limits: a trapezoid at noon, almost
+        // a square fully up. A capacitor (C4) rounds the corners off, so
+        // even the square doesn't click. The volume is at full only once
+        // per cycle and dips by DEPTH. Rate: Boss's spec, one cycle every 90
+        // to 900 ms (about 1.1 to 11 Hz; RATE keeps the block's wider range).
+        namespace razor
+        {
+            // How far WAVE fully up drives the triangle into clipping
+            // (estimated: flat for about 95% of each cycle, as the pedal
+            // fully up sounds nearly on and off).
+            constexpr float maxWaveGain = 30.0f;
+
+            // C4's rounding of the corners (estimated): a 1 ms time
+            // constant, fast enough to sound like a hard chop, slow enough
+            // not to click.
+            constexpr float cornerSeconds = 0.001f;
+        }
+
         // Biquad coefficients (bilinear transform), written into an existing
         // filter so nothing is allocated.
         template <typename Biquad>
@@ -222,6 +242,7 @@ namespace effects
         hornHz = 0.8f;
         drumHz = 0.7f;
         hornTone = lampGlow = 0.0f;
+        razorLfo = 1.0f;
         std::fill (std::begin (dimensionTone), std::end (dimensionTone), 0.0f);
         for (auto& path : vortexPaths)
         {
@@ -290,7 +311,7 @@ namespace effects
                     break;
 
                 case Type::phaser:           processHadron (wet, settings); break;
-                case Type::tremolo:          processTremolo (wet, settings); break;
+                case Type::tremolo:          processRazor (wet, settings); break;
                 case Type::dimension:        processDimension (wet, settings); break;
                 case Type::uniVibe:          processUniVibe (wet, settings); break;
                 case Type::rotary:           processRotary (wet, settings); break;
@@ -452,12 +473,22 @@ namespace effects
         }
     }
 
-    void Modulation::processTremolo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    float Modulation::razorShape (float phase, float wave) noexcept
     {
+        // The triangle, gained up by WAVE and clipped: -1 is full volume,
+        // 1 the deepest dip.
+        const auto gain = std::pow (razor::maxWaveGain, juce::jlimit (0.0f, 10.0f, wave) / 10.0f);
+        const auto clipped = juce::jlimit (-1.0f, 1.0f, gain * triangle (phase));
+        return 0.5f - 0.5f * clipped;
+    }
+
+    void Modulation::processRazor (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        const auto corner = smoothing (sampleRate, razor::cornerSeconds);
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
-            const auto lfo = 0.5f + 0.5f * std::sin (twoPi * advanceLfo (settings.rateHz));
-            const auto gain = 1.0f - depth.getNextValue() * lfo;
+            razorLfo += (razorShape (advanceLfo (settings.rateHz), settings.wave) - razorLfo) * corner;
+            const auto gain = 1.0f - depth.getNextValue() * (1.0f - razorLfo);
             mix.skip (1);
 
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
