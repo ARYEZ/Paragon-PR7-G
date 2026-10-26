@@ -880,7 +880,48 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK_THAT (levelWith (1.0f), WithinAbs (2.7, 0.7));
     }
 
-    SECTION ("Tremolo pulses the volume at the rate setting")
+    SECTION ("Razor's WAVE: a triangle, a trapezoid at noon, nearly a square fully up")
+    {
+        // The share of each cycle spent at (near) full volume or the deepest dip.
+        const auto flatShare = [] (float wave)
+        {
+            int flat = 0;
+            for (int i = 0; i < 1000; ++i)
+            {
+                const auto v = effects::Modulation::razorShape ((float) i / 1000.0f, wave);
+                flat += (v < 0.02f || v > 0.98f) ? 1 : 0;
+            }
+            return (float) flat / 1000.0f;
+        };
+        CHECK (flatShare (0.0f) < 0.05f);
+        CHECK_THAT (flatShare (5.0f), WithinAbs (0.82, 0.05));
+        CHECK (flatShare (10.0f) > 0.95f);
+    }
+
+    SECTION ("Razor: WAVE fully up chops on and off, without clicks")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::tremolo);
+        rig.set (ParamIDs::modRate, 4.0f);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modWave, 10.0f);
+        const auto output = rig.runMono (input);
+        // Mostly fully on or fully off: few 10 ms windows in between.
+        int between = 0, windows = 0;
+        for (double t = 0.2; t < 0.95; t += 0.01, ++windows)
+        {
+            const auto level = rms (output, t, t + 0.01) / rms (input, 0.2);
+            between += (level > 0.1f && level < 0.9f) ? 1 : 0;
+        }
+        CHECK ((float) between / (float) windows < 0.2f);
+        // The chop is rounded off (C4): no sample jumps by more than the
+        // input itself could.
+        float biggestStep = 0.0f;
+        for (size_t i = (size_t) (0.2 * sampleRate); i < output.size(); ++i)
+            biggestStep = std::max (biggestStep, std::abs (output[i] - output[i - 1]));
+        CHECK (biggestStep < 0.03f);
+    }
+
+    SECTION ("Razor pulses the volume at the rate setting, full DEPTH from silence to full")
     {
         rig.set (ParamIDs::modType, 3.0f);
         rig.set (ParamIDs::modRate, 4.0f);

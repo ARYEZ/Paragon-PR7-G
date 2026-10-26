@@ -2,6 +2,16 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.39.0
+
+- **Razor replaces the generic tremolo:** modelled on the Boss TR-2, the standard tremolo pedal since 1997. Its three knobs are RATE, DEPTH and a new **WAVE** knob (shown only for Razor).
+  - **WAVE** shapes the pulse, as on the pedal: fully down, a smooth triangle (the classic amp-style throb); at noon, a trapezoid that holds full and low volume for most of each cycle; fully up, almost a square: the hard, machine-gun on-off chop.
+  - **How:** like the pedal's circuit, WAVE turns up the gain of the oscillator's last stage, so its triangle clips flat into a trapezoid and then nearly a square. A capacitor rounds the corners off, so even the hardest chop doesn't click.
+  - **DEPTH** sets how far the volume dips. The guitar is at full volume only at the top of each pulse, so like the pedal, Razor sounds a little quieter when it's on.
+  - **RATE:** the pedal's spec is one pulse every 90 to 900 ms (about 1.1 to 11 per second). The RATE knob keeps its wider range, and SYNC still locks it to the tempo.
+  - **What's a guess:** how far WAVE fully up pushes into clipping, and how much the capacitor rounds the corners. Both are set from how the pedal is described: nearly on and off fully up, but no clicks.
+  - **Your rigs:** rigs and projects that used the Tremolo now get Razor, with WAVE down (a triangle). That's close to the old tremolo's smooth sine pulse, a touch more pointed.
+
 ## 0.38.0
 
 - **Hadron replaces the generic phaser:** modelled on the MXR Phase 90, the phaser behind so many hard-rock and metal leads, built from its circuit's real parts.

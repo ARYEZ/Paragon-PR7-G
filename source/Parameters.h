@@ -150,14 +150,16 @@ namespace ParamIDs
     inline constexpr auto mod2Res      = "mod2Res";
     inline constexpr auto modHadron    = "modHadron";    // Hadron's SCRIPT / BLOCK circuit
     inline constexpr auto mod2Hadron   = "mod2Hadron";
+    inline constexpr auto modWave      = "modWave";      // Razor's WAVE
+    inline constexpr auto mod2Wave     = "mod2Wave";
 
     // A MOD block's controls, so MOD and MOD 2 share their code.
     struct ModIds
     {
-        const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position, *manual, *res, *hadron;
+        const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position, *manual, *res, *hadron, *wave;
     };
-    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition, modManual, modRes, modHadron };
-    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position, mod2Manual, mod2Res, mod2Hadron };
+    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition, modManual, modRes, modHadron, modWave };
+    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position, mod2Manual, mod2Res, mod2Hadron, mod2Wave };
 
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)

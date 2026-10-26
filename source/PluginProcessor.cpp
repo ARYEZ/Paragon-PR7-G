@@ -323,7 +323,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                                            param (ids.eq),
                                                            param (ids.stereo) > 0.5f && ! pre,
                                                            param (ids.manual), param (ids.res),
-                                                           param (ids.hadron) > 0.5f },
+                                                           param (ids.hadron) > 0.5f, param (ids.wave) },
                            pre };
     };
     const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);

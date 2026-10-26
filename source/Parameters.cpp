@@ -276,5 +276,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     constexpr int v29 = 29;
     layout.add (makeChoice (ParamIDs::modHadron, "Hadron Circuit", v29, effects::Modulation::hadronCircuitNames, 0));
     layout.add (makeChoice (ParamIDs::mod2Hadron, "Mod 2 Hadron Circuit", v29, effects::Modulation::hadronCircuitNames, 0));
+
+    // Added in PR7-G 0.39.0: Razor's (the tremolo's) WAVE, 0 (triangle) to 10 (square).
+    constexpr int v30 = 30;
+    layout.add (makeFloat (ParamIDs::modWave, "Razor Wave", { 0.0f, 10.0f, 0.1f }, 0.0f, v30, asKnob));
+    layout.add (makeFloat (ParamIDs::mod2Wave, "Mod 2 Razor Wave", { 0.0f, 10.0f, 0.1f }, 0.0f, v30, asKnob));
     return layout;
 }
