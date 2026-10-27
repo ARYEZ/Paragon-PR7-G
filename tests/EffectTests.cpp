@@ -387,7 +387,7 @@ TEST_CASE ("GLITCH: each mode chops, repeats or smears the guitar as it says", "
     }
 }
 
-TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; Face clips unevenly and cleans up", "[effects][drive]")
+TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; Halo clips unevenly and cleans up", "[effects][drive]")
 {
     const auto play = [] (effects::Drive::Model model, float amplitude, float drive = 5.0f, float tone = 5.0f, double hz = 220.0)
     {
@@ -405,8 +405,8 @@ TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; F
     {
         for (const auto drive : { 2.0f, 5.0f, 9.0f })
         {
-            INFO ("Face, drive " << drive);
-            CHECK (std::abs (dB (rms (play (effects::Drive::Model::face, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
+            INFO ("Halo, FUZZ " << drive);
+            CHECK (std::abs (dB (rms (play (effects::Drive::Model::halo, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
         }
         const auto cosmonautDb = [&] (float drive) { return dB (rms (play (effects::Drive::Model::muff, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f))); };
         CHECK_THAT (cosmonautDb (5.0f), WithinAbs (0.0, 1.5));
@@ -432,21 +432,21 @@ TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; F
         CHECK (dB (level (0.3f) / level (0.03f)) < 8.0f);
     }
 
-    SECTION ("Cosmonaut clips both halves alike (odd harmonics); Face clips one harder (a strong 2nd)")
+    SECTION ("Cosmonaut clips both halves alike (odd harmonics); Halo clips one harder (a strong 2nd)")
     {
         const auto secondToThird = [&] (effects::Drive::Model model)
         {
             const auto output = play (model, 0.3f, 7.0f, 7.0f);
             return dB (levelAt (output, 440.0, 0.3) / levelAt (output, 660.0, 0.3));
         };
-        CHECK (secondToThird (effects::Drive::Model::face) > secondToThird (effects::Drive::Model::muff) + 10.0f);
+        CHECK (secondToThird (effects::Drive::Model::halo) > secondToThird (effects::Drive::Model::muff) + 10.0f);
     }
 
-    SECTION ("Face cleans up as the guitar's volume comes down")
+    SECTION ("Halo cleans up as the guitar's volume comes down")
     {
         const auto harmonics = [&] (float amplitude)
         {
-            const auto output = play (effects::Drive::Model::face, amplitude, 5.0f);
+            const auto output = play (effects::Drive::Model::halo, amplitude, 5.0f);
             return dB ((levelAt (output, 440.0, 0.3) + levelAt (output, 660.0, 0.3)) / levelAt (output, 220.0, 0.3));
         };
         CHECK (harmonics (0.3f) > harmonics (0.01f) + 10.0f);
@@ -462,6 +462,69 @@ TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; F
             return dB (rms (mids, 0.3) / rms (lows, 0.3));
         };
         CHECK (midsAgainstLows (5.0f) < midsAgainstLows (10.0f) - 3.0f);
+    }
+}
+
+TEST_CASE ("Halo: the germanium fuzz circuit, its working point, FUZZ and clean-up", "[effects][drive]")
+{
+    SECTION ("At rest it sits where the circuit's analysis says")
+    {
+        // Q1's collector is one germanium junction (about 0.2 V) above Q2's
+        // emitter, and Q2's collector sits mid-supply with room to swing.
+        effects::Halo halo;
+        halo.prepare (384000.0);
+        CHECK_THAT (halo.q1CollectorVolts() - halo.q2EmitterVolts(), WithinAbs (0.2, 0.05));
+        CHECK_THAT (halo.q2EmitterVolts(), WithinAbs (0.41, 0.05));
+        CHECK (halo.q2CollectorVolts() > 4.0);
+        CHECK (halo.q2CollectorVolts() < 6.5);
+    }
+
+    const auto play = [] (float amplitude, float fuzz, float tone = 5.0f, double hz = 220.0)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::halo);
+        rig.set (ParamIDs::driveGain, fuzz);
+        rig.set (ParamIDs::driveTone, tone);
+        const auto output = rig.runMono (sine (hz, amplitude, 1.0));
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto gainDb = [&] (float amplitude, float fuzz) { return dB (rms (play (amplitude, fuzz), 0.3) / (amplitude / std::sqrt (2.0f))); };
+
+    SECTION ("FUZZ takes the emitter resistance out of Q2: over 20 dB more gain for a quiet note")
+    {
+        CHECK (gainDb (0.002f, 10.0f) - gainDb (0.002f, 0.0f) > 20.0f);
+        CHECK (gainDb (0.002f, 5.0f) > gainDb (0.002f, 0.0f) + 3.0f);
+    }
+
+    SECTION ("Played hard it's saturated: FUZZ hardly changes the level, and harder playing barely gets louder")
+    {
+        CHECK (std::abs (gainDb (0.3f, 10.0f) - gainDb (0.3f, 0.0f)) < 2.0f);
+        const auto level = [&] (float amplitude) { return dB (rms (play (amplitude, 5.0f), 0.3)); };
+        CHECK (level (1.0f) - level (0.1f) < 6.0f);
+    }
+
+    SECTION ("It cleans up: a light touch is almost clean, a hard one is fuzz")
+    {
+        const auto harmonics = [&] (float amplitude)
+        {
+            const auto output = play (amplitude, 5.0f);
+            return dB ((levelAt (output, 440.0, 0.3) + levelAt (output, 660.0, 0.3)) / levelAt (output, 220.0, 0.3));
+        };
+        CHECK (harmonics (0.01f) < -40.0f);
+        CHECK (harmonics (0.3f) > -10.0f);
+    }
+
+    SECTION ("The original has no tone control: TONE changes nothing")
+    {
+        const auto dark = play (0.3f, 5.0f, 0.0f), bright = play (0.3f, 5.0f, 10.0f);
+        CHECK (maxAbsDifference (dark, bright, 0) < 1.0e-6f);
+    }
+
+    SECTION ("Its 2.2 uF input into the low input impedance thins the lowest bass")
+    {
+        CHECK (gainDb (0.002f, 5.0f) - dB (rms (play (0.002f, 5.0f, 5.0f, 50.0), 0.3) / (0.002f / std::sqrt (2.0f))) > 2.0f);
     }
 }
 
@@ -2416,3 +2479,5 @@ TEST_CASE ("AEON: the flanger follows the BF-2's circuit and specifications", "[
         CHECK (swing (envelope (0.3f, 5.0)) > swing (envelope (8.0f, 5.0)) + 2.0f);
     }
 }
+
+

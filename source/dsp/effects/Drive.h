@@ -3,6 +3,7 @@
 #include "Abyss.h"
 #include "Chimera.h"
 #include "Cosmonaut.h"
+#include "Halo.h"
 #include "Rabid.h"
 #include "EffectUtils.h"
 
@@ -56,20 +57,16 @@ namespace effects
     // 0.45.0). DRIVE is its DIST; its own HIGH, LOW, MIDDLE and MID FREQ
     // replace TONE.
     //
-    // FACE FUZZ follows the silicon Fuzz Face (Gilmour's earlier sound):
-    //
-    //   x -> pickup loading (a soft treble cut) -> gain -> asymmetric clip -> treble cut (TONE) -> level
-    //
-    // One high-gain stage that clips one half of the wave harder than the
-    // other: a raspy, round fuzz full of even harmonics, which cleans up
-    // when the guitar's volume comes down. The original has no tone knob:
-    // TONE here is a gentle treble cut.
+    // HALO is modelled on the germanium two-transistor fuzz of 1966-68, the
+    // whole circuit solved as it is (see Halo.h; PR7-G 0.50.0, replacing
+    // PR7-G's earlier, generic FACE FUZZ in the same place in the list).
+    // DRIVE is its FUZZ; it has no tone control, so TONE isn't used.
     class Drive
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { rabid, screamer, muff, face, skyline, chimera, abyss };
-        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline", "Chimera", "Abyss" };
+        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -104,7 +101,7 @@ namespace effects
         void processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
         void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processHalo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
@@ -121,10 +118,9 @@ namespace effects
         float gateEnvelope = 0.0f, gateGain = 1.0f;   // Skyline's gate
         float clipLowPassState = 0.0f, toneState = 0.0f, outputCouplingState = 0.0f;
         juce::SmoothedValue<float> screamerGain, screamerTone, screamerLevel;
-        // Cosmonaut's circuit, and Face Fuzz's one-pole filters (pickup
-        // loading, the transistors' top, the output coupling, tone).
+        // The fuzzes' circuits.
         Cosmonaut cosmonaut;
-        std::array<float, 8> fuzzStates {};
+        Halo halo;
         juce::SmoothedValue<float> fuzzGain, fuzzTone, fuzzLevel;
         Model lastModel = Model::screamer;
         BypassFade bypass;

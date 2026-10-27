@@ -146,7 +146,7 @@ namespace
     // Drive::modelNames' order).
     const char* driveKind (int model)
     {
-        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION" };
+        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION" };
         static_assert (std::size (kinds) == 7);
         return kinds[(size_t) juce::jlimit (0, (int) std::size (kinds) - 1, model)];
     }
@@ -332,14 +332,15 @@ void Faceplate::paintDrive (juce::Graphics& g, juce::Rectangle<float> header, ju
         body.removeFromBottom (4.0f);
     }
 
-    // The knobs: DRIVE, its tone controls, LEVEL.
-    std::vector<std::pair<const char*, const char*>> knobs { { ParamIDs::driveGain, "DRIVE" } };
+    // The knobs: DRIVE (Halo's FUZZ), its tone controls, LEVEL.
+    const auto halo = model == (int) effects::Drive::Model::halo;
+    std::vector<std::pair<const char*, const char*>> knobs { { ParamIDs::driveGain, halo ? "FUZZ" : "DRIVE" } };
     if (model == (int) effects::Drive::Model::abyss)
     {
         knobs.insert (knobs.end(), { { ParamIDs::driveHigh, "HIGH" }, { ParamIDs::driveLow, "LOW" },
                                      { ParamIDs::driveMiddle, "MIDDLE" }, { ParamIDs::driveMidFreq, "MID FREQ" } });
     }
-    else
+    else if (! halo)   // Halo, as the original, has just FUZZ and its volume
     {
         knobs.push_back ({ ParamIDs::driveTone, "TONE" });
         if (model == (int) effects::Drive::Model::skyline)
