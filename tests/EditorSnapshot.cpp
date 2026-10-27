@@ -141,6 +141,18 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     if (const auto width = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_WIDTH", {}).getIntValue(); width > 0)
         editor->setSize (width, width * 9 / 16);
     editor->resized();
+    // The FACEPLATE's meters settle as they would over a second of the timer;
+    // PARAGON_SNAPSHOT_INPUT=0.3 plays a guitar at that peak into them.
+    if (auto* faceplate = findType<Faceplate> (*editor))
+    {
+        const auto input = (float) juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_INPUT", "0").getDoubleValue();
+        for (int tick = 0; tick < 30; ++tick)
+        {
+            const float peak[] = { input };
+            processor.getFaceplateMeter().pushSamples (peak, 1);
+            faceplate->updateMeters();
+        }
+    }
     const auto image = editor->createComponentSnapshot (editor->getLocalBounds());
 
     juce::File file (juce::File::getCurrentWorkingDirectory().getChildFile (path));

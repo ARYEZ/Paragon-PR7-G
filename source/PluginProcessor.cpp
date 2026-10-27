@@ -253,6 +253,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     inputGain.setTargetValue (juce::Decibels::decibelsToGain (inputGainDb->load()));
     inputGain.applyGain (mono, numSamples);
     inputMeter.pushSamples (mono, numSamples);
+    faceplateMeter.pushSamples (mono, numSamples);
 
     // PITCH: TUNING, OCTAVER and FREEZE, before anything else shapes the guitar.
     pitchBlock.process (monoBlock, { param (ParamIDs::pitchTune), isOn (ParamIDs::octOn), param (ParamIDs::octSubTwo),

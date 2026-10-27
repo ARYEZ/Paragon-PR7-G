@@ -6,6 +6,7 @@
 #include "PluginProcessor.h"
 #include "ui/GraphicEqPanel.h"
 #include "ui/EqPresets.h"
+#include "ui/Faceplate.h"
 #include "ui/Finish.h"
 #include "ui/PerformanceControls.h"
 
@@ -398,4 +399,56 @@ TEST_CASE ("EQ PRESETS: choosing one sets the faders and switches the EQ on; mov
     auto* band = state.getParameter (ParamIDs::eqBands[4]);
     band->setValueNotifyingHost (band->convertTo0to1 (0.0f));
     CHECK (menu->getSelectedItemIndex() == -1);
+}
+
+TEST_CASE ("The FACEPLATE shows the selected block, and the guitar's level going in", "[ui][faceplate]")
+{
+    ParagonX1AudioProcessor processor;
+    constexpr double rate = 48000.0;
+    constexpr int blockSize = 256;
+    processor.setPlayConfigDetails (1, 2, rate, blockSize);
+    processor.prepareToPlay (rate, blockSize);
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    std::vector<Faceplate*> faceplates;
+    findAll (*editor, faceplates);
+    REQUIRE (faceplates.size() == 1);
+    auto& faceplate = *faceplates[0];
+    std::vector<SignalChain*> chains;
+    findAll (*editor, chains);
+    REQUIRE (chains.size() == 1);
+
+    // Every block from the signal chain: OD / DIST and NAMP have their own
+    // faceplates so far; the rest show the generic unit.
+    for (int block = 0; block < 13; ++block)
+    {
+        chains[0]->onSelect (block);
+        CAPTURE (block);
+        const auto expected = block == 3 ? Faceplate::Look::drive : block == 4 ? Faceplate::Look::amp : Faceplate::Look::generic;
+        CHECK (faceplate.getLook() == expected);
+    }
+
+    // Every drive MODEL draws on the same faceplate (each paints without trouble).
+    chains[0]->onSelect (3);
+    for (int model = 0; model < effects::Drive::modelNames.size(); ++model)
+    {
+        set (processor, ParamIDs::driveModel, (float) model);
+        CHECK (faceplate.getLook() == Faceplate::Look::drive);
+        CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
+    }
+
+    // Playing: the INPUT meter rises with the guitar, then falls back in silence.
+    juce::AudioBuffer<float> buffer (2, blockSize);
+    juce::MidiBuffer midi;
+    for (int b = 0, n = 0; b < 20; ++b)
+    {
+        buffer.clear();
+        for (int i = 0; i < blockSize; ++i, ++n)
+            buffer.setSample (0, i, 0.3f * std::sin (2.0f * juce::MathConstants<float>::pi * 220.0f * (float) n / (float) rate));
+        processor.processBlock (buffer, midi);
+    }
+    faceplate.updateMeters();
+    CHECK (faceplate.getShownInput() > 0.1f);
+    for (int tick = 0; tick < 60; ++tick)
+        faceplate.updateMeters();
+    CHECK (faceplate.getShownInput() < 0.01f);
 }

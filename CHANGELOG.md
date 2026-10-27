@@ -2,6 +2,15 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.46.0
+
+- **The FACEPLATE, in place of RIG BROWSER and SELECTED RIG** (the two panels at the bottom left). It shows the block you've selected in the signal chain as a hardware unit, built from the PR7's own parts (its chassis, LCD screens, knobs, keys and lettering) in your current finish. This is stage 1 of 3:
+  - **OD / DIST:** the pedal's model name on a badge, and what kind of pedal it is (OVERDRIVE, FUZZ, METAL DISTORTION...). Its knobs follow the model: DRIVE, TONE and LEVEL for most; Abyss shows its HIGH, LOW, MIDDLE and MID FREQ; Skyline shows its eight ATTACK keys (the chosen one lit) and GATE. An INPUT meter along the bottom shows your guitar's level going in.
+  - **NAMP:** the loaded amp model's name and details on an LCD screen (or LOADING... / NO MODEL LOADED), with RIG LEVEL, PRESENCE and NORMALISE, and the same INPUT meter.
+  - **Every other block** shows a plain unit with its name and on light for now. CABINET IR, PITCH, COMP / GATE, DELAY and REVERB get their own faceplates in stage 2; the rest in stage 3.
+  - **Nothing is lost:** saving is still on the header's SAVE button, the pedal's SAVE / SAVE AS and the PRESETS page, and the rig browser is the PRESETS page.
+  - The faceplate is a display: you still turn the knobs in the middle panel.
+
 ## 0.45.0
 
 - **Abyss, a new distortion:** modelled on the Boss MT-2 Metal Zone, from the circuit diagram in Boss's own service manual (1991), so every part value is real. It's the last MODEL in OD / DISTORTION.
