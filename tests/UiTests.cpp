@@ -418,18 +418,16 @@ TEST_CASE ("The FACEPLATE shows the selected block, and the guitar's level going
     findAll (*editor, chains);
     REQUIRE (chains.size() == 1);
 
-    // Every block from the signal chain gets its faceplate (stages 1 and 2
-    // so far); the rest show the generic unit.
-    const std::map<int, Faceplate::Look> looks { { 0, Faceplate::Look::pitch }, { 1, Faceplate::Look::classic },
-                                                 { 3, Faceplate::Look::drive }, { 4, Faceplate::Look::amp },
-                                                 { 5, Faceplate::Look::cabinet }, { 10, Faceplate::Look::delay },
-                                                 { 11, Faceplate::Look::reverb } };
+    // Every block from the signal chain gets its own faceplate.
+    using Look = Faceplate::Look;
+    const Look looks[] { Look::pitch, Look::classic, Look::filterPitch, Look::drive, Look::amp, Look::cabinet, Look::eq,
+                         Look::glitch, Look::modulation, Look::modulation, Look::delay, Look::reverb, Look::loFi };
+    static_assert (std::size (looks) == 13);
     for (int block = 0; block < 13; ++block)
     {
         chains[0]->onSelect (block);
         CAPTURE (block);
-        const auto look = looks.find (block);
-        CHECK (faceplate.getLook() == (look != looks.end() ? look->second : Faceplate::Look::generic));
+        CHECK (faceplate.getLook() == looks[block]);
         CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
     }
 
@@ -453,6 +451,24 @@ TEST_CASE ("The FACEPLATE shows the selected block, and the guitar's level going
         set (processor, ParamIDs::reverbType, (float) type);
         CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
     }
+
+    // And every TYPE (or MODE) of the stage 3 blocks: MOD and MOD 2 each
+    // show their own block's TYPE.
+    const auto paintsEvery = [&] (int block, const char* id, int count)
+    {
+        chains[0]->onSelect (block);
+        for (int type = 0; type < count; ++type)
+        {
+            CAPTURE (block, type);
+            set (processor, id, (float) type);
+            CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
+        }
+    };
+    paintsEvery (8, ParamIDs::modType, effects::Modulation::typeNames.size());
+    paintsEvery (9, ParamIDs::mod2Type, effects::Modulation::typeNames.size());
+    paintsEvery (2, ParamIDs::fpType, effects::FilterPitch::typeNames.size());
+    paintsEvery (7, ParamIDs::glitchMode, effects::Glitch::modeNames.size());
+    paintsEvery (12, ParamIDs::lofiType, effects::LoFi::typeNames.size());
 
     // Every drive MODEL draws on the same faceplate (each paints without trouble).
     chains[0]->onSelect (3);

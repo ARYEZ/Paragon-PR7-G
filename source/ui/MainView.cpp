@@ -511,6 +511,12 @@ void MainView::selectBlock (int block)
             case cabBlock:    return Faceplate::Unit::cabinet;
             case delayBlock:  return Faceplate::Unit::delay;
             case reverbBlock: return Faceplate::Unit::reverb;
+            case modBlock:    return Faceplate::Unit::modulation;
+            case mod2Block:   return Faceplate::Unit::modulation2;
+            case filterPitchBlock: return Faceplate::Unit::filterPitch;
+            case glitchBlock: return Faceplate::Unit::glitch;
+            case eqBlock:     return Faceplate::Unit::eq;
+            case loFiBlock:   return Faceplate::Unit::loFi;
             default:          return Faceplate::Unit::other;
         }
     }();

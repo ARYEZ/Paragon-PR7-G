@@ -9,6 +9,11 @@
 #include "dsp/effects/CompGate.h"
 #include "dsp/effects/Delay.h"
 #include "dsp/effects/Drive.h"
+#include "dsp/effects/FilterPitch.h"
+#include "dsp/effects/Glitch.h"
+#include "dsp/effects/GraphicEq.h"
+#include "dsp/effects/LoFi.h"
+#include "dsp/effects/Modulation.h"
 #include "dsp/effects/Reverb.h"
 
 // Every part here is one of the PR7's own: the unit's pearl chassis
@@ -196,6 +201,12 @@ Faceplate::Look Faceplate::getLook() const
         case Unit::dynamics: return juce::roundToInt (raw (ParamIDs::compType)) == (int) effects::CompGate::Type::daybreak ? Look::daybreak : Look::classic;
         case Unit::delay:    return Look::delay;
         case Unit::reverb:   return Look::reverb;
+        case Unit::modulation:
+        case Unit::modulation2: return Look::modulation;
+        case Unit::filterPitch: return Look::filterPitch;
+        case Unit::glitch:   return Look::glitch;
+        case Unit::eq:       return Look::eq;
+        case Unit::loFi:     return Look::loFi;
         case Unit::other:    break;
     }
     return Look::generic;
@@ -257,6 +268,11 @@ void Faceplate::paint (juce::Graphics& g)
         case Look::daybreak: paintDaybreak (g, header, content); break;
         case Look::delay:    paintDelay (g, header, content); break;
         case Look::reverb:   paintReverb (g, header, content); break;
+        case Look::modulation:  paintModulation (g, header, content); break;
+        case Look::filterPitch: paintFilterPitch (g, header, content); break;
+        case Look::glitch:   paintGlitch (g, header, content); break;
+        case Look::eq:       paintEq (g, header, content); break;
+        case Look::loFi:     paintLoFi (g, header, content); break;
         case Look::generic: paintGeneric (g, header, content); break;
     }
 }
@@ -696,4 +712,327 @@ void Faceplate::paintReverb (juce::Graphics& g, juce::Rectangle<float> header, j
     const auto half = settings.getWidth() / 2.0f;
     bigKnob (g, settings.removeFromLeft (half), "SIZE", normalised (ParamIDs::reverbSize));
     bigKnob (g, settings, "MIX", normalised (ParamIDs::reverbMix));
+}
+
+void Faceplate::paintModulation (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
+{
+    // MOD or MOD 2: its TYPE as the name; the wobble drawn at RATE and DEPTH
+    // with a dot riding it in time (the rate, not the audio); RATE; the
+    // TYPE's own knobs, as its panel shows them.
+    using Type = effects::Modulation::Type;
+    const auto& ids = unit == Unit::modulation2 ? ParamIDs::mod2Ids : ParamIDs::modIds;
+    const auto typeIndex = juce::jlimit (0, effects::Modulation::typeNames.size() - 1, juce::roundToInt (raw (ids.type)));
+    const auto type = (Type) typeIndex;
+    static const char* kinds[] = { "CHORUS", "FLANGER", "PHASER", "TREMOLO", "CHORUS", "PHASE VIBRATO", "ROTARY SPEAKER",
+                                   "PITCH VIBRATO", "TREMOLO", "STEREO PANNER", "DOUBLER", "CHORUS" };
+    static_assert (std::size (kinds) == 12);
+    const auto name = effects::Modulation::typeNames[typeIndex].toUpperCase();
+    const juce::String kind = kinds[(size_t) juce::jlimit (0, (int) std::size (kinds) - 1, typeIndex)];
+    nameplate (g, header, name, (unit == Unit::modulation2 ? "MODULATION 2" : "MODULATION") + (kind != name ? "  /  " + kind : juce::String()));
+    const auto on = isOn();
+
+    const auto sync = juce::roundToInt (raw (ids.sync));
+    const auto syncs = (int) std::size (effects::Delay::syncBeats);
+    const auto synced = sync > 0 && sync < syncs;
+    const auto hz = synced ? (float) (juce::jmax (20.0, processor.getTempoBpm()) / 60.0) / effects::Delay::syncBeats[sync] : raw (ids.rate);
+    const auto hasDepth = type != Type::phaser;   // Hadron has only SPEED
+    const auto depth = hasDepth ? juce::jlimit (0.05f, 1.0f, normalised (ids.depth)) : 1.0f;
+    const auto razor = type == Type::tremolo;
+
+    auto settings = body.removeFromRight (body.getWidth() * 0.42f);
+    body.removeFromRight (14.0f);
+    const auto glass = screen (g, body);
+    {
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, raw (ids.position) > 0.5f ? "LFO  PRE" : "LFO  POST");
+        plot.removeFromTop (4.0f);
+        // Two cycles across the screen, moving at the rate. Razor shows its
+        // real shape (triangle to square by WAVE), the others a sine.
+        const auto phase = std::fmod (juce::Time::getMillisecondCounterHiRes() / 1000.0 * (double) hz, 1.0);
+        const auto shape = [&] (float cycles)
+        {
+            const auto position = std::fmod (cycles + (float) phase, 1.0f);
+            if (razor)
+                return 2.0f * effects::Modulation::razorShape (position, raw (ids.wave)) - 1.0f;
+            return std::sin (juce::MathConstants<float>::twoPi * position);
+        };
+        const auto yFor = [&] (float value) { return plot.getCentreY() - plot.getHeight() * 0.45f * depth * value; };
+        juce::Path wave;
+        for (auto x = 0.0f; x <= 1.0f; x += 1.0f / 200.0f)
+        {
+            const auto y = yFor (shape (2.0f * x));
+            if (x <= 0.0f)
+                wave.startNewSubPath (plot.getX(), y);
+            else
+                wave.lineTo (plot.getX() + plot.getWidth() * x, y);
+        }
+        g.setColour (orange.withAlpha (0.12f));
+        g.drawHorizontalLine (juce::roundToInt (plot.getCentreY()), plot.getX(), plot.getRight());
+        g.setColour (orange.withAlpha (on ? 0.3f : 0.1f));
+        g.strokePath (wave, juce::PathStrokeType (4.0f));
+        g.setColour (orange.withAlpha (on ? 1.0f : 0.4f));
+        g.strokePath (wave, juce::PathStrokeType (1.5f));
+        g.fillEllipse (juce::Rectangle<float> (7.0f, 7.0f).withCentre ({ plot.getX(), yFor (shape (0.0f)) }));
+    }
+    finish (g, glass);
+
+    // RATE (the note length while synced).
+    auto rateArea = settings.removeFromTop (settings.getHeight() * 0.38f);
+    const auto rateGlass = screen (g, rateArea);
+    if (synced)
+    {
+        g.setColour (orange);
+        g.setFont (font (rateGlass.getHeight() * 0.5f));
+        g.drawText (effects::Delay::syncNames[sync], rateGlass.reduced (8.0f, 0.0f), juce::Justification::centredRight, false);
+    }
+    else
+    {
+        sevenSegment (g, rateGlass, juce::String (hz, hz < 10.0f ? 2 : 1), "Hz");
+    }
+    finish (g, rateGlass);
+    settings.removeFromTop (4.0f);
+
+    // The TYPE's knobs, as on its panel.
+    if (type == Type::phaser)
+    {
+        // Hadron: just its circuit, SCRIPT or BLOCK, on a key.
+        smallKey (g, settings.withSizeKeepingCentre (90.0f, juce::jmin (settings.getHeight(), 52.0f)), "BLOCK", raw (ids.hadron) > 0.5f);
+        return;
+    }
+    std::vector<std::pair<const char*, const char*>> knobs;
+    if (type == Type::flanger)
+        knobs = { { ids.manual, "MANUAL" }, { ids.depth, "DEPTH" }, { ids.res, "RES" } };
+    else
+    {
+        knobs.push_back ({ ids.depth, "DEPTH" });
+        if (razor)
+            knobs.push_back ({ ids.wave, "WAVE" });
+        if (effects::Modulation::usesMix (type))
+            knobs.push_back ({ ids.mix, "MIX" });
+        if (type == Type::chorus)
+            knobs.push_back ({ ids.eq, "EQ" });
+    }
+    const auto cellWidth = settings.getWidth() / (float) knobs.size();
+    for (const auto& [id, knobName] : knobs)
+        bigKnob (g, settings.removeFromLeft (cellWidth).reduced (2.0f, 0.0f), knobName, normalised (id));
+}
+
+void Faceplate::paintFilterPitch (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
+{
+    // Its TYPE as the name; on the screen what that type is set to; its knobs.
+    using Type = effects::FilterPitch::Type;
+    const auto type = (Type) juce::jlimit (0, effects::FilterPitch::typeNames.size() - 1, juce::roundToInt (raw (ParamIDs::fpType)));
+    nameplate (g, header, effects::FilterPitch::typeNames[(int) type].toUpperCase(), "FILTER / PITCH");
+    const auto on = isOn();
+
+    auto knobs = body.removeFromRight (body.getWidth() * 0.4f);
+    body.removeFromRight (14.0f);
+    const auto glass = screen (g, body);
+    auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+    if (type == Type::autoWah || type == Type::talkBox)
+    {
+        // A filter's peak, as sharp as RESONANCE (a sketch of its shape,
+        // not a measurement); the wah sweeps it with your playing.
+        caption (g, plot, type == Type::autoWah ? "FILTER  SWEEPS WITH YOUR PICKING" : "VOWEL FILTER");
+        const auto resonance = juce::jlimit (0.0f, 1.0f, normalised (ParamIDs::fpResonance));
+        juce::Path peak;
+        for (auto x = 0.0f; x <= 1.0f; x += 1.0f / 160.0f)
+        {
+            const auto distance = (x - 0.45f) * (4.0f + 14.0f * resonance);
+            const auto level = 0.15f + 0.8f * (0.35f + 0.65f * resonance) / (1.0f + distance * distance);
+            const auto y = plot.getBottom() - plot.getHeight() * juce::jmin (1.0f, level);
+            if (x <= 0.0f)
+                peak.startNewSubPath (plot.getX(), y);
+            else
+                peak.lineTo (plot.getX() + plot.getWidth() * x, y);
+        }
+        g.setColour (orange.withAlpha (on ? 0.3f : 0.1f));
+        g.strokePath (peak, juce::PathStrokeType (4.0f));
+        g.setColour (orange.withAlpha (on ? 1.0f : 0.4f));
+        g.strokePath (peak, juce::PathStrokeType (1.5f));
+    }
+    else
+    {
+        // The interval, or the program, big on the glass.
+        caption (g, plot, type == Type::pitchShifter ? "INTERVAL" : "PROGRAM");
+        g.setColour (orange.withAlpha (on ? 1.0f : 0.45f));
+        g.setFont (font (glass.getHeight() * 0.3f));
+        g.drawFittedText (text (type == Type::pitchShifter ? ParamIDs::fpInterval : ParamIDs::fpXpProgram).toUpperCase(),
+                          plot.toNearestInt(), juce::Justification::centredLeft, 2, 0.7f);
+    }
+    finish (g, glass);
+
+    // SENSITIVITY and RESONANCE (auto-wah), RESONANCE (talk box), and MIX.
+    std::vector<std::pair<const char*, const char*>> list;
+    if (type == Type::autoWah)
+        list = { { ParamIDs::fpSensitivity, "SENS" }, { ParamIDs::fpResonance, "RES" } };
+    else if (type == Type::talkBox)
+        list = { { ParamIDs::fpResonance, "RES" } };
+    list.push_back ({ ParamIDs::fpMix, "MIX" });
+    const auto cellWidth = knobs.getWidth() / (float) juce::jmax (2, (int) list.size());   // a lone MIX as big as two would be
+    knobs = knobs.withSizeKeepingCentre (cellWidth * (float) list.size(), knobs.getHeight());
+    for (const auto& [id, knobName] : list)
+        bigKnob (g, knobs.removeFromLeft (cellWidth).reduced (2.0f, 0.0f), knobName, normalised (id));
+}
+
+void Faceplate::paintGlitch (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
+{
+    // Its MODE as the name; a 16-step pattern, as dense as DENSITY, a light
+    // stepping through it at LENGTH (in time with LENGTH, not the audio).
+    const auto mode = juce::jlimit (0, effects::Glitch::modeNames.size() - 1, juce::roundToInt (raw (ParamIDs::glitchMode)));
+    nameplate (g, header, effects::Glitch::modeNames[mode].toUpperCase(), "GLITCH");
+    const auto on = isOn();
+    const auto synced = raw (ParamIDs::glitchSync) > 0.5f;
+    const auto division = juce::jlimit (0, (int) std::size (effects::Glitch::syncBeats) - 1, juce::roundToInt (raw (ParamIDs::glitchDivision)));
+    const auto stepSeconds = synced ? (double) effects::Glitch::syncBeats[division] * 60.0 / juce::jmax (20.0, processor.getTempoBpm())
+                                    : juce::jmax (0.01, raw (ParamIDs::glitchTime) / 1000.0);
+    const auto density = juce::jlimit (0.0f, 1.0f, normalised (ParamIDs::glitchDensity));
+
+    auto settings = body.removeFromRight (body.getWidth() * 0.4f);
+    body.removeFromRight (14.0f);
+    const auto glass = screen (g, body);
+    {
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, (raw (ParamIDs::glitchPosition) > 0.5f ? juce::String ("PRE") : juce::String ("POST")) + "  PATTERN");
+        const auto steps = 16;
+        const auto width = plot.getWidth() / (float) steps;
+        const auto current = (int) std::fmod (juce::Time::getMillisecondCounterHiRes() / 1000.0 / stepSeconds, (double) steps);
+        for (int step = 0; step < steps; ++step)
+        {
+            // Which steps glitch: a fixed scatter, more of them with DENSITY
+            // (a picture of how busy it is; the real pattern is random).
+            const auto scatter = std::fmod ((float) step * 0.618034f + 0.1f, 1.0f);
+            const auto active = scatter < density;
+            const auto cell = juce::Rectangle<float> (plot.getX() + width * (float) step, plot.getY(), width, plot.getHeight())
+                                  .reduced (width * 0.18f, plot.getHeight() * (active ? 0.15f : 0.38f));
+            const auto lit = on && step == current;
+            g.setColour (orange.withAlpha (lit ? 0.35f : 0.0f));
+            g.fillRoundedRectangle (cell.expanded (2.0f), 2.0f);
+            g.setColour (orange.withAlpha (! on ? 0.15f : lit ? 1.0f : active ? 0.6f : 0.12f));
+            g.fillRoundedRectangle (cell, 1.5f);
+        }
+    }
+    finish (g, glass);
+
+    auto lengthArea = settings.removeFromTop (settings.getHeight() * 0.38f);
+    const auto lengthGlass = screen (g, lengthArea);
+    if (synced)
+    {
+        g.setColour (orange);
+        g.setFont (font (lengthGlass.getHeight() * 0.42f));
+        g.drawFittedText (effects::Glitch::syncNames[division].toUpperCase(), lengthGlass.reduced (8.0f, 0.0f).toNearestInt(), juce::Justification::centredRight, 1, 0.7f);
+    }
+    else
+    {
+        sevenSegment (g, lengthGlass, juce::String (juce::roundToInt (raw (ParamIDs::glitchTime))), "ms");
+    }
+    finish (g, lengthGlass);
+    settings.removeFromTop (4.0f);
+    const auto half = settings.getWidth() / 2.0f;
+    bigKnob (g, settings.removeFromLeft (half), "DENSITY", normalised (ParamIDs::glitchDensity));
+    bigKnob (g, settings, "MIX", normalised (ParamIDs::glitchMix));
+}
+
+void Faceplate::paintEq (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
+{
+    // The EQ's own response (as its panel draws it), and LEVEL.
+    nameplate (g, header, "GRAPHIC EQ", "9-BAND EQUALIZER");
+    const auto on = isOn();
+    const auto range = effects::GraphicEq::maxGainDb;
+
+    auto right = body.removeFromRight (body.getWidth() * 0.28f);
+    body.removeFromRight (14.0f);
+    const auto glass = screen (g, body);
+    {
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, "RESPONSE  +" + juce::String (juce::roundToInt (range)) + " / -" + juce::String (juce::roundToInt (range)) + " dB");
+        auto labels = plot.removeFromBottom (10.0f);
+        std::array<float, effects::GraphicEq::numBands> gains {};
+        for (int band = 0; band < effects::GraphicEq::numBands; ++band)
+            gains[(size_t) band] = raw (ParamIDs::eqBands[band]);
+        const auto lowest = std::log2 (40.0f), highest = std::log2 (20000.0f);
+        const auto xFor = [&plot, lowest, highest] (float hz) { return plot.getX() + plot.getWidth() * (std::log2 (hz) - lowest) / (highest - lowest); };
+        const auto yFor = [&plot, range] (float db) { return plot.getCentreY() - plot.getHeight() * 0.5f * juce::jlimit (-1.0f, 1.0f, db / range); };
+        g.setColour (orange.withAlpha (0.15f));
+        g.drawHorizontalLine (juce::roundToInt (plot.getCentreY()), plot.getX(), plot.getRight());
+        juce::Path curve;
+        for (auto x = 0.0f; x <= 1.0f; x += 1.0f / 120.0f)
+        {
+            const auto hz = std::exp2 (lowest + (highest - lowest) * x);
+            const auto y = yFor (effects::GraphicEq::responseDb (gains, hz));
+            if (x <= 0.0f)
+                curve.startNewSubPath (plot.getX(), y);
+            else
+                curve.lineTo (xFor (hz), y);
+        }
+        g.setColour (orange.withAlpha (on ? 0.3f : 0.1f));
+        g.strokePath (curve, juce::PathStrokeType (4.0f));
+        g.setColour (orange.withAlpha (on ? 1.0f : 0.4f));
+        g.strokePath (curve, juce::PathStrokeType (1.5f));
+        g.setColour (orange.withAlpha (0.5f));
+        g.setFont (font (7.0f));
+        for (int band = 0; band < effects::GraphicEq::numBands; band += 2)
+            g.drawText (ParamIDs::eqBandNames[band], juce::Rectangle<float> (24.0f, labels.getHeight()).withCentre ({ xFor (effects::GraphicEq::frequencies[(size_t) band]), labels.getCentreY() }),
+                        juce::Justification::centred, false);
+    }
+    finish (g, glass);
+
+    auto levelArea = right.removeFromTop (right.getHeight() * 0.38f);
+    const auto levelGlass = screen (g, levelArea);
+    const auto level = raw (ParamIDs::eqLevel);
+    g.setColour (orange);
+    g.setFont (font (levelGlass.getHeight() * 0.42f));
+    g.drawText ((level > 0.05f ? "+" : "") + juce::String (level, 1) + " dB", levelGlass.reduced (8.0f, 0.0f), juce::Justification::centredRight, false);
+    finish (g, levelGlass);
+    right.removeFromTop (4.0f);
+    bigKnob (g, right, "LEVEL", normalised (ParamIDs::eqLevel));
+}
+
+void Faceplate::paintLoFi (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
+{
+    // Its TYPE as the name; a wave showing what AMOUNT (squashed, or
+    // stair-stepped for the bitcrusher) and NOISE (fuzz) do to it (a
+    // picture of the idea, not the real output).
+    using Type = effects::LoFi::Type;
+    const auto type = juce::jlimit (0, effects::LoFi::typeNames.size() - 1, juce::roundToInt (raw (ParamIDs::lofiType)));
+    nameplate (g, header, effects::LoFi::typeNames[type].toUpperCase(), "LO-FI");
+    const auto on = isOn();
+    const auto amount = juce::jlimit (0.0f, 1.0f, normalised (ParamIDs::lofiAmount));
+    const auto noise = juce::jlimit (0.0f, 1.0f, normalised (ParamIDs::lofiNoise));
+    const auto crusher = type == (int) Type::bitcrusher;
+
+    auto knobs = body.removeFromRight (body.getWidth() * 0.4f);
+    body.removeFromRight (14.0f);
+    const auto glass = screen (g, body);
+    {
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, "WAVE");
+        juce::Random random (7);   // the same fuzz every time, so it doesn't crawl
+        juce::Path wave;
+        const auto levels = 2.0f + 14.0f * (1.0f - amount) * (1.0f - amount);   // clearly stepped well before the top
+        for (auto x = 0.0f; x <= 1.0f; x += 1.0f / 200.0f)
+        {
+            auto v = std::sin (juce::MathConstants<float>::twoPi * 2.0f * x);
+            if (crusher)
+                v = std::round (v * levels) / levels;
+            else
+                v = std::tanh (v * (1.0f + 5.0f * amount)) / std::tanh (1.0f + 5.0f * amount);
+            v += noise * 0.25f * (random.nextFloat() - 0.5f);
+            const auto y = plot.getCentreY() - plot.getHeight() * 0.42f * v;
+            if (x <= 0.0f)
+                wave.startNewSubPath (plot.getX(), y);
+            else
+                wave.lineTo (plot.getX() + plot.getWidth() * x, y);
+        }
+        g.setColour (orange.withAlpha (on ? 0.3f : 0.1f));
+        g.strokePath (wave, juce::PathStrokeType (3.5f));
+        g.setColour (orange.withAlpha (on ? 1.0f : 0.4f));
+        g.strokePath (wave, juce::PathStrokeType (1.3f));
+    }
+    finish (g, glass);
+
+    const auto third = knobs.getWidth() / 3.0f;
+    bigKnob (g, knobs.removeFromLeft (third).reduced (2.0f, 0.0f), "AMOUNT", normalised (ParamIDs::lofiAmount));
+    bigKnob (g, knobs.removeFromLeft (third).reduced (2.0f, 0.0f), "NOISE", normalised (ParamIDs::lofiNoise));
+    bigKnob (g, knobs.reduced (2.0f, 0.0f), "MIX", normalised (ParamIDs::lofiMix));
 }

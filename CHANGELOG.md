@@ -2,6 +2,28 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.48.0
+
+- **FACEPLATE stage 3: every block now has its own faceplate**, built from the same PR7 parts, in every finish.
+  - **MOD and MOD 2:**
+    - Each is named for its TYPE, with what kind of effect it is (VORTEX / CHORUS, AEON / FLANGER, HADRON / PHASER...), and whether it sits PRE or POST.
+    - Its wobble is drawn at RATE and DEPTH, with a dot riding it. **Razor shows its real shape**: from triangle to square as you turn WAVE.
+    - RATE shows in digits, or as the note value while synced.
+    - Its knobs are the ones its TYPE has: the Vortex's DEPTH, MIX and EQ; AEON's MANUAL, DEPTH and RES; Razor's DEPTH and WAVE; Hadron's SCRIPT / BLOCK on a key.
+  - **FILTER / PITCH:**
+    - For Auto-Wah and Talk Box, the filter's peak, sharper as you turn up RESONANCE.
+    - For Pitch Shifter, the interval (+1 OCT...); for Whammy-Wah, the program.
+    - Its knobs (SENS, RES, MIX).
+  - **GLITCH:** named for its MODE (SEQUENCE, KILLSWITCH...). A 16-step pattern, busier as DENSITY goes up, with a light stepping at LENGTH. LENGTH in digits or as a note value; DENSITY and MIX.
+  - **GRAPHIC EQ:** the EQ's real response curve, exactly as its own panel works it out, and LEVEL.
+  - **LO-FI:** named for its TYPE (CASSETTE, BITCRUSHER...). A wave showing what AMOUNT does (squashed, or stair-stepped for the bitcrusher) and NOISE adds; AMOUNT, NOISE and MIX.
+  - **What's a drawing rather than a measurement:**
+    - the filter peak's shape;
+    - the glitch pattern (the real one is random, so the screen shows how busy it is, not the actual steps);
+    - the lo-fi wave.
+
+    The EQ curve and Razor's shape come from the effects' own code. The moving lights keep time with the RATE or LENGTH setting, not with the audio.
+
 ## 0.47.0
 
 - **FACEPLATE stage 2:** five more blocks get their own faceplates, built from the same PR7 parts as stage 1, in every finish.

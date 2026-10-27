@@ -31,7 +31,17 @@
 //               TIME in seven-segment digits; FEEDBACK and MIX knobs.
 //   REVERB      its TYPE as the name; the reverb's shape (pre-delay, then
 //               the tail as long as it decays); DECAY in seconds; SIZE, MIX.
-//   (every other block, for now: its name, icon and TYPE on a screen)
+//   MOD, MOD 2  its TYPE as the name; the wobble at RATE and DEPTH with a
+//               dot riding it (Razor's real WAVE shape); RATE in digits;
+//               the TYPE's own knobs (AEON's MANUAL and RES, Hadron's
+//               CIRCUIT, the Vortex's EQ...).
+//   FILTER /    its TYPE; the auto-wah's or talk box's peak, as sharp as
+//   PITCH       RESONANCE, or the interval or program; its knobs.
+//   GLITCH      its MODE; a 16-step pattern as dense as DENSITY, a light
+//               stepping at LENGTH; LENGTH in digits; DENSITY and MIX.
+//   GRAPHIC EQ  the EQ's own response curve; LEVEL.
+//   LO-FI       its TYPE; a wave showing what AMOUNT and NOISE do; AMOUNT, MIX.
+//   (the generic unit, name, icon and TYPE, is kept for any block added later)
 class Faceplate final : public juce::Component,
                         private juce::Timer,
                         private juce::ChangeListener
@@ -41,9 +51,11 @@ public:
     ~Faceplate() override;
 
     // Which kind of block: the ones with their own faceplates, or any other.
-    enum class Unit { drive, amp, cabinet, pitch, dynamics, delay, reverb, other };
+    enum class Unit { drive, amp, cabinet, pitch, dynamics, delay, reverb, modulation, modulation2,
+                      filterPitch, glitch, eq, loFi, other };
     // What's drawn now (for tests).
-    enum class Look { generic, drive, amp, cabinet, pitch, classic, daybreak, delay, reverb };
+    enum class Look { generic, drive, amp, cabinet, pitch, classic, daybreak, delay, reverb,
+                      modulation, filterPitch, glitch, eq, loFi };
 
     // `onIds`: the block's on switches (comma separated); `typeId`: its TYPE
     // (or MODEL; or empty).
@@ -78,6 +90,11 @@ private:
     void paintDaybreak (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintDelay (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintReverb (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintModulation (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintFilterPitch (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintGlitch (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintEq (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintLoFi (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintInputMeter (juce::Graphics&, juce::Rectangle<float> area);
 
     ParagonX1AudioProcessor& processor;
