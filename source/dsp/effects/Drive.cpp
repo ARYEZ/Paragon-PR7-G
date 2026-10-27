@@ -4,6 +4,7 @@ namespace effects
 {
     namespace
     {
+        constexpr float chimeraOutputScale = 0.234f;   // the same for Chimera, at GAIN noon
         constexpr float rabidOutputScale = 0.37f;      // so LEVEL 0 dB is roughly the guitar's own level, at noon
 
         // TS808 component values: the op-amp's gain is 1 + (51k + DRIVE pot)
@@ -63,6 +64,7 @@ namespace effects
         fuzzLevel.reset (sampleRate, 0.02);
 
         rabid.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
+        chimera.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         bypass.prepare (sampleRate, maxBlockSize);
     }
 
@@ -79,6 +81,7 @@ namespace effects
                 screamerOversampling.reset();
                 oversampling.reset();
                 rabid.reset();
+                chimera.reset();
                 clipLowPassState = toneState = outputCouplingState = 0.0f;
                 fuzzStates.fill (0.0f);
                 cosmonaut.reset();
@@ -91,8 +94,34 @@ namespace effects
                 case Model::muff:     processCosmonaut (block, settings); break;
                 case Model::face:     processFace (block, settings); break;
                 case Model::rabid:    processRabid (block, settings); break;
+                case Model::chimera:  processChimera (block, settings); break;
             }
         });
+    }
+
+    void Drive::processChimera (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // GAIN and TREBLE are the pedal's pots; their positions glide (per block) so turning them doesn't click.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzTone.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.tone) / 10.0f);
+        fuzzLevel.setTargetValue (chimeraOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        chimera.setGain (fuzzGain.skip (numSamples));
+        chimera.setTreble (fuzzTone.skip (numSamples));
+
+        // The guitar, kept for the clean feed and bleed; the gain stage and
+        // diodes at 8x; then the rest at the base rate.
+        auto* samples = block.getChannelPointer (0);
+        screamerPaths.copyFrom (0, 0, samples, numSamples);
+        auto upsampled = oversampling.processSamplesUp (block);
+        auto* fast = upsampled.getChannelPointer (0);
+        for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
+            fast[i] = (float) chimera.clip (fast[i]);
+        oversampling.processSamplesDown (block);
+
+        const auto* guitar = screamerPaths.getReadPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] = (float) chimera.finish (guitar[i], samples[i]) * fuzzLevel.getNextValue();
     }
 
     void Drive::processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept

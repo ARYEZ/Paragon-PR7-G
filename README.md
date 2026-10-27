@@ -62,11 +62,12 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     toe: the interval, as far as six octaves down) and eight harmonies (your note plus a voice the pedal moves between two intervals);
     or a **Talk Box**: the amp's sound, after the cab, shaped into vowels (oo to ee) by the expression pedal (TALK BOX),
     with RESONANCE and MIX.
-  - **2 OD / Distortion:** five models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
+  - **2 OD / Distortion:** six models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
     **Rabid**, modelled on the ProCo RAT 2, slow op-amp and all; **Cosmonaut**, modelled stage by stage on the '90s green Russian
     Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); and **Face Fuzz**, following the silicon Fuzz Face's uneven
     clipping (raspy and round, cleaning up with the guitar's volume); and **Skyline**, inspired by the Horizon Devices
-    Precision Drive: the Tube Screamer circuit with an 8-way ATTACK switch for how much bass reaches the clipping, and a gate. Drive, tone, level; 8x oversampled to avoid harsh aliasing.
+    Precision Drive: the Tube Screamer circuit with an 8-way ATTACK switch for how much bass reaches the clipping, and a gate;
+    and **Chimera**, modelled on the Klon Centaur: germanium clipping blended with a clean feed, the "transparent" overdrive. Drive, tone, level; 8x oversampled to avoid harsh aliasing.
   - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Dimension chorus, Uni-Vibe, rotary
     (Leslie), vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your

@@ -1,12 +1,13 @@
 #pragma once
 
+#include "Chimera.h"
 #include "Cosmonaut.h"
 #include "Rabid.h"
 #include "EffectUtils.h"
 
 namespace effects
 {
-    // Footswitch 2: an overdrive, distortion or fuzz pedal, before the amp, in five models.
+    // Footswitch 2: an overdrive, distortion or fuzz pedal, before the amp, in six models.
     //
     // SCREAMER is modelled on the Ibanez TS808 Tube Screamer's circuit:
     //
@@ -47,6 +48,9 @@ namespace effects
     //     TS808's 47 nF is position 7. TONE is its BRIGHT knob.
     //   - GATE: a gate on the pedal's output, listening to the guitar.
     //
+    // CHIMERA is modelled on the Klon Centaur, the "transparent" overdrive
+    // (see Chimera.h; PR7-G 0.44.0). DRIVE is its GAIN, TONE its TREBLE.
+    //
     // FACE FUZZ follows the silicon Fuzz Face (Gilmour's earlier sound):
     //
     //   x -> pickup loading (a soft treble cut) -> gain -> asymmetric clip -> treble cut (TONE) -> level
@@ -59,8 +63,8 @@ namespace effects
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { rabid, screamer, muff, face, skyline };
-        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline" };
+        enum class Model { rabid, screamer, muff, face, skyline, chimera };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline", "Chimera" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -89,6 +93,7 @@ namespace effects
         static float diodeClip (float x) noexcept;
 
     private:
+        void processChimera (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
         void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -97,6 +102,7 @@ namespace effects
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
         Rabid rabid;
+        Chimera chimera;
 
         // Screamer: the clean guitar and the clipping path, oversampled together
         // so they stay exactly in step when they're added back together.
