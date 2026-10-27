@@ -4,6 +4,7 @@ namespace effects
 {
     namespace
     {
+        constexpr float abyssOutputScale = 0.274f;      // the same for Abyss, at DIST noon and a flat EQ
         constexpr float chimeraOutputScale = 0.234f;   // the same for Chimera, at GAIN noon
         constexpr float rabidOutputScale = 0.37f;      // so LEVEL 0 dB is roughly the guitar's own level, at noon
 
@@ -65,6 +66,7 @@ namespace effects
 
         rabid.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
         chimera.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
+        abyss.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         bypass.prepare (sampleRate, maxBlockSize);
     }
 
@@ -82,6 +84,7 @@ namespace effects
                 oversampling.reset();
                 rabid.reset();
                 chimera.reset();
+                abyss.reset();
                 clipLowPassState = toneState = outputCouplingState = 0.0f;
                 fuzzStates.fill (0.0f);
                 cosmonaut.reset();
@@ -95,8 +98,31 @@ namespace effects
                 case Model::face:     processFace (block, settings); break;
                 case Model::rabid:    processRabid (block, settings); break;
                 case Model::chimera:  processChimera (block, settings); break;
+                case Model::abyss:    processAbyss (block, settings); break;
             }
         });
+    }
+
+    void Drive::processAbyss (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // DIST glides (per block) so turning it doesn't click; the EQ re-solves when it moves.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzLevel.setTargetValue (abyssOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        abyss.setDistortion (fuzzGain.skip (numSamples));
+        const auto knob = [] (float value) { return juce::jlimit (0.0f, 10.0f, value) / 10.0f; };
+        abyss.setEq (knob (settings.high), knob (settings.low), knob (settings.middle), knob (settings.midFreq));
+
+        // The gain stages and diodes at 8x, against aliasing; the EQ after, at the base rate.
+        auto upsampled = oversampling.processSamplesUp (block);
+        auto* fast = upsampled.getChannelPointer (0);
+        for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
+            fast[i] = (float) abyss.clip (fast[i]);
+        oversampling.processSamplesDown (block);
+
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] = (float) abyss.equalise (samples[i]) * fuzzLevel.getNextValue();
     }
 
     void Drive::processChimera (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept

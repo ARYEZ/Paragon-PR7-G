@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Abyss.h"
 #include "Chimera.h"
 #include "Cosmonaut.h"
 #include "Rabid.h"
@@ -7,7 +8,7 @@
 
 namespace effects
 {
-    // Footswitch 2: an overdrive, distortion or fuzz pedal, before the amp, in six models.
+    // Footswitch 2: an overdrive, distortion or fuzz pedal, before the amp, in seven models.
     //
     // SCREAMER is modelled on the Ibanez TS808 Tube Screamer's circuit:
     //
@@ -51,6 +52,10 @@ namespace effects
     // CHIMERA is modelled on the Klon Centaur, the "transparent" overdrive
     // (see Chimera.h; PR7-G 0.44.0). DRIVE is its GAIN, TONE its TREBLE.
     //
+    // ABYSS is modelled on the Boss MT-2 Metal Zone (see Abyss.h; PR7-G
+    // 0.45.0). DRIVE is its DIST; its own HIGH, LOW, MIDDLE and MID FREQ
+    // replace TONE.
+    //
     // FACE FUZZ follows the silicon Fuzz Face (Gilmour's earlier sound):
     //
     //   x -> pickup loading (a soft treble cut) -> gain -> asymmetric clip -> treble cut (TONE) -> level
@@ -63,8 +68,8 @@ namespace effects
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { rabid, screamer, muff, face, skyline, chimera };
-        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline", "Chimera" };
+        enum class Model { rabid, screamer, muff, face, skyline, chimera, abyss };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline", "Chimera", "Abyss" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -84,6 +89,7 @@ namespace effects
             float levelDb = 0.0f;
             int attack = skylineTubeScreamerAttack;   // Skyline's ATTACK, 0 to 7
             float gate = 0.0f;                        // Skyline's GATE, 0 (off) to 10 (fast and hard)
+            float high = 5.0f, low = 5.0f, middle = 5.0f, midFreq = 5.0f;   // Abyss's EQ, 0 to 10
         };
 
         Drive();
@@ -93,6 +99,7 @@ namespace effects
         static float diodeClip (float x) noexcept;
 
     private:
+        void processAbyss (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processChimera (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
@@ -103,6 +110,7 @@ namespace effects
         juce::dsp::Oversampling<float> oversampling;
         Rabid rabid;
         Chimera chimera;
+        Abyss abyss;
 
         // Screamer: the clean guitar and the clipping path, oversampled together
         // so they stay exactly in step when they're added back together.

@@ -286,5 +286,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     constexpr int v31 = 31;
     layout.add (makeChoice (ParamIDs::driveAttack, "Skyline Attack", v31, effects::Drive::skylineAttackNames, effects::Drive::skylineTubeScreamerAttack));
     layout.add (makeFloat (ParamIDs::driveGate, "Skyline Gate", { 0.0f, 10.0f, 0.1f }, 0.0f, v31, asKnob));
+
+    // Added in PR7-G 0.45.0: Abyss's (the Metal Zone's) EQ.
+    constexpr int v32 = 32;
+    layout.add (makeFloat (ParamIDs::driveHigh, "Abyss High", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    layout.add (makeFloat (ParamIDs::driveLow, "Abyss Low", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    layout.add (makeFloat (ParamIDs::driveMiddle, "Abyss Middle", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    layout.add (makeFloat (ParamIDs::driveMidFreq, "Abyss Mid Freq", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
     return layout;
 }
