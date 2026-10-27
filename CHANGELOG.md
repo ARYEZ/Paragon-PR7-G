@@ -2,6 +2,10 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.43.2
+
+- **The edit panels match their blocks:** each block's panel (its header icon and the bars above its controls) now uses that block's colour in the SIGNAL CHAIN, from red at PITCH to orange at LO-FI. The GRAPHIC EQ's faders and response curve take the EQ block's hot pink. The knob rings and buttons keep the plugin's orange.
+
 ## 0.43.1
 
 - **The SIGNAL CHAIN now matches the PR7-E:** every block is coloured by its place in the chain, along the PR7 family's red, hot pink and orange gradient (red at PITCH, hot pink in the middle, orange at LO-FI), instead of each block having its own colour. Switched-off blocks show their colour dimmed, as before.

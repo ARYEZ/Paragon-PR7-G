@@ -23,16 +23,6 @@ namespace
 
     juce::Point<float> mockPoint (float x, float y) { return juce::Point<float> (x, y) * mockScale; }
 
-    // A signal-chain block's colour, by its place in the chain: the red,
-    // hot pink and orange gradient the PR7-E's chain uses (red first,
-    // orange last), shared across the PR7 family.
-    juce::Colour chainColour (int index, int count)
-    {
-        juce::ColourGradient gradient (juce::Colour (0xffe0103c), 0.0f, 0.0f, juce::Colour (0xffff7a1a), 1.0f, 0.0f, false);
-        gradient.addColour (0.5, juce::Colour (0xffff2f7a));
-        return gradient.getColourAtPosition ((double) index / juce::jmax (1, count - 1));
-    }
-
     // Header groups.
     const auto tabsGroup = mockF (336, 10, 795, 55);
     const auto rigGroup = mockF (838, 10, 1135, 55);
@@ -140,19 +130,19 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
       // Each block in the red to pink to orange of the PR7 family's chains, by
       // its place in the chain: red first, orange last.
       signalChain (processorToShow.getParameters(), {
-          { "PITCH", Icons::Type::pitch, chainColour (0, 13), juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn },
-          { "COMP / GATE", Icons::Type::comp, chainColour (1, 13), ParamIDs::compOn },
-          { "FILTER / PITCH", Icons::Type::filterPitch, chainColour (2, 13), ParamIDs::fpOn },
-          { "OD / DIST", Icons::Type::drive, chainColour (3, 13), ParamIDs::driveOn },
-          { "NAMP", Icons::Type::amp, chainColour (4, 13), ParamIDs::ampOn },
-          { "CABINET IR", Icons::Type::cabinet, chainColour (5, 13), ParamIDs::cabOn },
-          { "EQ", Icons::Type::eq, chainColour (6, 13), ParamIDs::eqOn },
-          { "GLITCH", Icons::Type::glitch, chainColour (7, 13), ParamIDs::glitchOn },
-          { "MOD", Icons::Type::modulation, chainColour (8, 13), ParamIDs::modOn },   // MODULATION: short, to fit the blocks
-          { "MOD 2", Icons::Type::modulation, chainColour (9, 13), ParamIDs::mod2On },
-          { "DELAY", Icons::Type::delay, chainColour (10, 13), ParamIDs::delayOn },
-          { "REVERB", Icons::Type::reverb, chainColour (11, 13), ParamIDs::reverbOn },
-          { "LO-FI", Icons::Type::loFi, chainColour (12, 13), ParamIDs::lofiOn } }),
+          { "PITCH", Icons::Type::pitch, ParagonColours::chainColour (0, numBlocks), juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn },
+          { "COMP / GATE", Icons::Type::comp, ParagonColours::chainColour (1, numBlocks), ParamIDs::compOn },
+          { "FILTER / PITCH", Icons::Type::filterPitch, ParagonColours::chainColour (2, numBlocks), ParamIDs::fpOn },
+          { "OD / DIST", Icons::Type::drive, ParagonColours::chainColour (3, numBlocks), ParamIDs::driveOn },
+          { "NAMP", Icons::Type::amp, ParagonColours::chainColour (4, numBlocks), ParamIDs::ampOn },
+          { "CABINET IR", Icons::Type::cabinet, ParagonColours::chainColour (5, numBlocks), ParamIDs::cabOn },
+          { "EQ", Icons::Type::eq, ParagonColours::chainColour (6, numBlocks), ParamIDs::eqOn },
+          { "GLITCH", Icons::Type::glitch, ParagonColours::chainColour (7, numBlocks), ParamIDs::glitchOn },
+          { "MOD", Icons::Type::modulation, ParagonColours::chainColour (8, numBlocks), ParamIDs::modOn },   // MODULATION: short, to fit the blocks
+          { "MOD 2", Icons::Type::modulation, ParagonColours::chainColour (9, numBlocks), ParamIDs::mod2On },
+          { "DELAY", Icons::Type::delay, ParagonColours::chainColour (10, numBlocks), ParamIDs::delayOn },
+          { "REVERB", Icons::Type::reverb, ParagonColours::chainColour (11, numBlocks), ParamIDs::reverbOn },
+          { "LO-FI", Icons::Type::loFi, ParagonColours::chainColour (12, numBlocks), ParamIDs::lofiOn } }),
       rigBrowser (processorToShow),
       settingsPage (processorToShow)
 {
@@ -414,22 +404,20 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     panels[loFiBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "LO-FI", { { ParamIDs::lofiOn, "ON" }, { ParamIDs::lofiType, "TYPE" }, { ParamIDs::lofiAmount, "AMOUNT" },
                      { ParamIDs::lofiNoise, "NOISE" }, { ParamIDs::lofiMix, "MIX" }, { ParamIDs::lofiLevel, "LEVEL" } } } });
-    const std::pair<Icons::Type, juce::Colour> headers[] = {
-        { Icons::Type::pitch, ParagonColours::pitch }, { Icons::Type::comp, ParagonColours::comp }, { Icons::Type::filterPitch, ParagonColours::filterPitch },
-        { Icons::Type::drive, ParagonColours::drive },
-        { Icons::Type::amp, ParagonColours::amp }, { Icons::Type::cabinet, ParagonColours::cab },
-        { Icons::Type::eq, ParagonColours::eq }, { Icons::Type::glitch, ParagonColours::glitch },
-        { Icons::Type::modulation, ParagonColours::modulation }, { Icons::Type::modulation, ParagonColours::modulation },
-        { Icons::Type::delay, ParagonColours::delay },
-        { Icons::Type::reverb, ParagonColours::reverb }, { Icons::Type::loFi, ParagonColours::loFi } };
+    // Each panel's header and accents in its block's colour in the chain.
+    const Icons::Type headers[] = { Icons::Type::pitch, Icons::Type::comp, Icons::Type::filterPitch, Icons::Type::drive,
+                                    Icons::Type::amp, Icons::Type::cabinet, Icons::Type::eq, Icons::Type::glitch,
+                                    Icons::Type::modulation, Icons::Type::modulation, Icons::Type::delay,
+                                    Icons::Type::reverb, Icons::Type::loFi };
     const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "MODULATION 2", "DELAY", "REVERB", "LO-FI" };
     for (size_t i = 0; i < panels.size(); ++i)
     {
         if (panels[i] == nullptr)
             continue;
-        panels[i]->setHeader (headers[i].first, headers[i].second, titles[i]);
+        panels[i]->setHeader (headers[i], ParagonColours::chainColour ((int) i, numBlocks), titles[i]);
         addChildComponent (*panels[i]);
     }
+    eqPanel.setAccent (ParagonColours::chainColour (eqBlock, numBlocks));
     addChildComponent (eqPanel);
 
     closePanel.setTooltip ("Back to the graphic EQ");

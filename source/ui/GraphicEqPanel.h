@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "dsp/effects/GraphicEq.h"
+#include "ui/ParagonLookAndFeel.h"
 
 // The graphic EQ's knobs, shown in place of the rig summary when the EQ
 // block is selected: nine vertical faders standing at their own
@@ -13,6 +14,9 @@ class GraphicEqPanel final : public juce::Component
 {
 public:
     explicit GraphicEqPanel (juce::AudioProcessorValueTreeState&);
+
+    // The colour of the faders, the curve and the header icon: the EQ block's colour in the chain.
+    void setAccent (juce::Colour colour);
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -34,4 +38,5 @@ private:
     juce::ComboBox presets;
     juce::TextButton flat { "FLAT" };
     juce::Rectangle<float> graph, faderTrack;
+    juce::Colour accent = ParagonColours::eq;
 };
