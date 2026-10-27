@@ -2,6 +2,22 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.47.0
+
+- **FACEPLATE stage 2:** five more blocks get their own faceplates, built from the same PR7 parts as stage 1, in every finish.
+  - **CABINET IR:** the IR's name and length, and its **frequency response**: a curve from 40 Hz to 20 kHz showing what the cab does to your tone (where it's full, where it scoops, where the top end rolls off). It's worked out from the IR file itself when it loads, so it's the real response of your IR, smoothed a little so the cab's many fine ripples don't hide its shape. With no IR loaded, the line is flat.
+  - **PITCH:** the OCTAVER's four voices (2 DOWN, 1 DOWN, DRY, 1 UP) and FREEZE's level as faders, like a small mixer; TUNING on a screen; OCTAVER and FREEZE on keys, lit while they're on.
+  - **COMP / GATE** follows its TYPE:
+    - **Classic:** a gain-reduction needle that moves with the compressor as you play, plus THRESHOLD, RATIO, LEVEL and the GATE on small screens;
+    - **Daybreak:** COMP, DETAIL, MIX and LEVEL knobs, INTENSITY on a key, the GATE, and the gain reduction in LED bars.
+  - **DELAY:** named for its TYPE (TAPE ECHO, ANALOG DELAY...). The repeats are laid out in time, each one as loud as FEEDBACK leaves it, with a light running along them at the delay time. TIME shows in seven-segment digits, or as the note value (1/4...) while synced. FEEDBACK and MIX knobs.
+  - **REVERB:** named for its TYPE (HALL, SPRING...). Its shape: the PRE-DELAY gap, then the tail as long as it takes to die away (Spring with its ripple, Reverse swelling up). DECAY in seconds; SIZE and MIX knobs.
+  - **What's a drawing rather than a measurement:**
+    - The reverb's shape is drawn from its decay time; it isn't the real tail.
+    - The delay's light keeps time with the delay setting, not with the audio itself.
+    - The cab curve and the compressor's needle are real.
+  - Stage 3 (MOD, MOD 2, FILTER / PITCH, GLITCH, EQ, LO-FI) is next.
+
 ## 0.46.0
 
 - **The FACEPLATE, in place of RIG BROWSER and SELECTED RIG** (the two panels at the bottom left). It shows the block you've selected in the signal chain as a hardware unit, built from the PR7's own parts (its chassis, LCD screens, knobs, keys and lettering) in your current finish. This is stage 1 of 3:

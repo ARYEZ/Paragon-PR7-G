@@ -19,6 +19,18 @@
 //   NAMP        the loaded model's name and details on a screen (or that
 //               none is loaded, or why it failed); RIG LEVEL and PRESENCE;
 //               NORMALISE on a key; the level going in.
+//   CABINET IR  the IR's name and length, and its frequency response as a
+//               curve (what the cab does to the tone).
+//   PITCH       the OCTAVER's four voices and FREEZE's level as faders;
+//               TUNING on a screen; keys for OCTAVER and FREEZE, lit while on.
+//   COMP / GATE Classic: a gain-reduction needle, THRESHOLD, RATIO, LEVEL,
+//               GATE. Daybreak: COMP, DETAIL, MIX knobs, INTENSITY on a key,
+//               GATE, gain reduction in LED bars.
+//   DELAY       its TYPE as the name; the repeats laid out in time, fading
+//               by FEEDBACK, a light running along them at the delay time;
+//               TIME in seven-segment digits; FEEDBACK and MIX knobs.
+//   REVERB      its TYPE as the name; the reverb's shape (pre-delay, then
+//               the tail as long as it decays); DECAY in seconds; SIZE, MIX.
 //   (every other block, for now: its name, icon and TYPE on a screen)
 class Faceplate final : public juce::Component,
                         private juce::Timer,
@@ -29,9 +41,9 @@ public:
     ~Faceplate() override;
 
     // Which kind of block: the ones with their own faceplates, or any other.
-    enum class Unit { drive, amp, other };
+    enum class Unit { drive, amp, cabinet, pitch, dynamics, delay, reverb, other };
     // What's drawn now (for tests).
-    enum class Look { generic, drive, amp };
+    enum class Look { generic, drive, amp, cabinet, pitch, classic, daybreak, delay, reverb };
 
     // `onIds`: the block's on switches (comma separated); `typeId`: its TYPE
     // (or MODEL; or empty).
@@ -43,6 +55,7 @@ public:
     // does it 30 times a second; tests and screenshots call it directly).
     void updateMeters();
     float getShownInput() const noexcept { return shownInput; }
+    float getShownReduction() const noexcept { return shownReduction; }
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -59,6 +72,12 @@ private:
     void paintGeneric (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintDrive (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintAmp (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintCabinet (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintPitch (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintClassic (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintDaybreak (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintDelay (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintReverb (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintInputMeter (juce::Graphics&, juce::Rectangle<float> area);
 
     ParagonX1AudioProcessor& processor;
@@ -70,5 +89,6 @@ private:
     juce::Colour colour;   // the block's colour in the chain
     juce::Image satin;     // the pearl's grain, as on the unit
 
-    float shownInput = 0.0f;   // the input's peak, with a meter's fall
+    float shownInput = 0.0f;       // the input's peak, with a meter's fall
+    float shownReduction = 0.0f;   // the compressor's, dB (0 or less), with a needle's ballistics
 };

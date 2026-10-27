@@ -1,3 +1,4 @@
+#include <map>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -417,14 +418,40 @@ TEST_CASE ("The FACEPLATE shows the selected block, and the guitar's level going
     findAll (*editor, chains);
     REQUIRE (chains.size() == 1);
 
-    // Every block from the signal chain: OD / DIST and NAMP have their own
-    // faceplates so far; the rest show the generic unit.
+    // Every block from the signal chain gets its faceplate (stages 1 and 2
+    // so far); the rest show the generic unit.
+    const std::map<int, Faceplate::Look> looks { { 0, Faceplate::Look::pitch }, { 1, Faceplate::Look::classic },
+                                                 { 3, Faceplate::Look::drive }, { 4, Faceplate::Look::amp },
+                                                 { 5, Faceplate::Look::cabinet }, { 10, Faceplate::Look::delay },
+                                                 { 11, Faceplate::Look::reverb } };
     for (int block = 0; block < 13; ++block)
     {
         chains[0]->onSelect (block);
         CAPTURE (block);
-        const auto expected = block == 3 ? Faceplate::Look::drive : block == 4 ? Faceplate::Look::amp : Faceplate::Look::generic;
-        CHECK (faceplate.getLook() == expected);
+        const auto look = looks.find (block);
+        CHECK (faceplate.getLook() == (look != looks.end() ? look->second : Faceplate::Look::generic));
+        CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
+    }
+
+    // COMP / GATE follows its TYPE: Daybreak has its own faceplate.
+    chains[0]->onSelect (1);
+    set (processor, ParamIDs::compType, 1.0f);
+    CHECK (faceplate.getLook() == Faceplate::Look::daybreak);
+    set (processor, ParamIDs::compType, 0.0f);
+    CHECK (faceplate.getLook() == Faceplate::Look::classic);
+
+    // Every delay and reverb TYPE draws (Spring and Reverse have their own shapes).
+    chains[0]->onSelect (10);
+    for (int type = 0; type < effects::Delay::typeNames.size(); ++type)
+    {
+        set (processor, ParamIDs::delayType, (float) type);
+        CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
+    }
+    chains[0]->onSelect (11);
+    for (int type = 0; type < effects::Reverb::typeNames.size(); ++type)
+    {
+        set (processor, ParamIDs::reverbType, (float) type);
+        CHECK (faceplate.createComponentSnapshot (faceplate.getLocalBounds()).isValid());
     }
 
     // Every drive MODEL draws on the same faceplate (each paints without trouble).

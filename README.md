@@ -103,7 +103,8 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
   **WHAMMY-WAH** (plays the FILTER / PITCH block's Whammy-Wah). MIN and MAX set where the heel and toe land. The assignment and range
   are saved with each rig.
 - **Bottom panels:** the FACEPLATE (left) shows the selected block as a hardware unit: the drive
-  pedal's model and kind, the NAM amp's model on an LCD, and your guitar's input level; the middle shows the graphic EQ, or the knobs of whichever block you pick (click a
+  pedal's model and kind, the NAM amp's model on an LCD, the cab IR's frequency curve, the compressor's
+  gain reduction, the delay's repeats and the reverb's shape, and your guitar's input level; the middle shows the graphic EQ, or the knobs of whichever block you pick (click a
   signal-chain block or a footswitch name); **GRAPHIC EQ** goes back to the EQ.
 - **SETTINGS:** the tuner's reference pitch, mute while tuning, and the expression pedal's MIDI CC.
 - The paths of the loaded files are saved in your DAW project. If a file is missing when the project

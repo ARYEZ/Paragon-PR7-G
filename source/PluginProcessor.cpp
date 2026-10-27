@@ -543,6 +543,7 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
         {
             status.file = file;   // keep the path, as for the amp
             status.detail = {};
+            status.responseDb.clear();
             status.error = "Can't find " + file.getFullPathName();
             setStatus (cabStatus, status);
             return;
@@ -558,6 +559,7 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
             status.file = file;
             status.error = {};
             status.detail = juce::String (juce::roundToInt (result.lengthSeconds * 1000.0)) + " ms IR";
+            status.responseDb = result.responseDb;
         }
 
         setStatus (cabStatus, status);

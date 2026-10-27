@@ -23,6 +23,7 @@ public:
     {
         juce::String error;           // empty on success
         double lengthSeconds = 0.0;
+        std::vector<float> responseDb {};   // the IR's frequency response (see below)
     };
 
     // Background thread. Reads an IR file and hands it to the convolution engine.
@@ -35,6 +36,14 @@ public:
     void process (float* samples, int numSamples, bool enabled) noexcept;
 
     static constexpr double maxIrSeconds = 10.0;
+
+    // An IR's frequency response, for the FACEPLATE's curve: `responsePoints`
+    // levels in dB, from `responseLowHz` to `responseHighHz` evenly spaced
+    // on a log (octave) scale, each averaged over a sixth of an octave so a
+    // cab's many fine ripples don't hide its shape. The loudest point is 0 dB.
+    static constexpr int responsePoints = 128;
+    static constexpr float responseLowHz = 40.0f, responseHighHz = 20000.0f;
+    static std::vector<float> responseDb (const juce::AudioBuffer<float>& ir, double sampleRate);
 
 private:
     juce::AudioFormatManager formats;

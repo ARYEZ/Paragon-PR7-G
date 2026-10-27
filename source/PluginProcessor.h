@@ -30,6 +30,7 @@ struct SlotStatus
     juce::String detail;    // e.g. "48 kHz, resampled" or the IR length
     juce::String error;     // why the last load failed; empty if it didn't
     bool loading = false;
+    std::vector<float> responseDb;   // the cabinet IR's frequency response (CabStage::responseDb); empty for the amp
 };
 
 // Which rig is loaded, for the header display and the Save button.
