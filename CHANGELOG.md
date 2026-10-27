@@ -2,6 +2,21 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.45.0
+
+- **Abyss, a new distortion:** modelled on the Boss MT-2 Metal Zone, from the circuit diagram in Boss's own service manual (1991), so every part value is real. It's the last MODEL in OD / DISTORTION.
+  - **The gain:** a first stage whose transistor branch builds a hump of gain around 800 Hz, then DIST (up to about 250 times more), then two silicon diodes and another shaping stage. It's heavily saturated even at DIST 0, as a real MT-2 is. With a flat EQ and a quiet signal, 800 Hz gets about 33 dB more gain than 50 Hz.
+  - **Its own EQ, shown in place of TONE:**
+    - **LOW:** about 38 dB of range at 100 Hz;
+    - **HIGH:** about 34 dB at 6.4 kHz;
+    - **MIDDLE:** about 23 dB at 400 Hz;
+    - **MID FREQ:** moves MIDDLE from the low mids up into the low kHz.
+
+    LOW and MIDDLE match the reference circuit model's figures. HIGH comes out wider than its 23 dB, but a hand calculation from the HIGH stage's parts agrees with ours (about 35 dB). The difference isn't confirmed.
+  - **DRIVE is its DIST.** LEVEL 0 dB matches your guitar at DIST noon. Like the pedal, its level barely moves across DIST.
+  - **What's simplified:** the MT-2's three transistor branches are treated as perfect followers, which is what they do in this circuit, and each op-amp swings about 3 V either way. The stages that clip run at 8x the rate; the EQ runs at the normal rate.
+  - **What's a guess:** the direction of the EQ pots (taken from the reference model), and MID FREQ's direction, clockwise going higher.
+
 ## 0.44.0
 
 - **Chimera, a new overdrive:** modelled on the Klon Centaur, the "transparent" overdrive, from a clean redraw of its schematic, cross-checked with ElectroSmash's analysis. It's the last MODEL in OD / DISTORTION.

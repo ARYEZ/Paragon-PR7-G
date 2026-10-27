@@ -539,6 +539,67 @@ TEST_CASE ("Rabid: the RAT 2's op-amp gain, symmetric diodes and FILTER", "[effe
     }
 }
 
+TEST_CASE ("Abyss: the MT-2's gain hump, diodes and EQ", "[effects][drive]")
+{
+    struct Knobs { float dist = 5.0f, high = 5.0f, low = 5.0f, middle = 5.0f, midFreq = 5.0f; };
+    const auto play = [] (const std::vector<float>& input, Knobs k)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::abyss);
+        rig.set (ParamIDs::driveGain, k.dist);
+        rig.set (ParamIDs::driveHigh, k.high);
+        rig.set (ParamIDs::driveLow, k.low);
+        rig.set (ParamIDs::driveMiddle, k.middle);
+        rig.set (ParamIDs::driveMidFreq, k.midFreq);
+        const auto output = rig.runMono (input);
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto smallGain = [&] (double hz, Knobs k)
+    {
+        k.dist = 0.0f;
+        const auto input = sine (hz, 0.0002f, 0.6);
+        return dB (rms (play (input, k), 0.3) / rms (input, 0.3));
+    };
+    const auto note = sine (220.0, 0.2f, 0.6);
+    const auto levelDb = [&] (float dist) { Knobs k; k.dist = dist; return dB (rms (play (note, k), 0.3) / rms (note, 0.3)); };
+    Knobs hi1, hi0, lo1, lo0, mid1, mid0;
+    hi1.high = 10.0f; hi0.high = 0.0f; lo1.low = 10.0f; lo0.low = 0.0f; mid1.middle = 10.0f; mid0.middle = 0.0f;
+    Knobs m1lo = mid1, m1hi = mid1;
+    m1lo.midFreq = 0.0f;
+    m1hi.midFreq = 10.0f;
+
+    SECTION ("Heavily saturated even at DIST 0, as the pedal is; LEVEL 0 dB matches the guitar at noon")
+    {
+        CHECK_THAT (levelDb (5.0f), WithinAbs (0.0, 1.0));
+        CHECK (std::abs (levelDb (10.0f) - levelDb (0.0f)) < 4.0f);
+        const auto output = play (note, {});
+        CHECK (dB (levelAt (output, 660.0, 0.3) / levelAt (output, 220.0, 0.3)) > -20.0f);   // strong odd harmonics
+        CHECK (dB (levelAt (output, 440.0, 0.3) / levelAt (output, 220.0, 0.3)) < -40.0f);   // and little even: symmetric diodes and rails
+    }
+
+    SECTION ("The gain hump: with a flat EQ, a quiet 800 Hz gets far more gain than 50 Hz or 12 kHz")
+    {
+        const auto mids = smallGain (800.0, {});
+        CHECK (mids > smallGain (50.0, {}) + 25.0f);
+        CHECK (mids > smallGain (12000.0, {}) + 40.0f);
+    }
+
+    SECTION ("The EQ's ranges from its parts: LOW about 38 dB at 100 Hz and MIDDLE about 23 dB at 400 Hz, end to end")
+    {
+        CHECK_THAT (smallGain (100.0, lo1) - smallGain (100.0, lo0), WithinAbs (38.0, 2.0));
+        CHECK_THAT (smallGain (400.0, mid1) - smallGain (400.0, mid0), WithinAbs (23.0, 2.0));
+        CHECK (smallGain (6400.0, hi1) - smallGain (6400.0, hi0) > 20.0f);   // about 34 dB here
+    }
+
+    SECTION ("MID FREQ moves the MIDDLE boost up from the low mids")
+    {
+        const auto lowMidsOverUpper = [&] (Knobs k) { return smallGain (300.0, k) - smallGain (2000.0, k); };
+        CHECK (lowMidsOverUpper (m1lo) > lowMidsOverUpper (m1hi) + 10.0f);
+    }
+}
+
 TEST_CASE ("Chimera: the Klon's clean blend, germanium clipping, mid hump and TREBLE", "[effects][drive]")
 {
     const auto play = [] (const std::vector<float>& input, float gain, float treble = 5.0f)

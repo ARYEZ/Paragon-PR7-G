@@ -76,6 +76,10 @@ namespace ParamIDs
     inline constexpr auto driveModel    = "driveModel";
     inline constexpr auto driveAttack   = "driveAttack";   // Skyline's ATTACK (PR7-G 0.42.0)
     inline constexpr auto driveGate     = "driveGate";     // Skyline's GATE
+    inline constexpr auto driveHigh     = "driveHigh";     // Abyss's EQ (PR7-G 0.45.0)
+    inline constexpr auto driveLow      = "driveLow";
+    inline constexpr auto driveMiddle   = "driveMiddle";
+    inline constexpr auto driveMidFreq  = "driveMidFreq";
     inline constexpr auto fpOn          = "fpOn";
     inline constexpr auto fpType        = "fpType";
     inline constexpr auto fpSensitivity = "fpSensitivity";   // auto-wah
