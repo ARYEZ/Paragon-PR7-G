@@ -2,6 +2,10 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.43.1
+
+- **The SIGNAL CHAIN now matches the PR7-E:** every block is coloured by its place in the chain, along the PR7 family's red, hot pink and orange gradient (red at PITCH, hot pink in the middle, orange at LO-FI), instead of each block having its own colour. Switched-off blocks show their colour dimmed, as before.
+
 ## 0.43.0
 
 - **Rabid replaces Classic:** a distortion modelled on the ProCo RAT 2, from its published build schematic (the RAT 2 parts list, cross-checked against other builders' layouts). Rigs and projects that used Classic, and projects from before the MODEL menu, now get Rabid.

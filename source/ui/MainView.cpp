@@ -23,6 +23,16 @@ namespace
 
     juce::Point<float> mockPoint (float x, float y) { return juce::Point<float> (x, y) * mockScale; }
 
+    // A signal-chain block's colour, by its place in the chain: the red,
+    // hot pink and orange gradient the PR7-E's chain uses (red first,
+    // orange last), shared across the PR7 family.
+    juce::Colour chainColour (int index, int count)
+    {
+        juce::ColourGradient gradient (juce::Colour (0xffe0103c), 0.0f, 0.0f, juce::Colour (0xffff7a1a), 1.0f, 0.0f, false);
+        gradient.addColour (0.5, juce::Colour (0xffff2f7a));
+        return gradient.getColourAtPosition ((double) index / juce::jmax (1, count - 1));
+    }
+
     // Header groups.
     const auto tabsGroup = mockF (336, 10, 795, 55);
     const auto rigGroup = mockF (838, 10, 1135, 55);
@@ -127,20 +137,22 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
       selectedRig (processorToShow),
       expressionPanel (processorToShow.getParameters()),
       eqPanel (processorToShow.getParameters()),
+      // Each block in the red to pink to orange of the PR7 family's chains, by
+      // its place in the chain: red first, orange last.
       signalChain (processorToShow.getParameters(), {
-          { "PITCH", Icons::Type::pitch, ParagonColours::pitch, juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn },
-          { "COMP / GATE", Icons::Type::comp, ParagonColours::comp, ParamIDs::compOn },
-          { "FILTER / PITCH", Icons::Type::filterPitch, ParagonColours::filterPitch, ParamIDs::fpOn },
-          { "OD / DIST", Icons::Type::drive, ParagonColours::drive, ParamIDs::driveOn },
-          { "NAMP", Icons::Type::amp, ParagonColours::amp, ParamIDs::ampOn },
-          { "CABINET IR", Icons::Type::cabinet, ParagonColours::cab, ParamIDs::cabOn },
-          { "EQ", Icons::Type::eq, ParagonColours::eq, ParamIDs::eqOn },
-          { "GLITCH", Icons::Type::glitch, ParagonColours::glitch, ParamIDs::glitchOn },
-          { "MOD", Icons::Type::modulation, ParagonColours::modulation, ParamIDs::modOn },   // MODULATION: short, to fit the blocks
-          { "MOD 2", Icons::Type::modulation, ParagonColours::modulation, ParamIDs::mod2On },
-          { "DELAY", Icons::Type::delay, ParagonColours::delay, ParamIDs::delayOn },
-          { "REVERB", Icons::Type::reverb, ParagonColours::reverb, ParamIDs::reverbOn },
-          { "LO-FI", Icons::Type::loFi, ParagonColours::loFi, ParamIDs::lofiOn } }),
+          { "PITCH", Icons::Type::pitch, chainColour (0, 13), juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn },
+          { "COMP / GATE", Icons::Type::comp, chainColour (1, 13), ParamIDs::compOn },
+          { "FILTER / PITCH", Icons::Type::filterPitch, chainColour (2, 13), ParamIDs::fpOn },
+          { "OD / DIST", Icons::Type::drive, chainColour (3, 13), ParamIDs::driveOn },
+          { "NAMP", Icons::Type::amp, chainColour (4, 13), ParamIDs::ampOn },
+          { "CABINET IR", Icons::Type::cabinet, chainColour (5, 13), ParamIDs::cabOn },
+          { "EQ", Icons::Type::eq, chainColour (6, 13), ParamIDs::eqOn },
+          { "GLITCH", Icons::Type::glitch, chainColour (7, 13), ParamIDs::glitchOn },
+          { "MOD", Icons::Type::modulation, chainColour (8, 13), ParamIDs::modOn },   // MODULATION: short, to fit the blocks
+          { "MOD 2", Icons::Type::modulation, chainColour (9, 13), ParamIDs::mod2On },
+          { "DELAY", Icons::Type::delay, chainColour (10, 13), ParamIDs::delayOn },
+          { "REVERB", Icons::Type::reverb, chainColour (11, 13), ParamIDs::reverbOn },
+          { "LO-FI", Icons::Type::loFi, chainColour (12, 13), ParamIDs::lofiOn } }),
       rigBrowser (processorToShow),
       settingsPage (processorToShow)
 {
