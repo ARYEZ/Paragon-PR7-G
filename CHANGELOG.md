@@ -2,6 +2,36 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.49.0
+
+- **Our own names, in place of trademarks, artists and song titles.** The faceplates show effect names in big letters, so these needed to be ours. **Only the names changed: every effect sounds exactly as before, and your rigs and projects load as they did.**
+  - **Effects:**
+    - Whammy-Wah (FILTER / PITCH) is now **Quasar**;
+    - Uni-Vibe (MODULATION) is now **Nebula**;
+    - Dimension Chorus (MODULATION) is now **Prism**.
+  - **Expression pedal:** PITCH / WHAMMY is now **PITCH BEND**, and WHAMMY-WAH is now **QUASAR**.
+  - **Quasar's programs:** 02 Classic Wah, 03 Classic Wah 2, 07 Wah Auto Sens and 10 Wah Auto Attack (were "Cry ...").
+  - **Factory rigs:**
+
+    | Was | Now |
+    |---|---|
+    | Leslie Spin | Rotary Spin |
+    | Dimension Clean | Prism Clean |
+    | Machine Gun Vibe | Nebula Lead |
+    | Whammy Lead | Quasar Lead |
+    | XP Wah Crunch | Quasar Wah Crunch |
+    | Brownface Trem | Vintage Amp Trem |
+    | Killing Solo (RATM) | Octave Squeal Solo |
+    | Bulls Scratch (RATM) | Wah Scratch Chop |
+    | Numb Solo (Floyd) | Soaring Fuzz Solo |
+    | Us and Them (Floyd) | Slow Rotary Clean |
+    | Run Like Hell (Floyd) | Galloping Delay |
+    | Money Solo (Floyd) | Fuzz Echo Solo |
+    | Jambi Talk Box (Tool) | Heavy Talk Box |
+    | Show Me the Way (Frampton) | Warm Talk Box |
+
+  - **Nothing breaks:** a project saved with one of these rigs loaded shows its new name and still knows which rig it is, and factory rigs you'd starred stay starred.
+
 ## 0.48.0
 
 - **FACEPLATE stage 3: every block now has its own faceplate**, built from the same PR7 parts, in every finish.

@@ -190,7 +190,7 @@ namespace ExpressionTargets
 {
     // Saved by number: only ever add to the end.
     enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox };
-    inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch / Whammy", "Lo-Fi", "Whammy-Wah", "Glitch", "Talk Box" };
+    inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch Bend", "Lo-Fi", "Quasar", "Glitch", "Talk Box" };
 }
 
 namespace ParamRanges

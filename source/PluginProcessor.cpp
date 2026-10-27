@@ -3,6 +3,7 @@
 #include "LibraryFolders.h"
 #include "Parameters.h"
 #include "PluginEditor.h"
+#include "rigs/FactoryRigs.h"
 
 namespace
 {
@@ -925,9 +926,12 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
     // Restoring the project changed parameters and files, which marked the
     // rig as modified; put back what was saved instead.
     const auto rigFile = state[rigFileKey].toString();
-    currentRig = { state.getProperty (rigNameKey, "Untitled").toString(),
+    // A factory rig saved under a name it has since lost finds its new one.
+    const auto savedFactoryName = state[rigFactoryKey].toString();
+    const auto savedName = state.getProperty (rigNameKey, "Untitled").toString();
+    currentRig = { savedName == savedFactoryName ? currentFactoryName (savedName) : savedName,
                    rigFile.isNotEmpty() ? juce::File (rigFile) : juce::File(),
-                   state[rigFactoryKey].toString() };
+                   currentFactoryName (savedFactoryName) };
     rigModified = (bool) state.getProperty (rigModifiedKey, false);
     tappedBpm = (double) state.getProperty (tappedBpmKey, 0.0);
     setExpressionCc ((int) state.getProperty (expressionCcKey, 11));

@@ -126,8 +126,8 @@ TEST_CASE ("The Whammy-Wah factory rigs use the XP-100 programs they're named fo
     };
 
     CHECK (programOf (find ("Nu-Metal Screech")) == "21 Down Oct / Up Oct");
-    CHECK (programOf (find ("Whammy Lead")) == "13 Up 1 Octave");
-    CHECK (programOf (find ("XP Wah Crunch")) == "02 Original Cry Wah");
+    CHECK (programOf (find ("Quasar Lead")) == "13 Up 1 Octave");
+    CHECK (programOf (find ("Quasar Wah Crunch")) == "02 Classic Wah");
     CHECK (programOf (find ("Harmony Bends")) == "24 Up 4th / Up 5th");
 
     // The screech's EQ is the Tight Low End preset (bands it leaves out are at 0 dB).
@@ -202,6 +202,52 @@ TEST_CASE ("Favourites stick, including on factory rigs", "[rigs]")
     RigLibrary reopened (temp.folder);
     CHECK (reopened.findFactory ("Slapback")->rig.favourite);
     CHECK_FALSE (reopened.findFactory ("Studio Clean")->rig.favourite);
+}
+
+TEST_CASE ("Renamed factory rigs are still found by their old names", "[rigs][state]")
+{
+    // Every new name is a real factory rig; other names pass through.
+    TempRigFolder temp;
+    {
+        RigLibrary library (temp.folder);
+        for (auto name : { "Leslie Spin", "Whammy Lead", "XP Wah Crunch", "Numb Solo (Floyd)", "Show Me the Way (Frampton)" })
+        {
+            CAPTURE (name);
+            CHECK (library.findFactory (name) == nullptr);
+            CHECK (library.findFactory (currentFactoryName (name)) != nullptr);
+        }
+        CHECK (currentFactoryName ("Slapback") == "Slapback");
+        CHECK (currentFactoryName ("My Own Rig") == "My Own Rig");
+    }
+
+    // A favourite saved under an old name stays a favourite.
+    temp.folder.createDirectory();
+    temp.folder.getChildFile ("factory-favourites.txt").replaceWithText ("Leslie Spin\nSlapback");
+    RigLibrary reopened (temp.folder);
+    CHECK (reopened.findFactory ("Rotary Spin")->rig.favourite);
+    CHECK (reopened.findFactory ("Slapback")->rig.favourite);
+
+    // A project saved with an old factory rig loaded finds it by its new name.
+    juce::MemoryBlock saved;
+    {
+        RigRig r;
+        r.processor.loadRig (r.entryNamed ("Rotary Spin"));
+        r.processor.getStateInformation (saved);
+    }
+    auto xml = juce::AudioProcessor::getXmlFromBinary (saved.getData(), (int) saved.getSize());
+    REQUIRE (xml != nullptr);
+    REQUIRE (xml->getStringAttribute ("rigFactory") == "Rotary Spin");
+    xml->setAttribute ("rigFactory", "Leslie Spin");   // as 0.48.0 and earlier saved it
+    xml->setAttribute ("rigName", "Leslie Spin");
+    juce::MemoryBlock old;
+    juce::AudioProcessor::copyXmlToBinary (*xml, old);
+
+    RigRig restored;
+    restored.processor.setStateInformation (old.getData(), (int) old.getSize());
+    CHECK (restored.processor.getCurrentRig().name == "Rotary Spin");
+    CHECK (restored.processor.getCurrentRig().factoryName == "Rotary Spin");
+    REQUIRE (restored.processor.findCurrentRigEntry() != nullptr);
+    CHECK (restored.processor.findCurrentRigEntry()->rig.name == "Rotary Spin");
 }
 
 TEST_CASE ("Rigs are sorted by bank and number, and < > wrap round", "[rigs]")
