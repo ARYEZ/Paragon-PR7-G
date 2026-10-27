@@ -37,7 +37,7 @@ namespace effects
     class Circuit
     {
     public:
-        static constexpr int maxNodes = 16, maxResistors = 24, maxCapacitors = 8, maxOpAmps = 4;
+        static constexpr int maxNodes = 16, maxResistors = 24, maxCapacitors = 12, maxOpAmps = 4;
 
         int node() noexcept { return numNodes++; }   // returns the new node's number
         int resistor (int a, int b, double ohms) noexcept { resistors[(size_t) numResistors] = { a, b, ohms }; return numResistors++; }

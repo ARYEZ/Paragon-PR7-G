@@ -2,6 +2,27 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.44.0
+
+- **Chimera, a new overdrive:** modelled on the Klon Centaur, the "transparent" overdrive, from a clean redraw of its schematic, cross-checked with ElectroSmash's analysis. It's the last MODEL in OD / DISTORTION.
+  - **Three paths, mixed:**
+    - **the drive:** an op-amp gain stage into two germanium diodes, which clip softly from about 0.35 V;
+    - **a clean feed of your guitar:** GAIN's second half turns it down as the drive goes up, which is why it keeps your guitar's own sound under the drive;
+    - **a low feed for the bass.**
+
+    After the mix come the active TREBLE stage and a clean bleed straight to the output.
+  - **DRIVE is its GAIN** (a dual audio-taper pot, both halves turning together). **TONE is its TREBLE**, about 24 dB of range at 8 kHz, as its parts give.
+  - **What we measured:**
+    - a mid hump at full GAIN: a quiet 1 kHz gets about 19 dB more gain than 100 Hz;
+    - distortion that's clean at GAIN 0, about 1% at noon and about 20% fully up, all odd harmonics.
+  - **Level:** LEVEL 0 dB matches your guitar at GAIN noon. Like the real pedal it's louder at low GAIN (about +9 dB): the Klon's famous clean boost. It's a little louder fully up too (about +3 dB).
+  - **What's a guess:**
+    - the GAIN pot's value (100k, from clone parts lists);
+    - the germanium diodes' exact curve;
+    - VOLUME, which is held at noon, with LEVEL after it;
+    - the gain stage's limit of about 7.5 V either way.
+- The circuit helper can now hold 12 capacitors (it held 8), for the Klon's feed network.
+
 ## 0.43.2
 
 - **The edit panels match their blocks:** each block's panel (its header icon and the bars above its controls) now uses that block's colour in the SIGNAL CHAIN, from red at PITCH to orange at LO-FI. The GRAPHIC EQ's faders and response curve take the EQ block's hot pink. The knob rings and buttons keep the plugin's orange.

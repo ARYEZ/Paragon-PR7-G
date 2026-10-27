@@ -539,6 +539,65 @@ TEST_CASE ("Rabid: the RAT 2's op-amp gain, symmetric diodes and FILTER", "[effe
     }
 }
 
+TEST_CASE ("Chimera: the Klon's clean blend, germanium clipping, mid hump and TREBLE", "[effects][drive]")
+{
+    const auto play = [] (const std::vector<float>& input, float gain, float treble = 5.0f)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::chimera);
+        rig.set (ParamIDs::driveGain, gain);
+        rig.set (ParamIDs::driveTone, treble);
+        const auto output = rig.runMono (input);
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto note = sine (220.0, 0.2f, 0.6);
+    const auto levelDb = [&] (float gain) { return dB (rms (play (note, gain), 0.3) / rms (note, 0.3)); };
+    const auto thirdDb = [&] (float gain)
+    {
+        const auto output = play (note, gain);
+        return dB (levelAt (output, 660.0, 0.3) / levelAt (output, 220.0, 0.3));
+    };
+    const auto secondDb = [&] (float gain)
+    {
+        const auto output = play (note, gain);
+        return dB (levelAt (output, 440.0, 0.3) / levelAt (output, 220.0, 0.3));
+    };
+    const auto smallGain = [&] (double hz, float gain, float treble)
+    {
+        const auto input = sine (hz, 0.001f, 0.6);
+        return dB (rms (play (input, gain, treble), 0.3) / rms (input, 0.3));
+    };
+
+    SECTION ("At GAIN noon, near the guitar's level; louder at both ends, as GAIN's second gang trades clean level for drive")
+    {
+        CHECK_THAT (levelDb (5.0f), WithinAbs (0.0, 1.0));
+        CHECK (levelDb (0.0f) > levelDb (5.0f) + 4.0f);   // the Klon's famous clean boost at low GAIN
+        CHECK (levelDb (10.0f) > levelDb (5.0f));
+    }
+
+    SECTION ("Germanium diodes clip both halves alike: odd harmonics that grow with GAIN, no even ones")
+    {
+        CHECK (thirdDb (0.0f) < -80.0f);
+        CHECK (thirdDb (5.0f) > thirdDb (0.0f) + 40.0f);
+        CHECK (thirdDb (10.0f) > thirdDb (5.0f) + 15.0f);
+        CHECK (secondDb (10.0f) < -60.0f);
+    }
+
+    SECTION ("The mid hump: at full GAIN a quiet 1 kHz gets far more gain than 100 Hz or 10 kHz")
+    {
+        const auto mids = smallGain (1000.0, 10.0f, 5.0f);
+        CHECK (mids > smallGain (100.0, 10.0f, 5.0f) + 12.0f);
+        CHECK (mids > smallGain (10000.0, 10.0f, 5.0f) + 20.0f);
+    }
+
+    SECTION ("TREBLE spans about 24 dB at 8 kHz, as its parts give ((10k + 4.7k) / 1.8k against 4.7k / 11.8k)")
+    {
+        CHECK_THAT (smallGain (8000.0, 2.0f, 10.0f) - smallGain (8000.0, 2.0f, 0.0f), WithinAbs (24.0, 2.0));
+    }
+}
+
 TEST_CASE ("Skyline: a Tube Screamer whose ATTACK sets the bass into the clipping, with a gate", "[effects][drive]")
 {
     const auto play = [] (float model, const std::vector<float>& input, float attack, float gate = 0.0f, float drive = 6.0f)
