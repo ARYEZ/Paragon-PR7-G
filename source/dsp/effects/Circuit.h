@@ -131,6 +131,18 @@ namespace effects
             inputToOutput = voltage (outputNode, numCapacitors);
         }
 
+        // The output is feedthrough() * input + pending(): what the next
+        // process() will give, split so a nonlinear part around the circuit
+        // can solve for its input first (e.g. an op-amp driving it).
+        double feedthrough() const noexcept { return inputToOutput; }
+        double pending() const noexcept
+        {
+            auto out = 0.0;
+            for (int k = 0; k < numCapacitors; ++k)
+                out += stateToOutput[(size_t) k] * state[(size_t) k];
+            return out;
+        }
+
         double process (double in) noexcept
         {
             auto out = inputToOutput * in;

@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Cosmonaut.h"
+#include "Rabid.h"
 #include "EffectUtils.h"
 
 namespace effects
 {
-    // Footswitch 2: an overdrive or fuzz pedal, before the amp, in four models.
+    // Footswitch 2: an overdrive, distortion or fuzz pedal, before the amp, in five models.
     //
     // SCREAMER is modelled on the Ibanez TS808 Tube Screamer's circuit:
     //
@@ -21,16 +22,14 @@ namespace effects
     // as diodes in an op-amp's feedback loop do. Its tone control works
     // after a fixed treble cut at 723 Hz, from dark to slightly bright.
     //
-    // CLASSIC is Paragon's original overdrive:
-    //
-    //   low cut (tightens the bass) -> gain -> asymmetric soft clipping
-    //   (8x oversampled) -> tone (high cut) -> level
+    // RABID is modelled on the ProCo RAT 2, op-amp and all (see Rabid.h;
+    // PR7-G 0.43.0, replacing the original "Classic" overdrive). DRIVE is its
+    // DISTORTION; TONE is its FILTER turned around, so up is brighter, as on
+    // the other models.
     //
     // Clipping creates new high harmonics. Without oversampling, the ones
     // above half the sample rate fold back down as harsh, unmusical tones
-    // (aliasing). Running the clipper at 8x the rate keeps them out: at full
-    // drive a high note is close to a square wave, whose harmonics reach far
-    // enough that 4x still let audible fold-back through.
+    // (aliasing). The clipping runs at 8x the rate to keep them out.
     //
     // COSMONAUT is modelled on the green Russian Big Muff, stage by stage
     // from its circuit (see Cosmonaut.h; PR7-G 0.41.0, replacing the
@@ -60,8 +59,8 @@ namespace effects
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { classic, screamer, muff, face, skyline };
-        static inline const juce::StringArray modelNames { "Classic", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline" };
+        enum class Model { rabid, screamer, muff, face, skyline };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Face Fuzz", "Skyline" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -87,21 +86,17 @@ namespace effects
         void prepare (double sampleRate, int maxBlockSize);
         void process (juce::dsp::AudioBlock<float> monoBlock, const Settings& settings) noexcept;
 
-        // Exposed for tests: the waveshaper itself.
-        static float shape (float x) noexcept;
         static float diodeClip (float x) noexcept;
 
     private:
-        void processClassic (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
         void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
-        juce::dsp::IIR::Filter<float> lowCut, toneFilter;
-        juce::SmoothedValue<float> inputGain, outputGain;
-        float lastTone = -1.0f;
+        Rabid rabid;
 
         // Screamer: the clean guitar and the clipping path, oversampled together
         // so they stay exactly in step when they're added back together.
