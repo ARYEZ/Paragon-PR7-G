@@ -1387,7 +1387,7 @@ TEST_CASE ("Whammy-Wah: the expression pedal plays the XP-100's programs", "[eff
                 bright[i] += 0.1f * (float) std::sin (juce::MathConstants<double>::twoPi * 220.0 * harmonic * (double) i / sampleRate) / (float) harmonic;
         const auto brightness = [&] (float pedal)
         {
-            const auto output = play ("02 Original Cry Wah", pedal, bright);
+            const auto output = play ("02 Classic Wah", pedal, bright);
             return dB (levelAt (output, 220.0 * 9) / levelAt (output, 220.0 * 2));   // 2 kHz against 440 Hz
         };
         CHECK (brightness (1.0f) - brightness (0.0f) > 15.0f);
@@ -1396,7 +1396,7 @@ TEST_CASE ("Whammy-Wah: the expression pedal plays the XP-100's programs", "[eff
         // further with the pedal at the toe.
         const auto autoBrightness = [&] (float pedal)
         {
-            const auto output = play ("07 Cry Auto Sens", pedal, bright);
+            const auto output = play ("07 Wah Auto Sens", pedal, bright);
             return dB (levelAt (output, 220.0 * 9) / levelAt (output, 220.0 * 2));
         };
         CHECK (autoBrightness (1.0f) - autoBrightness (0.0f) > 10.0f);

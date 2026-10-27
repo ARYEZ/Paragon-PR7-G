@@ -56,9 +56,9 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     Sequence and Interfere start their steps on the song's grid (every 1/16, every bar...), locked to the drums. POSITION puts it after the amp (POST,
     the default: exact chops) or before it (PRE: the chops hit the drive). The expression pedal's GLITCH setting fades it in.
   - **Filter / Pitch** (in the signal chain; no footswitch): an auto-wah (envelope filter), a pitch shifter
-    (two octaves down to two up, blended with the dry guitar for harmonies and octaves), or a **Whammy-Wah**: the
-    DigiTech XP-100's factory programs 01–28, numbered as on the pedal and played with the expression pedal (WHAMMY-WAH):
-    a volume pedal, five wahs, six auto-wahs (the pedal sets sensitivity or attack), eight whammy bends (heel: no shift,
+    (two octaves down to two up, blended with the dry guitar for harmonies and octaves), or **Quasar**: 28 programs
+    modelled on the DigiTech XP-100's, numbered as on that pedal and played with the expression pedal (QUASAR):
+    a volume pedal, five wahs, six auto-wahs (the pedal sets sensitivity or attack), eight pitch bends (heel: no shift,
     toe: the interval, as far as six octaves down) and eight harmonies (your note plus a voice the pedal moves between two intervals);
     or a **Talk Box**: the amp's sound, after the cab, shaped into vowels (oo to ee) by the expression pedal (TALK BOX),
     with RESONANCE and MIX.
@@ -69,8 +69,8 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     Precision Drive: the Tube Screamer circuit with an 8-way ATTACK switch for how much bass reaches the clipping, and a gate;
     **Chimera**, modelled on the Klon Centaur: germanium clipping blended with a clean feed, the "transparent" overdrive;
     and **Abyss**, modelled on the Boss MT-2 Metal Zone, with its own HIGH, LOW, MIDDLE and MID FREQ. Drive, tone, level; 8x oversampled to avoid harsh aliasing.
-  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Dimension chorus, Uni-Vibe, rotary
-    (Leslie), vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
+  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Prism (a wide stereo chorus), Nebula (a throbbing
+    phase vibrato), rotary speaker, vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and
     optional ping-pong; it comes in eight types: Digital (the original), Analog, Tape, Mod, Reverse,
@@ -98,12 +98,14 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
   real expression pedal (route your MIDI track to the plugin). Assign it on the small EXPRESSION screen beside it (click a line, or scroll; it also shows the
   pedal's position) or with EXPRESSION ASSIGN in the dock, to
   **VOLUME**, **WAH / FILTER** (a wah before the drive), **MORPH / FX** (fades modulation, delay and
-  reverb in from the heel), **PITCH / WHAMMY** (bends the pitch shifter from no shift at the heel to its
+  reverb in from the heel), **PITCH BEND** (bends the pitch shifter from no shift at the heel to its
   INTERVAL at the toe), **LO-FI** (fades the lo-fi effect in: full band at the heel, lo-fi at the toe) or
-  **WHAMMY-WAH** (plays the FILTER / PITCH block's Whammy-Wah). MIN and MAX set where the heel and toe land. The assignment and range
+  **QUASAR** (plays the FILTER / PITCH block's Quasar). MIN and MAX set where the heel and toe land. The assignment and range
   are saved with each rig.
-- **Bottom panels:** RIG BROWSER jumps to the PRESETS page filtered; SELECTED RIG files and saves the
-  current rig; the middle shows the graphic EQ, or the knobs of whichever block you pick (click a
+- **Bottom panels:** the FACEPLATE (left) shows the selected block as a hardware unit: the drive
+  pedal's model and kind, the NAM amp's model on an LCD, the cab IR's frequency curve, the compressor's
+  gain reduction, the delay's repeats, the reverb's shape, the modulation's wave, the EQ's curve and more,
+  and your guitar's input level; the middle shows the graphic EQ, or the knobs of whichever block you pick (click a
   signal-chain block or a footswitch name); **GRAPHIC EQ** goes back to the EQ.
 - **SETTINGS:** the tuner's reference pitch, mute while tuning, and the expression pedal's MIDI CC.
 - The paths of the loaded files are saved in your DAW project. If a file is missing when the project

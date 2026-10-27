@@ -41,6 +41,7 @@ CabStage::LoadResult CabStage::load (const juce::File& file)
     juce::AudioBuffer<float> ir (1, (int) reader->lengthInSamples);
     reader->read (&ir, 0, ir.getNumSamples(), 0, true, false);
     ir.applyGain (juce::Decibels::decibelsToGain (irGainDb));
+    auto response = responseDb (ir, reader->sampleRate);
 
     // Normalise::no also makes JUCE scale the IR by (IR rate / host rate),
     // which keeps the level the same at any host sample rate.
@@ -49,7 +50,42 @@ CabStage::LoadResult CabStage::load (const juce::File& file)
                                      juce::dsp::Convolution::Trim::no,
                                      juce::dsp::Convolution::Normalise::no);
     hasImpulseResponse = true;
-    return { {}, (double) reader->lengthInSamples / reader->sampleRate };
+    return { {}, (double) reader->lengthInSamples / reader->sampleRate, std::move (response) };
+}
+
+std::vector<float> CabStage::responseDb (const juce::AudioBuffer<float>& ir, double sampleRate)
+{
+    // One FFT of the IR (its first 2^15 samples at most: a cab's sound is
+    // all in its first few hundred milliseconds), zero-padded to at least
+    // 32768 points (about 1.5 Hz apart) so the low end is smooth, not steps.
+    const auto length = juce::jmin (ir.getNumSamples(), 1 << 15);
+    auto order = 15;
+    while ((1 << order) < length)
+        ++order;
+    const auto size = 1 << order;
+    std::vector<float> data ((size_t) size * 2, 0.0f);
+    if (length > 0)
+        std::copy_n (ir.getReadPointer (0), length, data.begin());
+    juce::dsp::FFT (order).performFrequencyOnlyForwardTransform (data.data());
+
+    std::vector<float> curve ((size_t) responsePoints);
+    const auto binHz = sampleRate / (double) size;
+    const auto lastBin = size / 2;
+    const auto sixth = std::pow (2.0, 1.0 / 12.0);   // half of a sixth of an octave, either side
+    for (int point = 0; point < responsePoints; ++point)
+    {
+        const auto hz = responseLowHz * std::pow ((double) responseHighHz / responseLowHz, (double) point / (responsePoints - 1));
+        const auto from = juce::jlimit (1, lastBin, (int) std::floor (hz / sixth / binHz));
+        const auto to = juce::jlimit (from, lastBin, (int) std::ceil (hz * sixth / binHz));
+        double power = 0.0;
+        for (int bin = from; bin <= to; ++bin)
+            power += (double) data[(size_t) bin] * data[(size_t) bin];
+        curve[(size_t) point] = (float) (10.0 * std::log10 (power / (to - from + 1) + 1.0e-20));
+    }
+    const auto loudest = *std::max_element (curve.begin(), curve.end());
+    for (auto& level : curve)
+        level -= loudest;
+    return curve;
 }
 
 void CabStage::process (float* samples, int numSamples, bool enabled) noexcept

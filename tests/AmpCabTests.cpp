@@ -295,6 +295,58 @@ TEST_CASE ("The cabinet IR is convolved with the signal", "[cab]")
     CHECK (std::distance (output.begin(), peak) == 10);
 }
 
+TEST_CASE ("The cabinet's frequency curve shows what the IR does to the tone", "[cab][faceplate]")
+{
+    constexpr double rate = 48000.0;
+    const auto pointAt = [] (float hz)
+    {
+        return (size_t) juce::roundToInt ((CabStage::responsePoints - 1) * std::log (hz / CabStage::responseLowHz)
+                                          / std::log (CabStage::responseHighHz / CabStage::responseLowHz));
+    };
+
+    // A plain click changes nothing: flat, 0 dB everywhere.
+    juce::AudioBuffer<float> click (1, 512);
+    click.clear();
+    click.setSample (0, 0, 1.0f);
+    const auto flat = CabStage::responseDb (click, rate);
+    REQUIRE (flat.size() == (size_t) CabStage::responsePoints);
+    for (auto level : flat)
+        CHECK_THAT (level, WithinAbs (0.0, 0.1));
+
+    // A dull IR (a one-pole low-pass around 1 kHz, falling 6 dB an octave
+    // above it): the curve matches the filter's exact response, worked out
+    // from its formula (about -4 dB at 1 kHz and -19 dB at 10 kHz).
+    juce::AudioBuffer<float> dull (1, 4096);
+    const auto a = std::exp (-2.0 * juce::MathConstants<double>::pi * 1000.0 / rate);
+    for (int i = 0; i < dull.getNumSamples(); ++i)
+        dull.setSample (0, i, (float) ((1.0 - a) * std::pow (a, (double) i)));
+    const auto exactDb = [a, rate] (double hz)
+    {
+        const auto w = 2.0 * juce::MathConstants<double>::pi * hz / rate;
+        return 20.0 * std::log10 ((1.0 - a) / std::sqrt (1.0 - 2.0 * a * std::cos (w) + a * a));
+    };
+    const auto curve = CabStage::responseDb (dull, rate);
+    for (auto hz : { 100.0f, 1000.0f, 3000.0f, 10000.0f })
+    {
+        CAPTURE (hz);
+        const auto point = pointAt (hz);
+        const auto pointHz = CabStage::responseLowHz * std::pow (CabStage::responseHighHz / CabStage::responseLowHz, (float) point / (CabStage::responsePoints - 1));
+        CHECK_THAT (curve[point], WithinAbs (exactDb (pointHz), 0.5));
+    }
+    CHECK (curve[pointAt (10000.0f)] < -18.0f);
+
+    // A loaded IR's curve reaches the faceplate, with the cab's status.
+    TestRig rig;
+    std::vector<float> samples (256, 0.0f);
+    for (size_t i = 0; i < samples.size(); ++i)
+        samples[i] = dull.getSample (0, (int) i);
+    rig.processor.loadCabinetIR (writeWav (tempFile ("dull-ir.wav"), samples));
+    rig.waitForLoads();
+    const auto status = rig.processor.getCabStatus();
+    REQUIRE (status.responseDb.size() == (size_t) CabStage::responsePoints);
+    CHECK (status.responseDb[pointAt (10000.0f)] < -15.0f);
+}
+
 TEST_CASE ("An unreadable cabinet file is reported", "[cab]")
 {
     TestRig rig;

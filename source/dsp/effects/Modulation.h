@@ -33,7 +33,7 @@ namespace effects
     public:
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Type { chorus, flanger, phaser, tremolo, dimension, uniVibe, rotary, vibrato, harmonicTremolo, autoPan, doubler, carbonite };
-        static inline const juce::StringArray typeNames { "Vortex", "AEON", "Hadron", "Razor", "Dimension Chorus", "Uni-Vibe",
+        static inline const juce::StringArray typeNames { "Vortex", "AEON", "Hadron", "Razor", "Prism", "Nebula",
                                                           "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler", "Carbonite" };
 
         // Where the block sits: POST (after the amp and cab) or PRE (after the

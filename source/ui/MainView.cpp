@@ -124,7 +124,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                processorToShow.getParameters(), ParamIDs::cabOn),
       expressionPedal (processorToShow),
       tunerReader (processorToShow),
-      selectedRig (processorToShow),
+      faceplate (processorToShow),
       expressionPanel (processorToShow.getParameters()),
       eqPanel (processorToShow.getParameters()),
       // Each block in the red to pink to orange of the PR7 family's chains, by
@@ -301,7 +301,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                       &undoLabel, &redoLabel, &bypassLabel, &tunerLabel, &muteLabel, &tapLabel, &holdLabel,
                       &rigLevelKnob, &presenceKnob, &rigLevelLabel, &presenceLabel,
                       &ampSlot, &cabSlot, &rigSlot, &expressionPedal,
-                      &rigNavigator, &selectedRig, &expressionPanel };
+                      &faceplate, &expressionPanel };
     for (auto& footswitch : footswitches)
         processorPage.push_back (footswitch.get());
     for (auto* component : processorPage)
@@ -429,13 +429,6 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     closePanel.onClick = [this] { selectBlock (eqBlock); };
     addChildComponent (closePanel);
 
-    rigNavigator.onShow = [this] (int filter, int bank)
-    {
-        rigBrowser.showFilter (filter, bank);
-        showPage (Page::presets);
-    };
-    selectedRig.onSave = [this] { saveRig(); };
-    selectedRig.onSaveAs = [this] { rigBrowser.promptSaveAs(); };
 
     signalChain.onSelect = [this] (int block) { selectBlock (block); };
     addAndMakeVisible (signalChain);
@@ -488,6 +481,47 @@ void MainView::selectBlock (int block)
     if (block != eqBlock)
         closePanel.toFront (false);
 
+    // The FACEPLATE: the block as hardware (its own for OD / DIST and NAMP
+    // so far; for the rest, a unit with its name and TYPE).
+    struct About { const char* title; Icons::Type icon; juce::String onIds; const char* typeId; };
+    const About about[] = {
+        { "PITCH", Icons::Type::pitch, juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn, "" },
+        { "COMP / GATE", Icons::Type::comp, ParamIDs::compOn, ParamIDs::compType },
+        { "FILTER / PITCH", Icons::Type::filterPitch, ParamIDs::fpOn, ParamIDs::fpType },
+        { "OD / DIST", Icons::Type::drive, ParamIDs::driveOn, ParamIDs::driveModel },
+        { "NAMP", Icons::Type::amp, ParamIDs::ampOn, "" },
+        { "CABINET IR", Icons::Type::cabinet, ParamIDs::cabOn, "" },
+        { "GRAPHIC EQ", Icons::Type::eq, ParamIDs::eqOn, "" },
+        { "GLITCH", Icons::Type::glitch, ParamIDs::glitchOn, ParamIDs::glitchMode },
+        { "MODULATION", Icons::Type::modulation, ParamIDs::modOn, ParamIDs::modType },
+        { "MODULATION 2", Icons::Type::modulation, ParamIDs::mod2On, ParamIDs::mod2Type },
+        { "DELAY", Icons::Type::delay, ParamIDs::delayOn, ParamIDs::delayType },
+        { "REVERB", Icons::Type::reverb, ParamIDs::reverbOn, ParamIDs::reverbType },
+        { "LO-FI", Icons::Type::loFi, ParamIDs::lofiOn, ParamIDs::lofiType } };
+    static_assert (std::size (about) == numBlocks);
+    const auto& shown = about[(size_t) juce::jlimit (0, numBlocks - 1, block)];
+    const auto unit = [block]
+    {
+        switch (block)
+        {
+            case pitchBlock:  return Faceplate::Unit::pitch;
+            case compBlock:   return Faceplate::Unit::dynamics;
+            case driveBlock:  return Faceplate::Unit::drive;
+            case ampBlock:    return Faceplate::Unit::amp;
+            case cabBlock:    return Faceplate::Unit::cabinet;
+            case delayBlock:  return Faceplate::Unit::delay;
+            case reverbBlock: return Faceplate::Unit::reverb;
+            case modBlock:    return Faceplate::Unit::modulation;
+            case mod2Block:   return Faceplate::Unit::modulation2;
+            case filterPitchBlock: return Faceplate::Unit::filterPitch;
+            case glitchBlock: return Faceplate::Unit::glitch;
+            case eqBlock:     return Faceplate::Unit::eq;
+            case loFiBlock:   return Faceplate::Unit::loFi;
+            default:          return Faceplate::Unit::other;
+        }
+    }();
+    faceplate.setBlock (unit, shown.title, shown.icon, ParagonColours::chainColour (block, numBlocks), shown.onIds, shown.typeId);
+
     const int footswitchBlocks[] = { compBlock, driveBlock, modBlock, delayBlock };
     for (size_t i = 0; i < footswitches.size(); ++i)
         footswitches[i]->setSelected (footswitchBlocks[i] == block || (i == 3 && block == reverbBlock));
@@ -522,7 +556,6 @@ void MainView::refreshRig()
     display.setContents ({ entry != nullptr ? entry->rig.number : 0, rig.name,
                            entry != nullptr ? Rig::bankName (entry->rig.bank) : juce::String(), modified, bypassed, tunerState });
     rigSlot.setRig (entry != nullptr ? entry->rig.getSlotName() : juce::String(), rig.name, modified);
-    selectedRig.refresh();
 }
 
 void MainView::timerCallback()
@@ -779,8 +812,10 @@ void MainView::resized()
     expressionPedal.setBounds (mock (1342, 46, 1553, 562));
 
     // Dock
-    rigNavigator.setBounds (mock (12, 568, 246, 822));
-    selectedRig.setBounds (mock (256, 568, 652, 822));
+    // The FACEPLATE where the RIG BROWSER and SELECTED RIG panels were (as on
+    // the PR7-V): both only repeated the PRESETS page and the unit's own
+    // display and SAVE buttons.
+    faceplate.setBounds (mock (12, 568, 652, 822));
     const auto summaryArea = mock (662, 568, 1334, 822);
     for (auto& panel : panels)
         if (panel != nullptr)

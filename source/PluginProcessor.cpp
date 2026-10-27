@@ -3,6 +3,7 @@
 #include "LibraryFolders.h"
 #include "Parameters.h"
 #include "PluginEditor.h"
+#include "rigs/FactoryRigs.h"
 
 namespace
 {
@@ -253,6 +254,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     inputGain.setTargetValue (juce::Decibels::decibelsToGain (inputGainDb->load()));
     inputGain.applyGain (mono, numSamples);
     inputMeter.pushSamples (mono, numSamples);
+    faceplateMeter.pushSamples (mono, numSamples);
 
     // PITCH: TUNING, OCTAVER and FREEZE, before anything else shapes the guitar.
     pitchBlock.process (monoBlock, { param (ParamIDs::pitchTune), isOn (ParamIDs::octOn), param (ParamIDs::octSubTwo),
@@ -542,6 +544,7 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
         {
             status.file = file;   // keep the path, as for the amp
             status.detail = {};
+            status.responseDb.clear();
             status.error = "Can't find " + file.getFullPathName();
             setStatus (cabStatus, status);
             return;
@@ -557,6 +560,7 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
             status.file = file;
             status.error = {};
             status.detail = juce::String (juce::roundToInt (result.lengthSeconds * 1000.0)) + " ms IR";
+            status.responseDb = result.responseDb;
         }
 
         setStatus (cabStatus, status);
@@ -922,9 +926,12 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
     // Restoring the project changed parameters and files, which marked the
     // rig as modified; put back what was saved instead.
     const auto rigFile = state[rigFileKey].toString();
-    currentRig = { state.getProperty (rigNameKey, "Untitled").toString(),
+    // A factory rig saved under a name it has since lost finds its new one.
+    const auto savedFactoryName = state[rigFactoryKey].toString();
+    const auto savedName = state.getProperty (rigNameKey, "Untitled").toString();
+    currentRig = { savedName == savedFactoryName ? currentFactoryName (savedName) : savedName,
                    rigFile.isNotEmpty() ? juce::File (rigFile) : juce::File(),
-                   state[rigFactoryKey].toString() };
+                   currentFactoryName (savedFactoryName) };
     rigModified = (bool) state.getProperty (rigModifiedKey, false);
     tappedBpm = (double) state.getProperty (tappedBpmKey, 0.0);
     setExpressionCc ((int) state.getProperty (expressionCcKey, 11));

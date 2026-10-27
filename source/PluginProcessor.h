@@ -30,6 +30,7 @@ struct SlotStatus
     juce::String detail;    // e.g. "48 kHz, resampled" or the IR length
     juce::String error;     // why the last load failed; empty if it didn't
     bool loading = false;
+    std::vector<float> responseDb;   // the cabinet IR's frequency response (CabStage::responseDb); empty for the amp
 };
 
 // Which rig is loaded, for the header display and the Save button.
@@ -175,6 +176,8 @@ public:
 
     juce::AudioProcessorValueTreeState& getParameters() noexcept { return parameters; }
     LevelMeterSource& getInputMeter() noexcept { return inputMeter; }
+    // The same input level, for the FACEPLATE's meters (each reader takes the peaks it reads).
+    LevelMeterSource& getFaceplateMeter() noexcept { return faceplateMeter; }
     // How hard the compressor is working (dB, 0 or less), for its meter.
     float getCompGainReductionDb() const noexcept { return compGate.getGainReductionDb(); }
     LevelMeterSource& getOutputMeter() noexcept { return outputMeter; }
@@ -283,7 +286,7 @@ private:
     juce::CriticalSection statusLock;
     SlotStatus ampStatus, cabStatus;
 
-    LevelMeterSource inputMeter, outputMeter;
+    LevelMeterSource inputMeter, outputMeter, faceplateMeter;
 
     // Declared last so it is destroyed first: its jobs use the members above.
     juce::ThreadPool loader { juce::ThreadPoolOptions{}.withThreadName ("Paragon PR7-G loader").withNumberOfThreads (1) };

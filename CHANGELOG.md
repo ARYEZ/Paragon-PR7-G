@@ -2,6 +2,83 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.49.0
+
+- **Our own names, in place of trademarks, artists and song titles.** The faceplates show effect names in big letters, so these needed to be ours. **Only the names changed: every effect sounds exactly as before, and your rigs and projects load as they did.**
+  - **Effects:**
+    - Whammy-Wah (FILTER / PITCH) is now **Quasar**;
+    - Uni-Vibe (MODULATION) is now **Nebula**;
+    - Dimension Chorus (MODULATION) is now **Prism**.
+  - **Expression pedal:** PITCH / WHAMMY is now **PITCH BEND**, and WHAMMY-WAH is now **QUASAR**.
+  - **Quasar's programs:** 02 Classic Wah, 03 Classic Wah 2, 07 Wah Auto Sens and 10 Wah Auto Attack (were "Cry ...").
+  - **Factory rigs:**
+
+    | Was | Now |
+    |---|---|
+    | Leslie Spin | Rotary Spin |
+    | Dimension Clean | Prism Clean |
+    | Machine Gun Vibe | Nebula Lead |
+    | Whammy Lead | Quasar Lead |
+    | XP Wah Crunch | Quasar Wah Crunch |
+    | Brownface Trem | Vintage Amp Trem |
+    | Killing Solo (RATM) | Octave Squeal Solo |
+    | Bulls Scratch (RATM) | Wah Scratch Chop |
+    | Numb Solo (Floyd) | Soaring Fuzz Solo |
+    | Us and Them (Floyd) | Slow Rotary Clean |
+    | Run Like Hell (Floyd) | Galloping Delay |
+    | Money Solo (Floyd) | Fuzz Echo Solo |
+    | Jambi Talk Box (Tool) | Heavy Talk Box |
+    | Show Me the Way (Frampton) | Warm Talk Box |
+
+  - **Nothing breaks:** a project saved with one of these rigs loaded shows its new name and still knows which rig it is, and factory rigs you'd starred stay starred.
+
+## 0.48.0
+
+- **FACEPLATE stage 3: every block now has its own faceplate**, built from the same PR7 parts, in every finish.
+  - **MOD and MOD 2:**
+    - Each is named for its TYPE, with what kind of effect it is (VORTEX / CHORUS, AEON / FLANGER, HADRON / PHASER...), and whether it sits PRE or POST.
+    - Its wobble is drawn at RATE and DEPTH, with a dot riding it. **Razor shows its real shape**: from triangle to square as you turn WAVE.
+    - RATE shows in digits, or as the note value while synced.
+    - Its knobs are the ones its TYPE has: the Vortex's DEPTH, MIX and EQ; AEON's MANUAL, DEPTH and RES; Razor's DEPTH and WAVE; Hadron's SCRIPT / BLOCK on a key.
+  - **FILTER / PITCH:**
+    - For Auto-Wah and Talk Box, the filter's peak, sharper as you turn up RESONANCE.
+    - For Pitch Shifter, the interval (+1 OCT...); for Whammy-Wah, the program.
+    - Its knobs (SENS, RES, MIX).
+  - **GLITCH:** named for its MODE (SEQUENCE, KILLSWITCH...). A 16-step pattern, busier as DENSITY goes up, with a light stepping at LENGTH. LENGTH in digits or as a note value; DENSITY and MIX.
+  - **GRAPHIC EQ:** the EQ's real response curve, exactly as its own panel works it out, and LEVEL.
+  - **LO-FI:** named for its TYPE (CASSETTE, BITCRUSHER...). A wave showing what AMOUNT does (squashed, or stair-stepped for the bitcrusher) and NOISE adds; AMOUNT, NOISE and MIX.
+  - **What's a drawing rather than a measurement:**
+    - the filter peak's shape;
+    - the glitch pattern (the real one is random, so the screen shows how busy it is, not the actual steps);
+    - the lo-fi wave.
+
+    The EQ curve and Razor's shape come from the effects' own code. The moving lights keep time with the RATE or LENGTH setting, not with the audio.
+
+## 0.47.0
+
+- **FACEPLATE stage 2:** five more blocks get their own faceplates, built from the same PR7 parts as stage 1, in every finish.
+  - **CABINET IR:** the IR's name and length, and its **frequency response**: a curve from 40 Hz to 20 kHz showing what the cab does to your tone (where it's full, where it scoops, where the top end rolls off). It's worked out from the IR file itself when it loads, so it's the real response of your IR, smoothed a little so the cab's many fine ripples don't hide its shape. With no IR loaded, the line is flat.
+  - **PITCH:** the OCTAVER's four voices (2 DOWN, 1 DOWN, DRY, 1 UP) and FREEZE's level as faders, like a small mixer; TUNING on a screen; OCTAVER and FREEZE on keys, lit while they're on.
+  - **COMP / GATE** follows its TYPE:
+    - **Classic:** a gain-reduction needle that moves with the compressor as you play, plus THRESHOLD, RATIO, LEVEL and the GATE on small screens;
+    - **Daybreak:** COMP, DETAIL, MIX and LEVEL knobs, INTENSITY on a key, the GATE, and the gain reduction in LED bars.
+  - **DELAY:** named for its TYPE (TAPE ECHO, ANALOG DELAY...). The repeats are laid out in time, each one as loud as FEEDBACK leaves it, with a light running along them at the delay time. TIME shows in seven-segment digits, or as the note value (1/4...) while synced. FEEDBACK and MIX knobs.
+  - **REVERB:** named for its TYPE (HALL, SPRING...). Its shape: the PRE-DELAY gap, then the tail as long as it takes to die away (Spring with its ripple, Reverse swelling up). DECAY in seconds; SIZE and MIX knobs.
+  - **What's a drawing rather than a measurement:**
+    - The reverb's shape is drawn from its decay time; it isn't the real tail.
+    - The delay's light keeps time with the delay setting, not with the audio itself.
+    - The cab curve and the compressor's needle are real.
+  - Stage 3 (MOD, MOD 2, FILTER / PITCH, GLITCH, EQ, LO-FI) is next.
+
+## 0.46.0
+
+- **The FACEPLATE, in place of RIG BROWSER and SELECTED RIG** (the two panels at the bottom left). It shows the block you've selected in the signal chain as a hardware unit, built from the PR7's own parts (its chassis, LCD screens, knobs, keys and lettering) in your current finish. This is stage 1 of 3:
+  - **OD / DIST:** the pedal's model name on a badge, and what kind of pedal it is (OVERDRIVE, FUZZ, METAL DISTORTION...). Its knobs follow the model: DRIVE, TONE and LEVEL for most; Abyss shows its HIGH, LOW, MIDDLE and MID FREQ; Skyline shows its eight ATTACK keys (the chosen one lit) and GATE. An INPUT meter along the bottom shows your guitar's level going in.
+  - **NAMP:** the loaded amp model's name and details on an LCD screen (or LOADING... / NO MODEL LOADED), with RIG LEVEL, PRESENCE and NORMALISE, and the same INPUT meter.
+  - **Every other block** shows a plain unit with its name and on light for now. CABINET IR, PITCH, COMP / GATE, DELAY and REVERB get their own faceplates in stage 2; the rest in stage 3.
+  - **Nothing is lost:** saving is still on the header's SAVE button, the pedal's SAVE / SAVE AS and the PRESETS page, and the rig browser is the PRESETS page.
+  - The faceplate is a display: you still turn the knobs in the middle panel.
+
 ## 0.45.0
 
 - **Abyss, a new distortion:** modelled on the Boss MT-2 Metal Zone, from the circuit diagram in Boss's own service manual (1991), so every part value is real. It's the last MODEL in OD / DISTORTION.

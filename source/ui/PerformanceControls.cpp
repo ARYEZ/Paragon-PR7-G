@@ -11,7 +11,7 @@ namespace
 {
     constexpr float screenSize = 7.0f / 11.0f;   // the assign screen's frame and bezel, relative to the main screen's
 
-    const char* pedalNames[] = { "VOLUME", "WAH / FILTER", "MORPH / FX", "PITCH / WHAMMY", "LO-FI", "WHAMMY-WAH", "GLITCH", "TALK BOX" };
+    const char* pedalNames[] = { "VOLUME", "WAH / FILTER", "MORPH / FX", "PITCH BEND", "LO-FI", "QUASAR", "GLITCH", "TALK BOX" };
     constexpr int lastTarget = ExpressionTargets::talkBox;
     static_assert (std::size (pedalNames) == (size_t) lastTarget && ExpressionAssign::numTargets == lastTarget);
 
