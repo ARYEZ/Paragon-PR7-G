@@ -63,6 +63,23 @@ public:
                    const juce::String& onIds, const juce::String& typeId);
     Look getLook() const;
 
+    // The rack: one wide unit holding the block's display on the left (this
+    // wide) and its real controls (the block's panel, in rack mode) on the
+    // rest of its face, at getControlArea(); EXPRESSION ASSIGN in a section
+    // on the right (sideWidth), at getSideArea(). 0: the faceplate alone.
+    // On the rack a look draws only its screens and meters (no drawn knobs
+    // or keys: the real ones are beside it).
+    void setRackDisplayWidth (float width, float sideWidth = 0.0f);
+    bool isRack() const noexcept { return rackDisplayWidth > 0.0f; }
+    juce::Rectangle<int> getControlArea() const;
+    juce::Rectangle<int> getDisplayArea() const;
+    juce::Rectangle<int> getSideArea() const;
+    // A screen's frame on the face round `area` (in this component), for a
+    // block whose controls are a whole editor: it sits in the glass,
+    // getWindowGlass(). Empty: none.
+    void setWindow (juce::Rectangle<int> area);
+    juce::Rectangle<int> getWindowGlass() const;
+
     // Moves the meters one step towards the plugin's readings (the timer
     // does it 30 times a second; tests and screenshots call it directly).
     void updateMeters();
@@ -79,6 +96,8 @@ private:
     float normalised (const juce::String& id) const;
     juce::String text (const juce::String& id) const;
     bool isOn() const;
+    juce::Rectangle<float> settingsColumn (juce::Rectangle<float>& body, float share) const;
+    juce::Rectangle<float> readoutArea (juce::Graphics&, juce::Rectangle<float>& settings, const juce::String& name) const;
 
     // Each draws its name in `header` and the rest in `body`.
     void paintGeneric (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
@@ -96,6 +115,7 @@ private:
     void paintEq (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintLoFi (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintInputMeter (juce::Graphics&, juce::Rectangle<float> area);
+    void paintInputScreen (juce::Graphics&, juce::Rectangle<float> area, const juce::String& note);
 
     ParagonX1AudioProcessor& processor;
     juce::AudioProcessorValueTreeState& parameters;
@@ -105,6 +125,8 @@ private:
     Icons::Type icon = Icons::Type::eq;
     juce::Colour colour;   // the block's colour in the chain
     juce::Image satin;     // the pearl's grain, as on the unit
+    float rackDisplayWidth = 0.0f, rackSideWidth = 0.0f;
+    juce::Rectangle<int> window;
 
     float shownInput = 0.0f;       // the input's peak, with a meter's fall
     float shownReduction = 0.0f;   // the compressor's, dB (0 or less), with a needle's ballistics

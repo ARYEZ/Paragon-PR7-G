@@ -6,6 +6,7 @@
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
 #include "ui/GraphicEqPanel.h"
+#include "ui/EffectPanel.h"
 #include "ui/EqPresets.h"
 #include "ui/Faceplate.h"
 #include "ui/Finish.h"
@@ -494,4 +495,125 @@ TEST_CASE ("The FACEPLATE shows the selected block, and the guitar's level going
     for (int tick = 0; tick < 60; ++tick)
         faceplate.updateMeters();
     CHECK (faceplate.getShownInput() < 0.01f);
+}
+
+TEST_CASE ("The rack: every block's display, real controls at full size and EXPRESSION ASSIGN on one unit", "[ui][faceplate][rack]")
+{
+    ParagonX1AudioProcessor processor;
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    std::vector<Faceplate*> faceplates;
+    findAll (*editor, faceplates);
+    REQUIRE (faceplates.size() == 1);
+    auto& rack = *faceplates[0];
+    REQUIRE (rack.isRack());
+    std::vector<SignalChain*> chains;
+    findAll (*editor, chains);
+    REQUIRE (chains.size() == 1);
+    std::vector<EffectPanel*> effectPanels;
+    findAll (*editor, effectPanels);
+    std::vector<GraphicEqPanel*> eqPanels;
+    findAll (*editor, eqPanels);
+    REQUIRE (eqPanels.size() == 1);
+    const auto rackBounds = rack.getBounds();
+
+    // EXPRESSION ASSIGN at the rack's right end, on the same unit.
+    std::vector<ExpressionPanel*> expression;
+    findAll (*editor, expression);
+    REQUIRE (expression.size() == 1);
+    CHECK (expression[0]->getBounds() == rack.getSideArea() + rack.getPosition());
+    CHECK (expression[0]->getX() > rack.getControlArea().getRight() + rack.getX());
+
+    // Every parameter's value, to see what a control changed.
+    auto& parameters = processor.getParameters();
+    const auto snapshot = [&parameters]
+    {
+        std::map<juce::String, float> values;
+        for (auto* parameter : parameters.processor.getParameters())
+            if (auto* withId = dynamic_cast<juce::AudioProcessorParameterWithID*> (parameter))
+                values[withId->paramID] = parameter->getValue();
+        return values;
+    };
+    const auto changedSomething = [&] (const std::map<juce::String, float>& before)
+    {
+        for (const auto& [id, value] : snapshot())
+            if (std::abs (value - before.at (id)) > 1.0e-6f)
+                return true;
+        return false;
+    };
+
+    for (int block = 0; block < 13; ++block)
+    {
+        CAPTURE (block);
+        chains[0]->onSelect (block);
+
+        // Exactly one set of controls showing, on the rack's face, between
+        // its display and EXPRESSION ASSIGN.
+        EffectPanel* panel = nullptr;
+        int count = 0;
+        for (auto* candidate : effectPanels)
+            if (candidate->isVisible())
+            {
+                CHECK (candidate->isRack());
+                panel = candidate;
+                ++count;
+            }
+        if (eqPanels[0]->isVisible())
+            ++count;
+        REQUIRE (count == 1);
+        if (panel == nullptr)
+        {
+            // The GRAPHIC EQ (stage 2 rebuilds it at full size): in its screen on the face.
+            CHECK (block == 6);
+            const auto shown = eqPanels[0]->getBoundsInParent();
+            CHECK (shown == rack.getWindowGlass() + rack.getPosition());
+            CHECK (rackBounds.contains (shown));
+            continue;
+        }
+        CHECK (rack.getWindowGlass().isEmpty());
+        CHECK (panel->getBounds() == rack.getControlArea() + rack.getPosition());
+        CHECK (rackBounds.contains (panel->getBounds()));
+        CHECK (panel->getRight() <= expression[0]->getX());
+        CHECK (panel->getTransform().isIdentity());
+
+        // Every control showing is one of the unit's parts at full size, and
+        // the real one: working it changes a setting.
+        std::vector<juce::Component*> showing;
+        for (auto* child : panel->getChildren())
+            if (child->isVisible() && (dynamic_cast<juce::Slider*> (child) != nullptr || dynamic_cast<juce::ComboBox*> (child) != nullptr
+                                       || dynamic_cast<juce::ToggleButton*> (child) != nullptr))
+                showing.push_back (child);
+        CHECK (showing.size() >= 2);
+        for (auto* control : showing)
+        {
+            if (! control->isVisible())
+                continue;   // a TYPE changed by an earlier control hid it
+            // (A big knob draws only the middle of its box, which may reach a
+            // little past the face's edge: what's drawn stays on the face.)
+            const auto drawn = dynamic_cast<juce::Slider*> (control) != nullptr ? control->getBounds().reduced (control->getWidth() / 6, 0) : control->getBounds();
+            CAPTURE (drawn.toString());
+            CHECK (panel->getLocalBounds().contains (drawn));
+            const auto before = snapshot();
+            if (auto* slider = dynamic_cast<juce::Slider*> (control))
+            {
+                CAPTURE (slider->getName(), slider->getWidth(), slider->getHeight());
+                CHECK ((bool) slider->getProperties()[ParagonLookAndFeel::pedalKnobProperty]);
+                CHECK (slider->getWidth() >= 80);   // the unit's big knob, not shrunk
+                const auto range = slider->getRange();
+                slider->setValue (slider->getValue() < range.getStart() + range.getLength() * 0.5 ? range.getEnd() : range.getStart(),
+                                  juce::sendNotificationSync);
+            }
+            else if (auto* box = dynamic_cast<juce::ComboBox*> (control))
+            {
+                CHECK (box->getWidth() >= 80);
+                box->setSelectedItemIndex ((box->getSelectedItemIndex() + 1) % box->getNumItems(), juce::sendNotificationSync);
+            }
+            else if (auto* key = dynamic_cast<juce::ToggleButton*> (control))
+            {
+                CHECK ((bool) key->getProperties()[ParagonLookAndFeel::rackKeyProperty]);
+                CHECK (key->getHeight() >= 24);
+                key->setToggleState (! key->getToggleState(), juce::sendNotificationSync);
+            }
+            CHECK (changedSomething (before));
+        }
+    }
 }

@@ -103,11 +103,13 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
   INTERVAL at the toe), **LO-FI** (fades the lo-fi effect in: full band at the heel, lo-fi at the toe) or
   **QUASAR** (plays the FILTER / PITCH block's Quasar). MIN and MAX set where the heel and toe land. The assignment and range
   are saved with each rig.
-- **Bottom panels:** the FACEPLATE (left) shows the selected block as a hardware unit: the drive
-  pedal's model and kind, the NAM amp's model on an LCD, the cab IR's frequency curve, the compressor's
-  gain reduction, the delay's repeats, the reverb's shape, the modulation's wave, the EQ's curve and more,
-  and your guitar's input level; the middle shows the graphic EQ, or the knobs of whichever block you pick (click a
-  signal-chain block or a footswitch name); **GRAPHIC EQ** goes back to the EQ.
+- **The rack** (under the floorboard): one wide PR7 unit, the "brain" for the floorboard. On the left,
+  the selected block's display (its screens and meters: the drive's input level, the NAM amp's model on
+  an LCD, the cab IR's frequency curve, the compressor's gain reduction, the delay's repeats, the reverb's
+  shape, the modulation's wave and more); in the middle, that block's real controls at full size (the
+  unit's big knobs with their values on small screens, lists on screens, switches as keys); at the right
+  end, EXPRESSION ASSIGN. Pick a block by clicking it in the signal chain or a footswitch's name;
+  **GRAPHIC EQ** goes back to the EQ.
 - **SETTINGS:** the tuner's reference pitch, mute while tuning, and the expression pedal's MIDI CC.
 - The paths of the loaded files are saved in your DAW project. If a file is missing when the project
   opens, the slot says so and keeps the path, so moving the file back fixes it.

@@ -480,8 +480,7 @@ void MainView::selectBlock (int block)
             panels[i]->setVisible ((int) i == block && onProcessorPage);
     eqPanel.setVisible (block == eqBlock && onProcessorPage);
     closePanel.setVisible (block != eqBlock && onProcessorPage);
-    if (block != eqBlock)
-        closePanel.toFront (false);
+    layoutDock();
 
     // The FACEPLATE: the block as hardware (its own for OD / DIST and NAMP
     // so far; for the rest, a unit with its name and TYPE).
@@ -656,6 +655,52 @@ void MainView::saveRig()
     refreshRig();
 }
 
+void MainView::layoutDock()
+{
+    // The rack, as on the PR7-V: one wide unit across the dock, the "brain"
+    // to go with the floorboard. The selected block's display on the left
+    // (the faceplate), its real controls in the middle, EXPRESSION ASSIGN at
+    // the right end.
+    faceplate.setBounds (mock (12, 568, 1662, 822));
+    faceplate.setRackDisplayWidth (mockF (0, 0, 380, 0).getWidth(), mockF (0, 0, 270, 0).getWidth());
+    expressionPanel.setRack (true);
+    expressionPanel.setBounds (faceplate.getSideArea() + faceplate.getPosition());
+    expressionPanel.toFront (false);
+
+    const auto controls = faceplate.getControlArea() + faceplate.getPosition();
+    for (auto& panel : panels)
+        if (panel != nullptr)
+        {
+            panel->setRack (true);
+            panel->setBounds (controls);
+            if (panel->isVisible())
+                panel->toFront (false);
+        }
+
+    // The GRAPHIC EQ is a whole editor: it sits in a screen on the face, as
+    // on the unit's big screen, laid out at the height it was designed for
+    // (the dock's) and as wide as the screen allows at that height, then
+    // scaled to fit. (Until it's rebuilt for the rack.)
+    const auto eqShowing = eqPanel.isVisible();
+    faceplate.setWindow (eqShowing ? controls - faceplate.getPosition() : juce::Rectangle<int>());
+    eqPanel.showTitle = false;
+    const auto glass = (eqShowing ? faceplate.getWindowGlass() + faceplate.getPosition() : controls).toFloat();
+    const auto designHeight = mockF (0, 568, 0, 822).getHeight();
+    const auto scale = juce::jmin (1.0f, glass.getHeight() / designHeight);
+    eqPanel.setTransform ({});
+    eqPanel.setBounds (juce::Rectangle<float> (glass.getX(), glass.getY(), glass.getWidth() / scale, designHeight).toNearestInt());
+    eqPanel.setTransform (juce::AffineTransform::scale (scale, scale, glass.getX(), glass.getY()));
+    if (eqShowing)
+        eqPanel.toFront (false);
+
+    // GRAPHIC EQ (back to the default block): one of the unit's keys, top
+    // right over the controls' row of keys.
+    closePanel.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
+    closePanel.setBounds (controls.getRight() - 108, controls.getY(), 108, 24);
+    if (closePanel.isVisible())
+        closePanel.toFront (false);
+}
+
 void MainView::applyFinish()
 {
     for (auto* label : { &rigLevelLabel, &presenceLabel })
@@ -668,6 +713,7 @@ void MainView::applyFinish()
     holdLabel.setColour (juce::Label::textColourId, Finish::printedRed());
     pedal.refinish();
     expressionPedal.refinish();
+    expressionPanel.refinish();
     repaint();
 }
 
@@ -813,19 +859,8 @@ void MainView::resized()
     // for the toe to rise into.
     expressionPedal.setBounds (mock (1342, 46, 1553, 562));
 
-    // Dock
-    // The FACEPLATE where the RIG BROWSER and SELECTED RIG panels were (as on
-    // the PR7-V): both only repeated the PRESETS page and the unit's own
-    // display and SAVE buttons.
-    faceplate.setBounds (mock (12, 568, 652, 822));
-    const auto summaryArea = mock (662, 568, 1334, 822);
-    for (auto& panel : panels)
-        if (panel != nullptr)
-            panel->setBounds (summaryArea);
-    eqPanel.setBounds (summaryArea);
-    closePanel.setBounds (summaryArea.withSizeKeepingCentre (0, 0).withX (summaryArea.getRight() - 130).withY (summaryArea.getY() + 10)
-                              .withSize (118, 24));
-    expressionPanel.setBounds (mock (1344, 568, 1662, 822));
+    // The dock: the rack (see layoutDock).
+    layoutDock();
 
     signalChain.setBounds (mock (12, 832, 1662, 930));
 

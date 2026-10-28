@@ -2,6 +2,26 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.51.0
+
+- **THE RACK, stage 1 of 2** (as on PR7-V): the faceplate, the block's controls and EXPRESSION ASSIGN are now **one wide rack unit** under the floorboard, the "brain" for the floorboard processor.
+  - **Left: the block's display.** Only its screens and meters, since the real knobs are right beside it:
+    - Classic's needle fills the display;
+    - Daybreak's gain reduction and the drive's INPUT level are big LED bars with their dB reading;
+    - the delay's repeats, the reverb's shape and the modulation's wave each have their TIME, DECAY or RATE readout beside them;
+    - PITCH's voices are LED columns, with TUNING beside them.
+  - **Middle: the block's real controls, at full size.** They're the same controls as before (same settings, automation and undo), drawn as the unit's own parts:
+    - its big knobs, each value on a small screen;
+    - lists on screens;
+    - switches as small keys with a light stripe;
+    - names stamped in the finish's ink.
+
+    Every block fits in one row, so there are no pages. A control that doesn't apply (another TYPE's, TIME while synced) leaves the face rather than greying out.
+  - **Right end: EXPRESSION ASSIGN**, behind its own printed red line.
+  - **GRAPHIC EQ** is one of the unit's keys, top right.
+  - **The GRAPHIC EQ sits in a screen on the rack for now**, a little smaller (about four-fifths). Stage 2 rebuilds it for the rack at full size, with its curve as the display.
+  - In all three finishes.
+
 ## 0.50.0
 
 - **Halo replaces Face Fuzz:** a fuzz modelled on the germanium Fuzz Face of 1966-68 (the round fuzz pedal of early Hendrix and Gilmour), with **its whole circuit solved as it is**, part for part from the published schematic. It takes Face Fuzz's place in the MODEL list, so rigs and projects that used Face Fuzz now get Halo.
