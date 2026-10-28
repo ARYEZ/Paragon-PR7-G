@@ -256,7 +256,6 @@ namespace
         return chassis.withTrimmedBottom (unitShape.frontEdge).reduced (9.0f);
     }
     constexpr float rackGap = 28.0f;      // between the display and the controls, the printed line in its middle
-    constexpr float windowFrame = 0.35f;  // an editor's screen frame on the rack, against the main display's
 }
 
 void Faceplate::setRackDisplayWidth (float width, float sideWidth)
@@ -292,22 +291,6 @@ juce::Rectangle<int> Faceplate::getSideArea() const
     if (! isRack() || rackSideWidth <= 0.0f)
         return {};
     return faceOf (getLocalBounds().toFloat()).reduced (12.0f, 8.0f).removeFromRight (rackSideWidth).toNearestInt();
-}
-
-void Faceplate::setWindow (juce::Rectangle<int> area)
-{
-    window = area;
-    repaint();
-}
-
-juce::Rectangle<int> Faceplate::getWindowGlass() const
-{
-    if (window.isEmpty())
-        return {};
-    // The glass paintScreen would give, measured on a scratch image.
-    juce::Image scratch (juce::Image::ARGB, 1, 1, true);
-    juce::Graphics g (scratch);
-    return LedDisplay::paintScreen (g, window.toFloat(), windowFrame).getSmallestIntegerContainer().reduced (1);
 }
 
 // A look's settings column: narrower on the rack, where it holds only a
@@ -362,8 +345,6 @@ void Faceplate::paint (juce::Graphics& g)
         content = content.withWidth (rackDisplayWidth);
         printedLine (content.getRight() + rackGap * 0.5f);
     }
-    if (! window.isEmpty())
-        LedDisplay::paintScreen (g, window.toFloat(), windowFrame);   // a whole editor's screen (it sits in the glass)
     switch (getLook())
     {
         case Look::drive:   paintDrive (g, header, content); break;

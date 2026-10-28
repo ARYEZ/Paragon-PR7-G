@@ -74,11 +74,6 @@ public:
     juce::Rectangle<int> getControlArea() const;
     juce::Rectangle<int> getDisplayArea() const;
     juce::Rectangle<int> getSideArea() const;
-    // A screen's frame on the face round `area` (in this component), for a
-    // block whose controls are a whole editor: it sits in the glass,
-    // getWindowGlass(). Empty: none.
-    void setWindow (juce::Rectangle<int> area);
-    juce::Rectangle<int> getWindowGlass() const;
 
     // Moves the meters one step towards the plugin's readings (the timer
     // does it 30 times a second; tests and screenshots call it directly).
@@ -126,7 +121,6 @@ private:
     juce::Colour colour;   // the block's colour in the chain
     juce::Image satin;     // the pearl's grain, as on the unit
     float rackDisplayWidth = 0.0f, rackSideWidth = 0.0f;
-    juce::Rectangle<int> window;
 
     float shownInput = 0.0f;       // the input's peak, with a meter's fall
     float shownReduction = 0.0f;   // the compressor's, dB (0 or less), with a needle's ballistics

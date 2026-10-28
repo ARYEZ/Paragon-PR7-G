@@ -677,20 +677,11 @@ void MainView::layoutDock()
                 panel->toFront (false);
         }
 
-    // The GRAPHIC EQ is a whole editor: it sits in a screen on the face, as
-    // on the unit's big screen, laid out at the height it was designed for
-    // (the dock's) and as wide as the screen allows at that height, then
-    // scaled to fit. (Until it's rebuilt for the rack.)
-    const auto eqShowing = eqPanel.isVisible();
-    faceplate.setWindow (eqShowing ? controls - faceplate.getPosition() : juce::Rectangle<int>());
-    eqPanel.showTitle = false;
-    const auto glass = (eqShowing ? faceplate.getWindowGlass() + faceplate.getPosition() : controls).toFloat();
-    const auto designHeight = mockF (0, 568, 0, 822).getHeight();
-    const auto scale = juce::jmin (1.0f, glass.getHeight() / designHeight);
-    eqPanel.setTransform ({});
-    eqPanel.setBounds (juce::Rectangle<float> (glass.getX(), glass.getY(), glass.getWidth() / scale, designHeight).toNearestInt());
-    eqPanel.setTransform (juce::AffineTransform::scale (scale, scale, glass.getX(), glass.getY()));
-    if (eqShowing)
+    // The GRAPHIC EQ has its own rack layout, on the face at full size (the
+    // display shows its curve).
+    eqPanel.setRack (true);
+    eqPanel.setBounds (controls);
+    if (eqPanel.isVisible())
         eqPanel.toFront (false);
 
     // GRAPHIC EQ (back to the default block): one of the unit's keys, top

@@ -2,6 +2,15 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.52.0
+
+- **THE RACK, stage 2: the GRAPHIC EQ rebuilt for the rack, at full size** (as on PR7-V). In 0.51.0 it sat in a screen on the rack at about four-fifths size; now it's on the unit's face like every other block, and nothing on the rack is scaled down.
+  - **The nine faders:** evenly spaced, as on a hardware graphic EQ, with LEVEL a little apart. Each value is on a small screen above its fader and each frequency is stamped under it, in the finish's ink.
+  - **A printed red dB scale** and a 0 dB line across the faders.
+  - **The keys:** ON is the unit's key with a light stripe, FLAT is a key, and PRESETS is on a screen.
+  - **The display shows the EQ's curve** across its whole width.
+  - The faders are the real ones (same settings, automation and undo).
+
 ## 0.51.0
 
 - **THE RACK, stage 1 of 2** (as on PR7-V): the faceplate, the block's controls and EXPRESSION ASSIGN are now **one wide rack unit** under the floorboard, the "brain" for the floorboard processor.
