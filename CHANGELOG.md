@@ -2,6 +2,35 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.52.0
+
+- **THE RACK, stage 2: the GRAPHIC EQ rebuilt for the rack, at full size** (as on PR7-V). In 0.51.0 it sat in a screen on the rack at about four-fifths size; now it's on the unit's face like every other block, and nothing on the rack is scaled down.
+  - **The nine faders:** evenly spaced, as on a hardware graphic EQ, with LEVEL a little apart. Each value is on a small screen above its fader and each frequency is stamped under it, in the finish's ink.
+  - **A printed red dB scale** and a 0 dB line across the faders.
+  - **The keys:** ON is the unit's key with a light stripe, FLAT is a key, and PRESETS is on a screen.
+  - **The display shows the EQ's curve** across its whole width.
+  - The faders are the real ones (same settings, automation and undo).
+
+## 0.51.0
+
+- **THE RACK, stage 1 of 2** (as on PR7-V): the faceplate, the block's controls and EXPRESSION ASSIGN are now **one wide rack unit** under the floorboard, the "brain" for the floorboard processor.
+  - **Left: the block's display.** Only its screens and meters, since the real knobs are right beside it:
+    - Classic's needle fills the display;
+    - Daybreak's gain reduction and the drive's INPUT level are big LED bars with their dB reading;
+    - the delay's repeats, the reverb's shape and the modulation's wave each have their TIME, DECAY or RATE readout beside them;
+    - PITCH's voices are LED columns, with TUNING beside them.
+  - **Middle: the block's real controls, at full size.** They're the same controls as before (same settings, automation and undo), drawn as the unit's own parts:
+    - its big knobs, each value on a small screen;
+    - lists on screens;
+    - switches as small keys with a light stripe;
+    - names stamped in the finish's ink.
+
+    Every block fits in one row, so there are no pages. A control that doesn't apply (another TYPE's, TIME while synced) leaves the face rather than greying out.
+  - **Right end: EXPRESSION ASSIGN**, behind its own printed red line.
+  - **GRAPHIC EQ** is one of the unit's keys, top right.
+  - **The GRAPHIC EQ sits in a screen on the rack for now**, a little smaller (about four-fifths). Stage 2 rebuilds it for the rack at full size, with its curve as the display.
+  - In all three finishes.
+
 ## 0.50.0
 
 - **Halo replaces Face Fuzz:** a fuzz modelled on the germanium Fuzz Face of 1966-68 (the round fuzz pedal of early Hendrix and Gilmour), with **its whole circuit solved as it is**, part for part from the published schematic. It takes Face Fuzz's place in the MODEL list, so rigs and projects that used Face Fuzz now get Halo.

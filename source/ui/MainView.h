@@ -83,6 +83,7 @@ private:
     enum class Page { processor, presets, settings };
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
+    void layoutDock();    // the rack: the faceplate, the selected block's controls on it, EXPRESSION ASSIGN
     void applyFinish();   // colours the printed labels and redraws the unit in the current finish
     void timerCallback() override;
 

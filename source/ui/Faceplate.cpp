@@ -93,11 +93,13 @@ namespace
         g.setColour (orange);
         g.setFont (font (area.getHeight() * 0.38f));
         g.drawText (unitText, area.removeFromRight (unitWidth), juce::Justification::bottomLeft, false);
-        const auto digitHeight = area.getHeight();
-        const auto digitWidth = digitHeight * 0.55f;
         auto digits = 0;
         for (auto c : number)
             digits += c == '.' ? 0 : 1;
+        // As tall as the screen allows, but narrow enough to fit it.
+        const auto digitWidth = juce::jmin (area.getHeight() * 0.55f, (area.getWidth() - 6.0f) / (1.15f * (float) juce::jmax (1, digits)));
+        const auto digitHeight = digitWidth / 0.55f;
+        area = area.withSizeKeepingCentre (area.getWidth(), digitHeight);
         auto x = area.getRight() - 4.0f - (float) digits * digitWidth * 1.15f;
         for (auto c : number)
         {
@@ -246,18 +248,103 @@ void Faceplate::updateMeters()
 }
 
 //==============================================================================
+namespace
+{
+    juce::Rectangle<float> faceOf (juce::Rectangle<float> bounds)
+    {
+        const auto chassis = bounds.reduced (glowRoom);
+        return chassis.withTrimmedBottom (unitShape.frontEdge).reduced (9.0f);
+    }
+    constexpr float rackGap = 28.0f;      // between the display and the controls, the printed line in its middle
+}
+
+void Faceplate::setRackDisplayWidth (float width, float sideWidth)
+{
+    rackDisplayWidth = juce::jmax (0.0f, width);
+    rackSideWidth = juce::jmax (0.0f, sideWidth);
+    repaint();
+}
+
+juce::Rectangle<int> Faceplate::getControlArea() const
+{
+    if (! isRack())
+        return {};
+    auto content = faceOf (getLocalBounds().toFloat()).reduced (12.0f, 8.0f);
+    content.removeFromLeft (rackDisplayWidth + rackGap);
+    if (rackSideWidth > 0.0f)
+        content.removeFromRight (rackSideWidth + rackGap);
+    content.removeFromRight (44.0f);   // the status light's column
+    return content.toNearestInt();
+}
+
+juce::Rectangle<int> Faceplate::getDisplayArea() const
+{
+    if (! isRack())
+        return {};
+    auto content = faceOf (getLocalBounds().toFloat()).reduced (12.0f, 8.0f);
+    content.removeFromTop (36.0f);   // the name, and the gap under it
+    return content.withWidth (rackDisplayWidth).toNearestInt();
+}
+
+juce::Rectangle<int> Faceplate::getSideArea() const
+{
+    if (! isRack() || rackSideWidth <= 0.0f)
+        return {};
+    return faceOf (getLocalBounds().toFloat()).reduced (12.0f, 8.0f).removeFromRight (rackSideWidth).toNearestInt();
+}
+
+// A look's settings column: narrower on the rack, where it holds only a
+// readout (the knobs are the real ones beside the display).
+juce::Rectangle<float> Faceplate::settingsColumn (juce::Rectangle<float>& body, float share) const
+{
+    auto column = body.removeFromRight (body.getWidth() * (isRack() ? 0.34f : share));
+    body.removeFromRight (14.0f);
+    return column;
+}
+
+// Where a settings column's readout goes: its top, over the knobs; on the
+// rack, the middle of the column with its name stamped over it.
+juce::Rectangle<float> Faceplate::readoutArea (juce::Graphics& g, juce::Rectangle<float>& settings, const juce::String& name) const
+{
+    if (! isRack())
+        return settings.removeFromTop (settings.getHeight() * 0.38f);
+    const auto area = settings.withSizeKeepingCentre (settings.getWidth(), juce::jmin (settings.getHeight() - 16.0f, 80.0f)).translated (0.0f, 8.0f);
+    stamped (g, name, area.withHeight (14.0f).translated (0.0f, -16.0f), 8.0f, juce::Justification::centredLeft);
+    return area;
+}
+
 void Faceplate::paint (juce::Graphics& g)
 {
-    // The unit: the PR7's chassis, smaller, in the current finish.
+    // The unit: the PR7's chassis, smaller (or as wide as the rack), in the current finish.
     const auto chassis = getLocalBounds().toFloat().reduced (glowRoom);
-    const auto face = chassis.withTrimmedBottom (unitShape.frontEdge).reduced (9.0f);
+    const auto face = faceOf (getLocalBounds().toFloat());
     PedalBody::paintUnit (g, chassis, face, [this] (juce::Graphics& gg) { gg.drawImage (satin, getLocalBounds().toFloat()); }, unitShape);
 
     // Its name top left, its status LED top right (as over the footswitches).
     auto content = face.reduced (12.0f, 8.0f);
+    const auto printedLine = [&] (float x)
+    {
+        g.setColour (Finish::printedRed().withAlpha (0.7f));
+        g.fillRect (juce::Rectangle<float> (x - 0.75f, face.getY() + 14.0f, 1.5f, face.getHeight() - 28.0f));
+    };
+    if (isRack() && rackSideWidth > 0.0f)
+    {
+        // The section on the right (EXPRESSION ASSIGN), behind its own line.
+        content.removeFromRight (rackSideWidth);
+        printedLine (content.getRight() - rackGap * 0.5f);
+        content.removeFromRight (rackGap);
+    }
     auto header = content.removeFromTop (30.0f);
     ParagonLookAndFeel::drawNeonBar (g, header.removeFromRight (34.0f).withSizeKeepingCentre (30.0f, 6.0f).translated (0.0f, -6.0f), isOn());
     content.removeFromTop (6.0f);
+    if (isRack())
+    {
+        // The display on the left; a printed red line between it and the
+        // controls, which the block's panel puts on the rest of the face.
+        header = header.withWidth (rackDisplayWidth);
+        content = content.withWidth (rackDisplayWidth);
+        printedLine (content.getRight() + rackGap * 0.5f);
+    }
     switch (getLook())
     {
         case Look::drive:   paintDrive (g, header, content); break;
@@ -305,6 +392,20 @@ void Faceplate::paintInputMeter (juce::Graphics& g, juce::Rectangle<float> area)
     finish (g, glass);
 }
 
+void Faceplate::paintInputScreen (juce::Graphics& g, juce::Rectangle<float> area, const juce::String& note)
+{
+    // On the rack: the level going in, filling the display, with its reading.
+    const auto glass = screen (g, area);
+    auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+    caption (g, plot, note.isEmpty() ? juce::String ("INPUT") : "INPUT  " + note);
+    const auto db = juce::Decibels::gainToDecibels (shownInput, -60.0f);
+    g.setColour (orange);
+    g.setFont (font (juce::jmin (26.0f, plot.getHeight() * 0.3f)));
+    g.drawText (db <= -59.0f ? juce::String ("-INF dB") : juce::String (db, 1) + " dB", plot.removeFromTop (plot.getHeight() * 0.42f), juce::Justification::centredRight, false);
+    bars (g, plot.reduced (0.0f, plot.getHeight() * 0.18f), (db + 48.0f) / 48.0f, 24);
+    finish (g, glass);
+}
+
 void Faceplate::paintDrive (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
 {
     // A pedal: the MODEL's name in the badge's lettering and what kind of
@@ -312,6 +413,13 @@ void Faceplate::paintDrive (juce::Graphics& g, juce::Rectangle<float> header, ju
     const auto model = juce::roundToInt (raw (ParamIDs::driveModel));
     const auto& names = effects::Drive::modelNames;
     nameplate (g, header, names[juce::jlimit (0, names.size() - 1, model)].toUpperCase(), driveKind (model));
+
+    if (isRack())
+    {
+        // The real knobs (and Skyline's ATTACK) are beside it: the level going in.
+        paintInputScreen (g, body, model == (int) effects::Drive::Model::skyline ? "ATTACK " + text (ParamIDs::driveAttack) : juce::String());
+        return;
+    }
 
     paintInputMeter (g, body.removeFromBottom (22.0f));
     body.removeFromBottom (6.0f);
@@ -362,17 +470,22 @@ void Faceplate::paintAmp (juce::Graphics& g, juce::Rectangle<float> header, juce
     paintInputMeter (g, body.removeFromBottom (22.0f));
     body.removeFromBottom (6.0f);
 
-    // RIG LEVEL, PRESENCE and NORMALISE on the right.
-    auto controls = body.removeFromRight (body.getWidth() * 0.46f);
-    body.removeFromRight (14.0f);
+    // RIG LEVEL, PRESENCE and NORMALISE on the right (on the rack, the real ones are beside it).
+    auto controls = isRack() ? juce::Rectangle<float>() : body.removeFromRight (body.getWidth() * 0.46f);
+    if (! isRack())
+        body.removeFromRight (14.0f);
     auto keyCell = controls.removeFromRight (70.0f);
-    stamped (g, "NORMALISE", keyCell.removeFromBottom (12.0f), 8.0f);
-    const auto key = keyCell.withSizeKeepingCentre (52.0f, 26.0f);
-    ParagonLookAndFeel::drawSmallKey (g, key, false, false);
-    ParagonLookAndFeel::drawKeyStripe (g, key.reduced (4.0f, 2.0f), raw (ParamIDs::ampNormalise) > 0.5f, false);
-    const auto half = controls.getWidth() / 2.0f;
-    bigKnob (g, controls.removeFromLeft (half), "RIG LEVEL", normalised (ParamIDs::rigLevel));
-    bigKnob (g, controls, "PRESENCE", normalised (ParamIDs::presence));
+    if (! isRack())
+        stamped (g, "NORMALISE", keyCell.removeFromBottom (12.0f), 8.0f);
+    if (! isRack())
+    {
+        const auto key = keyCell.withSizeKeepingCentre (52.0f, 26.0f);
+        ParagonLookAndFeel::drawSmallKey (g, key, false, false);
+        ParagonLookAndFeel::drawKeyStripe (g, key.reduced (4.0f, 2.0f), raw (ParamIDs::ampNormalise) > 0.5f, false);
+        const auto half = controls.getWidth() / 2.0f;
+        bigKnob (g, controls.removeFromLeft (half), "RIG LEVEL", normalised (ParamIDs::rigLevel));
+        bigKnob (g, controls, "PRESENCE", normalised (ParamIDs::presence));
+    }
 
     // The model on a screen: its name, then its details (or what went wrong).
     const auto status = processor.getAmpStatus();
@@ -488,6 +601,43 @@ void Faceplate::paintPitch (juce::Graphics& g, juce::Rectangle<float> header, ju
     // The PITCH block: the OCTAVER's voices and FREEZE's level as faders, as
     // a little mixer; TUNING on a screen; OCTAVER and FREEZE on keys.
     nameplate (g, header, "PITCH", "OCTAVER  /  FREEZE  /  TUNING");
+    if (isRack())
+    {
+        // The real faders' knobs and keys are beside it: the voices' levels
+        // as LED columns on a screen (lit while OCTAVER or FREEZE is on), TUNING beside them.
+        auto tuning = settingsColumn (body, 0.34f);
+        const auto glass = screen (g, body);
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, "VOICES");
+        auto names = plot.removeFromBottom (11.0f);
+        const auto columnWidth = plot.getWidth() / 5.0f;
+        for (auto [id, onId, name] : { std::tuple { ParamIDs::octSubTwo, ParamIDs::octOn, "2 DN" }, std::tuple { ParamIDs::octSubOne, ParamIDs::octOn, "1 DN" },
+                                       std::tuple { ParamIDs::octDry, ParamIDs::octOn, "DRY" }, std::tuple { ParamIDs::octUp, ParamIDs::octOn, "1 UP" },
+                                       std::tuple { ParamIDs::freezeLevel, ParamIDs::freezeOn, "FRZ" } })
+        {
+            const auto cell = plot.removeFromLeft (columnWidth).reduced (columnWidth * 0.3f, 2.0f);
+            const auto lit = raw (onId) > 0.5f;
+            const auto segments = 10;
+            const auto height = cell.getHeight() / (float) segments;
+            const auto level = juce::roundToInt (normalised (id) * (float) segments);
+            for (int segment = 0; segment < segments; ++segment)
+            {
+                const auto bar = juce::Rectangle<float> (cell.getX(), cell.getBottom() - height * (float) (segment + 1), cell.getWidth(), height).reduced (0.0f, height * 0.22f);
+                g.setColour (orange.withAlpha (segment < level ? (lit ? 1.0f : 0.35f) : 0.1f));
+                g.fillRoundedRectangle (bar, 1.5f);
+            }
+            g.setColour (orange.withAlpha (0.6f));
+            g.setFont (font (7.5f));
+            g.drawText (name, names.removeFromLeft (columnWidth), juce::Justification::centred, false);
+        }
+        finish (g, glass);
+        const auto tuningGlass = screen (g, readoutArea (g, tuning, "TUNING"));
+        g.setColour (orange);
+        g.setFont (font (juce::jmin (20.0f, tuningGlass.getHeight() * 0.36f)));
+        g.drawFittedText (text (ParamIDs::pitchTune).toUpperCase(), tuningGlass.reduced (8.0f, 0.0f).toNearestInt(), juce::Justification::centredRight, 2, 0.7f);
+        finish (g, tuningGlass);
+        return;
+    }
 
     auto controls = body.removeFromRight (body.getWidth() * 0.38f);
     body.removeFromRight (18.0f);
@@ -520,8 +670,7 @@ void Faceplate::paintClassic (juce::Graphics& g, juce::Rectangle<float> header, 
     nameplate (g, header, "CLASSIC", "STUDIO COMPRESSOR  /  GATE");
     const auto on = isOn();
 
-    auto settings = body.removeFromRight (body.getWidth() * 0.42f);
-    body.removeFromRight (14.0f);
+    auto settings = isRack() ? juce::Rectangle<float>() : settingsColumn (body, 0.42f);   // on the rack the needle takes the display
 
     // The meter: the needle and scale drawn in the screen's LED orange.
     const auto glass = screen (g, body);
@@ -555,6 +704,8 @@ void Faceplate::paintClassic (juce::Graphics& g, juce::Rectangle<float> header, 
     finish (g, glass);
 
     // THRESHOLD, RATIO, LEVEL and the GATE, each on its own small screen.
+    if (isRack())
+        return;
     const auto row = settings.getHeight() / 4.0f;
     for (auto [id, name] : { std::pair { ParamIDs::compThreshold, "THRESHOLD" }, std::pair { ParamIDs::compRatio, "RATIO" },
                              std::pair { ParamIDs::compLevel, "LEVEL" }, std::pair { ParamIDs::gateThreshold, "GATE" } })
@@ -566,6 +717,22 @@ void Faceplate::paintDaybreak (juce::Graphics& g, juce::Rectangle<float> header,
     // A pedal compressor: its knobs, INTENSITY on a key, the GATE, and the
     // gain reduction on a screen.
     nameplate (g, header, "DAYBREAK", "PEDAL COMPRESSOR  /  GATE");
+
+    if (isRack())
+    {
+        // The real knobs and INTENSITY are beside it: the display is the
+        // gain reduction, in big LED bars with its reading.
+        const auto glass = screen (g, body);
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, "GAIN REDUCTION");
+        const auto db = isOn() ? shownReduction : 0.0f;
+        g.setColour (orange);
+        g.setFont (font (juce::jmin (26.0f, plot.getHeight() * 0.3f)));
+        g.drawText (juce::String (db, 1) + " dB", plot.removeFromTop (plot.getHeight() * 0.42f), juce::Justification::centredRight, false);
+        bars (g, plot.reduced (0.0f, plot.getHeight() * 0.18f), -db / 20.0f, 20);
+        finish (g, glass);
+        return;
+    }
 
     auto meter = body.removeFromBottom (24.0f);
     body.removeFromBottom (6.0f);
@@ -611,8 +778,7 @@ void Faceplate::paintDelay (juce::Graphics& g, juce::Rectangle<float> header, ju
     // The screen: each repeat a bar, as tall as it is loud (FEEDBACK each
     // time), over the next few seconds; a light runs along them at the
     // delay time (in time with it, not with the audio itself).
-    auto settings = body.removeFromRight (body.getWidth() * 0.4f);
-    body.removeFromRight (14.0f);
+    auto settings = settingsColumn (body, 0.4f);
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.14f);
@@ -642,7 +808,7 @@ void Faceplate::paintDelay (juce::Graphics& g, juce::Rectangle<float> header, ju
     finish (g, glass);
 
     // TIME (the note length while synced), then FEEDBACK and MIX knobs.
-    auto timeArea = settings.removeFromTop (settings.getHeight() * 0.38f);
+    auto timeArea = readoutArea (g, settings, "TIME");
     const auto timeGlass = screen (g, timeArea);
     if (synced)
     {
@@ -655,6 +821,8 @@ void Faceplate::paintDelay (juce::Graphics& g, juce::Rectangle<float> header, ju
         sevenSegment (g, timeGlass, juce::String (juce::roundToInt (period * 1000.0)), "ms");
     }
     finish (g, timeGlass);
+    if (isRack())
+        return;   // the real knobs are beside the display
     settings.removeFromTop (4.0f);
     const auto half = settings.getWidth() / 2.0f;
     bigKnob (g, settings.removeFromLeft (half), "FEEDBACK", normalised (ParamIDs::delayFeedback));
@@ -674,8 +842,7 @@ void Faceplate::paintReverb (juce::Graphics& g, juce::Rectangle<float> header, j
 
     // The screen: level over time. A gap for PRE-DELAY, then the tail
     // fading over DECAY (rising, for REVERSE; with a spring's ripple, for SPRING).
-    auto settings = body.removeFromRight (body.getWidth() * 0.4f);
-    body.removeFromRight (14.0f);
+    auto settings = settingsColumn (body, 0.4f);
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.14f);
@@ -705,10 +872,12 @@ void Faceplate::paintReverb (juce::Graphics& g, juce::Rectangle<float> header, j
     finish (g, glass);
 
     // DECAY in seconds, then SIZE and MIX knobs.
-    auto decayArea = settings.removeFromTop (settings.getHeight() * 0.38f);
+    auto decayArea = readoutArea (g, settings, "DECAY");
     const auto decayGlass = screen (g, decayArea);
     sevenSegment (g, decayGlass, juce::String (decay, decay < 10.0f ? 1 : 0), "s");
     finish (g, decayGlass);
+    if (isRack())
+        return;   // the real knobs are beside the display
     settings.removeFromTop (4.0f);
     const auto half = settings.getWidth() / 2.0f;
     bigKnob (g, settings.removeFromLeft (half), "SIZE", normalised (ParamIDs::reverbSize));
@@ -740,8 +909,7 @@ void Faceplate::paintModulation (juce::Graphics& g, juce::Rectangle<float> heade
     const auto depth = hasDepth ? juce::jlimit (0.05f, 1.0f, normalised (ids.depth)) : 1.0f;
     const auto razor = type == Type::tremolo;
 
-    auto settings = body.removeFromRight (body.getWidth() * 0.42f);
-    body.removeFromRight (14.0f);
+    auto settings = settingsColumn (body, 0.42f);
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
@@ -778,7 +946,7 @@ void Faceplate::paintModulation (juce::Graphics& g, juce::Rectangle<float> heade
     finish (g, glass);
 
     // RATE (the note length while synced).
-    auto rateArea = settings.removeFromTop (settings.getHeight() * 0.38f);
+    auto rateArea = readoutArea (g, settings, "RATE");
     const auto rateGlass = screen (g, rateArea);
     if (synced)
     {
@@ -791,6 +959,8 @@ void Faceplate::paintModulation (juce::Graphics& g, juce::Rectangle<float> heade
         sevenSegment (g, rateGlass, juce::String (hz, hz < 10.0f ? 2 : 1), "Hz");
     }
     finish (g, rateGlass);
+    if (isRack())
+        return;   // the real knobs are beside the display
     settings.removeFromTop (4.0f);
 
     // The TYPE's knobs, as on its panel.
@@ -826,8 +996,8 @@ void Faceplate::paintFilterPitch (juce::Graphics& g, juce::Rectangle<float> head
     nameplate (g, header, effects::FilterPitch::typeNames[(int) type].toUpperCase(), "FILTER / PITCH");
     const auto on = isOn();
 
-    auto knobs = body.removeFromRight (body.getWidth() * 0.4f);
-    body.removeFromRight (14.0f);
+    // (On the rack the real controls are beside the display: no column.)
+    auto knobs = isRack() ? juce::Rectangle<float>() : settingsColumn (body, 0.4f);
     const auto glass = screen (g, body);
     auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
     if (type == Type::autoWah || type == Type::talkBox)
@@ -862,6 +1032,8 @@ void Faceplate::paintFilterPitch (juce::Graphics& g, juce::Rectangle<float> head
                           plot.toNearestInt(), juce::Justification::centredLeft, 2, 0.7f);
     }
     finish (g, glass);
+    if (isRack())
+        return;
 
     // SENSITIVITY and RESONANCE (auto-wah), RESONANCE (talk box), and MIX.
     std::vector<std::pair<const char*, const char*>> list;
@@ -889,8 +1061,7 @@ void Faceplate::paintGlitch (juce::Graphics& g, juce::Rectangle<float> header, j
                                     : juce::jmax (0.01, raw (ParamIDs::glitchTime) / 1000.0);
     const auto density = juce::jlimit (0.0f, 1.0f, normalised (ParamIDs::glitchDensity));
 
-    auto settings = body.removeFromRight (body.getWidth() * 0.4f);
-    body.removeFromRight (14.0f);
+    auto settings = settingsColumn (body, 0.4f);
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
@@ -915,7 +1086,7 @@ void Faceplate::paintGlitch (juce::Graphics& g, juce::Rectangle<float> header, j
     }
     finish (g, glass);
 
-    auto lengthArea = settings.removeFromTop (settings.getHeight() * 0.38f);
+    auto lengthArea = readoutArea (g, settings, "LENGTH");
     const auto lengthGlass = screen (g, lengthArea);
     if (synced)
     {
@@ -928,6 +1099,8 @@ void Faceplate::paintGlitch (juce::Graphics& g, juce::Rectangle<float> header, j
         sevenSegment (g, lengthGlass, juce::String (juce::roundToInt (raw (ParamIDs::glitchTime))), "ms");
     }
     finish (g, lengthGlass);
+    if (isRack())
+        return;   // the real knobs are beside the display
     settings.removeFromTop (4.0f);
     const auto half = settings.getWidth() / 2.0f;
     bigKnob (g, settings.removeFromLeft (half), "DENSITY", normalised (ParamIDs::glitchDensity));
@@ -941,8 +1114,7 @@ void Faceplate::paintEq (juce::Graphics& g, juce::Rectangle<float> header, juce:
     const auto on = isOn();
     const auto range = effects::GraphicEq::maxGainDb;
 
-    auto right = body.removeFromRight (body.getWidth() * 0.28f);
-    body.removeFromRight (14.0f);
+    auto right = isRack() ? juce::Rectangle<float>() : settingsColumn (body, 0.28f);   // on the rack, LEVEL is the real one beside it
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
@@ -978,6 +1150,8 @@ void Faceplate::paintEq (juce::Graphics& g, juce::Rectangle<float> header, juce:
     }
     finish (g, glass);
 
+    if (isRack())
+        return;
     auto levelArea = right.removeFromTop (right.getHeight() * 0.38f);
     const auto levelGlass = screen (g, levelArea);
     const auto level = raw (ParamIDs::eqLevel);
@@ -1002,8 +1176,8 @@ void Faceplate::paintLoFi (juce::Graphics& g, juce::Rectangle<float> header, juc
     const auto noise = juce::jlimit (0.0f, 1.0f, normalised (ParamIDs::lofiNoise));
     const auto crusher = type == (int) Type::bitcrusher;
 
-    auto knobs = body.removeFromRight (body.getWidth() * 0.4f);
-    body.removeFromRight (14.0f);
+    // (On the rack the real controls are beside the display: no column.)
+    auto knobs = isRack() ? juce::Rectangle<float>() : settingsColumn (body, 0.4f);
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
@@ -1031,6 +1205,8 @@ void Faceplate::paintLoFi (juce::Graphics& g, juce::Rectangle<float> header, juc
         g.strokePath (wave, juce::PathStrokeType (1.3f));
     }
     finish (g, glass);
+    if (isRack())
+        return;
 
     const auto third = knobs.getWidth() / 3.0f;
     bigKnob (g, knobs.removeFromLeft (third).reduced (2.0f, 0.0f), "AMOUNT", normalised (ParamIDs::lofiAmount));
