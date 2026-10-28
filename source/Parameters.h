@@ -159,13 +159,41 @@ namespace ParamIDs
     inline constexpr auto modWave      = "modWave";      // Razor's WAVE
     inline constexpr auto mod2Wave     = "mod2Wave";
 
+    // Version 33: CYCLONE's controls (the rotary speaker, inspired by the
+    // Neo Ventilator II), on MOD and MOD 2.
+    inline constexpr auto modCycFast       = "modCycFast";        // SLOW / FAST: on is fast
+    inline constexpr auto modCycStop       = "modCycStop";        // STOP: the rotors brake to a stop, facing forward
+    inline constexpr auto modCycFastSpeed  = "modCycFastSpeed";   // FAST SPEED: the horn's, Hz
+    inline constexpr auto modCycSlowSpeed  = "modCycSlowSpeed";   // SLOW SPEED: the horn's, Hz
+    inline constexpr auto modCycAccel      = "modCycAccel";       // ACCELERATION, 0 to 10
+    inline constexpr auto modCycBalance    = "modCycBalance";     // BALANCE, 0 to 10, 5 even
+    inline constexpr auto modCycDrive      = "modCycDrive";       // DRIVE, 0 to 10
+    inline constexpr auto modCycLow        = "modCycLow";         // MIX / DIST LO, 0 to 10
+    inline constexpr auto modCycHigh       = "modCycHigh";        // MIX / DIST HI, 0 to 10
+    inline constexpr auto modCycMode       = "modCycMode";        // MODE: GIT 1, GIT 2, KEY
+    inline constexpr auto modCycLevel      = "modCycLevel";       // LEVEL, 0 to 10, 5 about the bypassed level
+    inline constexpr auto mod2CycFast      = "mod2CycFast";
+    inline constexpr auto mod2CycStop      = "mod2CycStop";
+    inline constexpr auto mod2CycFastSpeed = "mod2CycFastSpeed";
+    inline constexpr auto mod2CycSlowSpeed = "mod2CycSlowSpeed";
+    inline constexpr auto mod2CycAccel     = "mod2CycAccel";
+    inline constexpr auto mod2CycBalance   = "mod2CycBalance";
+    inline constexpr auto mod2CycDrive     = "mod2CycDrive";
+    inline constexpr auto mod2CycLow       = "mod2CycLow";
+    inline constexpr auto mod2CycHigh      = "mod2CycHigh";
+    inline constexpr auto mod2CycMode      = "mod2CycMode";
+    inline constexpr auto mod2CycLevel     = "mod2CycLevel";
+
     // A MOD block's controls, so MOD and MOD 2 share their code.
     struct ModIds
     {
         const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position, *manual, *res, *hadron, *wave;
+        const char *cycFast, *cycStop, *cycFastSpeed, *cycSlowSpeed, *cycAccel, *cycBalance, *cycDrive, *cycLow, *cycHigh, *cycMode, *cycLevel;
     };
-    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition, modManual, modRes, modHadron, modWave };
-    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position, mod2Manual, mod2Res, mod2Hadron, mod2Wave };
+    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition, modManual, modRes, modHadron, modWave,
+                                    modCycFast, modCycStop, modCycFastSpeed, modCycSlowSpeed, modCycAccel, modCycBalance, modCycDrive, modCycLow, modCycHigh, modCycMode, modCycLevel };
+    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position, mod2Manual, mod2Res, mod2Hadron, mod2Wave,
+                                     mod2CycFast, mod2CycStop, mod2CycFastSpeed, mod2CycSlowSpeed, mod2CycAccel, mod2CycBalance, mod2CycDrive, mod2CycLow, mod2CycHigh, mod2CycMode, mod2CycLevel };
 
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)
@@ -189,8 +217,9 @@ namespace ParamIDs
 namespace ExpressionTargets
 {
     // Saved by number: only ever add to the end.
-    enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox };
-    inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch Bend", "Lo-Fi", "Quasar", "Glitch", "Talk Box" };
+    enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox, cycloneSpeed };
+    inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch Bend", "Lo-Fi", "Quasar", "Glitch", "Talk Box",
+                                           "Cyclone Speed" };
 }
 
 namespace ParamRanges

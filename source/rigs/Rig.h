@@ -2,6 +2,8 @@
 
 #include <juce_core/juce_core.h>
 
+#include "Parameters.h"
+
 #include <map>
 #include <optional>
 
@@ -42,6 +44,11 @@ struct Rig
     std::unique_ptr<juce::XmlElement> toXml() const;
     // Returns nothing if the XML isn't a rig.
     static std::optional<Rig> fromXml (const juce::XmlElement&);
+
+    // A rig or project saved with the original rotary speaker (before 0.55.0)
+    // on MOD or MOD 2: Cyclone's controls set as close to it as they go.
+    // Leaves anything already saved with Cyclone alone.
+    static void convertOldRotary (std::map<juce::String, float>& parameters, const ParamIDs::ModIds&);
 
     static constexpr const char* fileExtension = ".pr7rig";
     // From when the plugin was called Paragon X1: still read, never written.

@@ -910,6 +910,11 @@ void Faceplate::paintModulation (juce::Graphics& g, juce::Rectangle<float> heade
     const auto razor = type == Type::tremolo;
 
     auto settings = settingsColumn (body, 0.42f);
+    if (type == Type::rotary)
+    {
+        paintCyclone (g, body, settings, ids, on);
+        return;
+    }
     const auto glass = screen (g, body);
     {
         auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
@@ -985,6 +990,62 @@ void Faceplate::paintModulation (juce::Graphics& g, juce::Rectangle<float> heade
     }
     const auto cellWidth = settings.getWidth() / (float) knobs.size();
     for (const auto& [id, knobName] : knobs)
+        bigKnob (g, settings.removeFromLeft (cellWidth).reduced (2.0f, 0.0f), knobName, normalised (id));
+}
+
+void Faceplate::paintCyclone (juce::Graphics& g, juce::Rectangle<float> body, juce::Rectangle<float> settings,
+                              const ParamIDs::ModIds& ids, bool on)
+{
+    // CYCLONE: the two rotors seen from above, turning where the sound's
+    // rotors are (the horn above, the drum below; the line points where it
+    // faces, forward is down), each with its speed in LED bars and Hz, like
+    // the pedal's two speed lights. The caption says what they're doing.
+    const auto& cyclone = processor.getModulation (unit == Unit::modulation2 ? 1 : 0).getCyclone();
+    const auto pedal = juce::roundToInt (raw (ParamIDs::expressionTarget)) == ExpressionTargets::cycloneSpeed;
+    const auto state = pedal ? "PEDAL" : raw (ids.cycStop) > 0.5f ? "STOP" : raw (ids.cycFast) > 0.5f ? "FAST" : "SLOW";
+    const auto glass = screen (g, body);
+    {
+        auto plot = glass.reduced (glass.getWidth() * 0.05f, glass.getHeight() * 0.12f);
+        caption (g, plot, juce::String ("ROTORS  ") + state + (raw (ids.position) > 0.5f ? "  PRE" : "  POST"));
+        plot.removeFromTop (2.0f);
+        const auto rowHeight = plot.getHeight() / 2.0f;
+        const struct { const char* name; float hz, turn; } rotors[] = {
+            { "HORN", on ? cyclone.getHornHz() : 0.0f, cyclone.getHornTurn() },
+            { "DRUM", on ? cyclone.getDrumHz() : 0.0f, cyclone.getDrumTurn() } };
+        for (const auto& rotor : rotors)
+        {
+            auto row = plot.removeFromTop (rowHeight).reduced (0.0f, 2.0f);
+            const auto dial = row.removeFromLeft (row.getHeight()).reduced (2.0f);
+            g.setColour (orange.withAlpha (on ? 0.35f : 0.15f));
+            g.drawEllipse (dial, 1.2f);
+            const auto angle = juce::MathConstants<float>::twoPi * rotor.turn;
+            const auto centre = dial.getCentre();
+            const juce::Point<float> tip { centre.x + std::sin (angle) * dial.getWidth() * 0.45f, centre.y + std::cos (angle) * dial.getHeight() * 0.45f };
+            g.setColour (orange.withAlpha (on ? 1.0f : 0.35f));
+            g.drawLine ({ centre, tip }, 2.0f);
+            g.fillEllipse (juce::Rectangle<float> (5.0f, 5.0f).withCentre (tip));
+
+            row.removeFromLeft (8.0f);
+            g.setFont (font (9.0f));
+            g.drawText (rotor.name, row.removeFromLeft (34.0f), juce::Justification::centredLeft, false);
+            g.drawText (juce::String (rotor.hz, 2) + " Hz", row.removeFromRight (52.0f), juce::Justification::centredRight, false);
+            bars (g, row.withSizeKeepingCentre (row.getWidth() - 6.0f, juce::jmin (row.getHeight() * 0.6f, 14.0f)),
+                  rotor.hz / effects::Cyclone::fastMaxHz, 16);
+        }
+    }
+    finish (g, glass);
+
+    // The horn's speed, as the main reading.
+    auto readArea = readoutArea (g, settings, "HORN");
+    const auto readGlass = screen (g, readArea);
+    const auto hornHz = on ? cyclone.getHornHz() : 0.0f;
+    sevenSegment (g, readGlass, juce::String (hornHz, 2), "Hz");
+    finish (g, readGlass);
+    if (isRack())
+        return;   // the real knobs are beside the display
+    settings.removeFromTop (4.0f);
+    const auto cellWidth = settings.getWidth() / 3.0f;
+    for (const auto& [id, knobName] : { std::pair { ids.cycFastSpeed, "FAST" }, std::pair { ids.cycSlowSpeed, "SLOW" }, std::pair { ids.cycAccel, "ACCEL" } })
         bigKnob (g, settings.removeFromLeft (cellWidth).reduced (2.0f, 0.0f), knobName, normalised (id));
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Aeon.h"
+#include "Cyclone.h"
 #include "EffectUtils.h"
 
 namespace effects
@@ -19,7 +20,8 @@ namespace effects
     //                  original sine tremolo)
     //   dimension      Roland Dimension D / Boss CE-1 style dual chorus
     //   uniVibe        Shin-ei Uni-Vibe: four uneven phase stages, lamp LFO
-    //   rotary         Leslie speaker: horn and drum rotors, Doppler, stereo mics
+    //   rotary         CYCLONE, a rotary speaker inspired by the Neo Ventilator II
+    //                  (see Cyclone.h; PR7-G 0.55.0, replacing the original generic one)
     //   vibrato        pure pitch vibrato
     //   harmonicTremolo  Fender brownface: lows and highs pulse in turn
     //   autoPan        sweeps between the speakers at constant loudness
@@ -34,7 +36,7 @@ namespace effects
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Type { chorus, flanger, phaser, tremolo, dimension, uniVibe, rotary, vibrato, harmonicTremolo, autoPan, doubler, carbonite };
         static inline const juce::StringArray typeNames { "Vortex", "AEON", "Hadron", "Razor", "Prism", "Nebula",
-                                                          "Rotary", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler", "Carbonite" };
+                                                          "Cyclone", "Vibrato", "Harmonic Tremolo", "Auto-Pan", "Doubler", "Carbonite" };
 
         // Where the block sits: POST (after the amp and cab) or PRE (after the
         // drive, before the amp, like a pedal). Saved by number: only append.
@@ -49,8 +51,9 @@ namespace effects
         static bool usesMix (Type type) noexcept
         {
             // (AEON, Hadron and Carbonite have none: their pedals mix dry and wet 50/50.)
+            // (Cyclone has none either: its MIX / DIST knobs mix each rotor in.)
             return type == Type::chorus || type == Type::dimension
-                || type == Type::uniVibe || type == Type::rotary || type == Type::doubler;
+                || type == Type::uniVibe || type == Type::doubler;
         }
 
         struct Settings
@@ -65,6 +68,7 @@ namespace effects
             float manual = 5.0f, resonance = 5.0f;   // AEON's MANUAL and RES, 0 to 10
             bool hadronBlock = false;   // Hadron: the BLOCK circuit (false: SCRIPT)
             float wave = 0.0f;          // Razor's WAVE, 0 (triangle) to 10 (square)
+            Cyclone::Settings cyclone;  // Cyclone's own controls (RATE, DEPTH and MIX don't apply to it)
         };
 
         // The Vortex's EQ: how much it cuts or boosts the chorus's
@@ -86,6 +90,8 @@ namespace effects
 
         Modulation();
         void prepare (double sampleRate, int maxBlockSize);
+        // The rotary speaker, for the faceplate (where its rotors are).
+        const Cyclone& getCyclone() const noexcept { return cyclone; }
         void process (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
     private:
@@ -96,7 +102,6 @@ namespace effects
         void processRazor (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processDimension (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processUniVibe (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processRotary (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processVibrato (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processHarmonicTremolo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processAutoPan (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
@@ -161,11 +166,8 @@ namespace effects
         AllPassState vibeStages[maxChannels][4] {};
         float lampGlow = 0.0f;
 
-        // Rotary: a crossover into horn (treble) and drum (bass), each with
-        // its own delay line for the Doppler shift and its own spinning speed.
-        juce::dsp::LinkwitzRileyFilter<float> rotaryCrossover;
-        juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> hornDelay, drumDelay;
-        float hornPhase = 0.0f, drumPhase = 0.0f, hornHz = 0.8f, drumHz = 0.7f, hornTone = 0.0f;
+        // CYCLONE, the rotary speaker.
+        Cyclone cyclone;
 
         // Harmonic tremolo: a crossover per channel.
         juce::dsp::LinkwitzRileyFilter<float> harmonicCrossover;

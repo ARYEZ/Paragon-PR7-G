@@ -178,6 +178,8 @@ public:
     LevelMeterSource& getInputMeter() noexcept { return inputMeter; }
     // The same input level, for the FACEPLATE's meters (each reader takes the peaks it reads).
     LevelMeterSource& getFaceplateMeter() noexcept { return faceplateMeter; }
+    // MOD (0) or MOD 2 (1), for the faceplate: where Cyclone's rotors are.
+    const effects::Modulation& getModulation (int block) const noexcept { return block == 0 ? modulation : modulation2; }
     // How hard the compressor is working (dB, 0 or less), for its meter.
     float getCompGainReductionDb() const noexcept { return compGate.getGainReductionDb(); }
     LevelMeterSource& getOutputMeter() noexcept { return outputMeter; }
