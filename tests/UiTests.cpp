@@ -11,6 +11,8 @@
 #include "ui/Faceplate.h"
 #include "ui/Finish.h"
 #include "ui/PerformanceControls.h"
+#include "ui/RackView.h"
+#include "ui/SignalChain.h"
 
 using Catch::Matchers::WithinAbs;
 
@@ -81,6 +83,95 @@ TEST_CASE ("The window lays out cleanly at every size", "[ui]")
             checkLayout (*view, "view");
         }
     }
+}
+
+TEST_CASE ("HIDE RACK takes the rack away and shortens the window; a block clicked in the chain brings it back", "[ui][rack]")
+{
+    RackView::setShown (true, false);
+    ParagonX1AudioProcessor processor;
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    editor->setSize (1280, 720);
+    auto* view = editor->getChildComponent (0);
+    REQUIRE (view != nullptr);
+
+    auto* rackButton = dynamic_cast<juce::TextButton*> (view->findChildWithID ("rackButton"));
+    REQUIRE (rackButton != nullptr);
+    std::vector<Faceplate*> faceplates;
+    findAll (*editor, faceplates);
+    REQUIRE (faceplates.size() == 1);
+    std::vector<GraphicEqPanel*> eqPanels;
+    findAll (*editor, eqPanels);
+    REQUIRE (eqPanels.size() == 1);
+    std::vector<EffectPanel*> effectPanels;
+    findAll (*editor, effectPanels);
+    std::vector<SignalChain*> chains;
+    findAll (*editor, chains);
+    REQUIRE (chains.size() == 1);
+    const auto anyPanelShowing = [&]
+    {
+        return eqPanels[0]->isVisible()
+            || std::any_of (effectPanels.begin(), effectPanels.end(), [] (auto* panel) { return panel->isVisible(); });
+    };
+
+    CHECK (rackButton->getButtonText() == "HIDE RACK");
+    CHECK (faceplates[0]->isVisible());
+    CHECK (anyPanelShowing());
+
+    // Hidden: the faceplate and every block's controls go, the chain moves
+    // up under the floor unit and the window keeps its width but gets
+    // shorter by the rack's height (the view keeps its scale).
+    rackButton->onClick();
+    CHECK_FALSE (RackView::isShown());
+    CHECK (rackButton->getButtonText() == "SHOW RACK");
+    CHECK_FALSE (faceplates[0]->isVisible());
+    CHECK_FALSE (anyPanelShowing());
+    CHECK (view->getHeight() == MainView::height - MainView::rackHeight);
+    CHECK (editor->getWidth() == 1280);
+    CHECK (editor->getHeight() == juce::roundToInt (1280.0f * (float) view->getHeight() / (float) MainView::width));
+    CHECK_THAT (view->getTransform().mat00, WithinAbs (1280.0f / (float) MainView::width, 0.001));
+    CHECK (chains[0]->getBottom() <= view->getHeight());
+    checkLayout (*view, "view");
+
+    // Dragging the window keeps the shorter shape.
+    auto* constrainer = editor->getConstrainer();
+    REQUIRE (constrainer != nullptr);
+    CHECK_THAT (constrainer->getFixedAspectRatio(), WithinAbs ((double) MainView::width / (double) view->getHeight(), 0.0001));
+
+    // The other pages fit in the shorter window too.
+    for (const auto* tabId : { "presetsTab", "settingsTab", "processorTab" })
+    {
+        auto* tab = dynamic_cast<juce::Button*> (view->findChildWithID (tabId));
+        REQUIRE (tab != nullptr);
+        tab->onClick();
+        // (Only the top level: the rig list scrolls, so its contents are taller than it.)
+        for (auto* child : view->getChildren())
+            if (child->isVisible())
+            {
+                INFO (tabId << ": " << typeid (*child).name() << " at " << child->getBounds().toString());
+                CHECK (view->getLocalBounds().contains (child->getBounds()));
+                if (child != chains[0] && child != rackButton)
+                    CHECK (child->getBottom() <= chains[0]->getY());   // nothing runs into the chain
+            }
+    }
+    CHECK_FALSE (RackView::isShown());
+
+    // Clicking a block in the chain opens the rack on that block, at full height again.
+    chains[0]->onSelect (3);
+    CHECK (RackView::isShown());
+    CHECK (rackButton->getButtonText() == "HIDE RACK");
+    CHECK (faceplates[0]->isVisible());
+    CHECK (effectPanels[3]->isVisible());
+    CHECK (view->getHeight() == MainView::height);
+    CHECK (editor->getWidth() == 1280);
+    CHECK (editor->getHeight() == 720);
+    checkLayout (*view, "view");
+
+    // And the button brings it back too.
+    rackButton->onClick();
+    rackButton->onClick();
+    CHECK (RackView::isShown());
+    CHECK (editor->getHeight() == 720);
+    CHECK (effectPanels[3]->isVisible());
 }
 
 TEST_CASE ("The window opens as big as fits above the taskbar, up to 1824 x 1026", "[ui]")

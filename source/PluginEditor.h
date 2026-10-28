@@ -7,8 +7,8 @@
 #include "ui/ParagonLookAndFeel.h"
 
 // The plugin window. All the content lives in MainView, laid out on a fixed
-// 1600 x 900 canvas; the editor just scales it to whatever size the window
-// is, keeping the mockup's 16:9 shape.
+// 1600 x 900 canvas (1600 x 647 with the rack hidden); the editor just
+// scales it to whatever size the window is, keeping its shape.
 class ParagonX1AudioProcessorEditor final : public juce::AudioProcessorEditor
 {
 public:
@@ -27,6 +27,8 @@ public:
     static juce::Point<int> openingSize (juce::Rectangle<int> screen);
 
 private:
+    void fitShape();   // resize limits and aspect ratio for the view's current height
+
     juce::SharedResourcePointer<SharedParagonLookAndFeel> look;   // declared first: outlives the view
     MainView view;
     juce::TooltipWindow tooltips { this };

@@ -6,16 +6,35 @@ ParagonX1AudioProcessorEditor::ParagonX1AudioProcessorEditor (ParagonX1AudioProc
 {
     setLookAndFeel (&look->lookAndFeel);
 
-    view.setSize (MainView::width, MainView::height);
-    addAndMakeVisible (view);
+    addAndMakeVisible (view);   // the view already has its height (shorter with the rack hidden)
 
-    // Keep the mockup's 16:9 shape at any size the user drags to.
+    // Keep the view's shape at any size the user drags to.
     setResizable (true, true);
-    setResizeLimits (960, 540, 1920, 1080);
-    getConstrainer()->setFixedAspectRatio ((double) MainView::width / (double) MainView::height);
+    fitShape();
     const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
     const auto size = openingSize (display != nullptr ? display->userBounds.toNearestInt() : juce::Rectangle<int> (defaultWidth, defaultHeight + 80));
-    setSize (size.x, size.y);
+    setSize (size.x, size.x * view.getHeight() / MainView::width);
+
+    // HIDE RACK / SHOW RACK: the window keeps its width and gets shorter or
+    // taller with the view.
+    view.onHeightChanged = [this]
+    {
+        setSize (getWidth(), juce::roundToInt ((float) getWidth() * (float) view.getHeight() / (float) MainView::width));
+        fitShape();
+    };
+}
+
+void ParagonX1AudioProcessorEditor::fitShape()
+{
+    // 16:9 with the rack, wider without it; 960 to 1920 wide either way.
+    const auto heightAt = [this] (int width) { return width * view.getHeight() / MainView::width; };
+    // The new shape goes in before the limits too: setting the limits
+    // re-fits the window, which would squeeze it back to the old shape.
+    const auto shape = (double) MainView::width / (double) view.getHeight();
+    if (auto* constrainer = getConstrainer())
+        constrainer->setFixedAspectRatio (shape);
+    setResizeLimits (960, heightAt (960), 1920, heightAt (1920));
+    getConstrainer()->setFixedAspectRatio (shape);
 }
 
 juce::Point<int> ParagonX1AudioProcessorEditor::openingSize (juce::Rectangle<int> screen)
