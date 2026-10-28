@@ -64,8 +64,9 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     with RESONANCE and MIX.
   - **2 OD / Distortion:** seven models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
     **Rabid**, modelled on the ProCo RAT 2, slow op-amp and all; **Cosmonaut**, modelled stage by stage on the '90s green Russian
-    Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); and **Face Fuzz**, following the silicon Fuzz Face's uneven
-    clipping (raspy and round, cleaning up with the guitar's volume); and **Skyline**, inspired by the Horizon Devices
+    Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); **Halo**, modelled on the germanium Fuzz Face of
+    1966-68, its whole two-transistor circuit solved as it is (warm and round, cleaning up as you pick softer; FUZZ and LEVEL);
+    **Skyline**, inspired by the Horizon Devices
     Precision Drive: the Tube Screamer circuit with an 8-way ATTACK switch for how much bass reaches the clipping, and a gate;
     **Chimera**, modelled on the Klon Centaur: germanium clipping blended with a clean feed, the "transparent" overdrive;
     and **Abyss**, modelled on the Boss MT-2 Metal Zone, with its own HIGH, LOW, MIDDLE and MID FREQ. Drive, tone, level; 8x oversampled to avoid harsh aliasing.

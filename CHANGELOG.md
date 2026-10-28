@@ -2,6 +2,29 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.50.0
+
+- **Halo replaces Face Fuzz:** a fuzz modelled on the germanium Fuzz Face of 1966-68 (the round fuzz pedal of early Hendrix and Gilmour), with **its whole circuit solved as it is**, part for part from the published schematic. It takes Face Fuzz's place in the MODEL list, so rigs and projects that used Face Fuzz now get Halo.
+  - **What changed:** Face Fuzz was a generic fuzz (a gain stage and a lopsided clipper). Halo is the real two-transistor circuit: the 100k that both biases the transistors and feeds back, the 1k FUZZ pot with 22 uF on its wiper, the 2.2 uF input and the split 470 + 8.2k output load. Nothing in it is a clipper: the fuzz comes from the transistors themselves.
+  - **The guitar is part of the circuit.** The original's input is very low impedance, so it loads your guitar; a 6k pickup's resistance is modelled in front of it.
+  - **The transistors:** germanium, the AC128 kind, with a gain of 100 (the originals used hand-picked parts of about 80 to 120), germanium's leakage, and their limited speed.
+  - **What we measured:**
+    - At rest it sits exactly where the circuit's analysis says: 0.61 V, 0.41 V and 5.4 V at the three points that matter.
+    - FUZZ adds about 23 dB of gain for a quiet note.
+    - Played hard it's saturated, so FUZZ barely changes its level, as on the pedal.
+    - It clips unevenly: a strong 2nd harmonic.
+    - It **cleans up as you pick softer**: a light touch is almost clean (harmonics 50 dB down); a hard one is full fuzz.
+    - Its input thins the lowest bass a little.
+  - **Controls:** DRIVE is its FUZZ. The original has only FUZZ and VOLUME, so **there's no TONE**: it's hidden for Halo, and LEVEL stands in for VOLUME. LEVEL 0 dB matches your guitar at FUZZ noon.
+  - **Its faceplate** reads HALO / GERMANIUM FUZZ, with FUZZ and LEVEL.
+  - **The two factory rigs that use it** (Slow Rotary Clean, with Halo waiting on footswitch 2, and Fuzz Echo Solo) keep their settings. Halo sits at the same level Face Fuzz did (within about 3 dB), so they weren't rebalanced. They now sound like the real circuit; they lose Face Fuzz's TONE, which the original never had.
+  - **What isn't modelled:**
+    - the pickup's inductance;
+    - temperature (real germanium drifts with it);
+    - a tired battery;
+    - your guitar's volume knob raising the source resistance. Its volume is already in the recording, so Halo cleans up with how hard you play, not with that knob's position.
+  - It solves the circuit 8 times per sample's worth of audio, so it costs about as much CPU as the other circuit-modelled drives.
+
 ## 0.49.0
 
 - **Our own names, in place of trademarks, artists and song titles.** The faceplates show effect names in big letters, so these needed to be ours. **Only the names changed: every effect sounds exactly as before, and your rigs and projects load as they did.**

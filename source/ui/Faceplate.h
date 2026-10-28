@@ -15,7 +15,7 @@
 //   OD / DIST   the MODEL's name and what kind of pedal it is; its knobs as
 //               the unit's big knobs (Skyline's ATTACK as eight small keys,
 //               one lit, and its GATE; Abyss's HIGH, LOW, MIDDLE and MID
-//               FREQ); the guitar's level going in, in LED bars.
+//               FREQ; Halo's FUZZ and LEVEL only); the guitar's level going in, in LED bars.
 //   NAMP        the loaded model's name and details on a screen (or that
 //               none is loaded, or why it failed); RIG LEVEL and PRESENCE;
 //               NORMALISE on a key; the level going in.

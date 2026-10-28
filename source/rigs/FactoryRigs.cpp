@@ -34,7 +34,7 @@ namespace
     constexpr float pedalWah = 2;      // the expression pedal's WAH / FILTER setting
     constexpr float glitchKillswitch = 4;
     constexpr int E = 4;               // bank E: rigs inspired by particular songs
-    constexpr float cosmonaut = 2, faceFuzz = 3;   // OD / DISTORTION's MODEL
+    constexpr float cosmonaut = 2, halo = 3;   // OD / DISTORTION's MODEL
     constexpr float digitalDelay = 0;
     constexpr float xpCryWah = 1, xpUpOctave = 12, xpOctDownOctUp = 20, xpUp4thUp5th = 23;   // Whammy-Wah programs 02, 13, 21 and 24
     constexpr float pedalWhammyWah = 6;   // the expression pedal's WHAMMY-WAH setting
@@ -242,10 +242,10 @@ std::vector<Rig> makeFactoryRigs()
 
         // "Us and Them": the neck pickup, clean, through a slow rotating
         // speaker (a Leslie dominated it; a Uni-Vibe is close too), with echo.
-        // For the louder chorus, stomp footswitch 2: a Fuzz Face-style fuzz
-        // is set up and waiting, as Gilmour kicked his in.
+        // For the louder chorus, stomp footswitch 2: Halo, the germanium
+        // fuzz, is set up and waiting, as Gilmour kicked his in.
         make ("Slow Rotary Clean", E, 4, "Song,Clean,Modulation,Fuzz", {
-            { driveOn, 0 }, { driveModel, faceFuzz }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 0 },
+            { driveOn, 0 }, { driveModel, halo }, { driveGain, 6 }, { driveLevel, 0 },
             { modOn, 1 }, { modType, rotary }, { modRate, 0.7f }, { modDepth, 0.6f }, { modMix, 0.6f },
             { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, syncOff }, { delayTime, 420 }, { delayFeedback, 0.25f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbMix, 0.25f } }),
@@ -259,10 +259,10 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 380 }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
             { reverbOn, 1 }, { reverbType, room }, { reverbMix, 0.12f } }),
 
-        // "Money" solos: the bridge pickup into a Fuzz Face-style fuzz, with
+        // "Money" solos: the bridge pickup into Halo, the germanium fuzz, with
         // a multi-head echo in the spirit of his Binson Echorec.
         make ("Fuzz Echo Solo", E, 6, "Song,Lead,Fuzz,Delay", {
-            { driveOn, 1 }, { driveModel, faceFuzz }, { driveGain, 7 }, { driveTone, 7 }, { driveLevel, 1 },
+            { driveOn, 1 }, { driveModel, halo }, { driveGain, 7 }, { driveLevel, 1 },
             { delayOn, 1 }, { delayType, multiTap }, { delaySync, syncOff }, { delayTime, 330 }, { delayFeedback, 0.3f }, { delayMix, 0.22f },
             { reverbOn, 1 }, { reverbType, room }, { reverbMix, 0.15f } }),
 

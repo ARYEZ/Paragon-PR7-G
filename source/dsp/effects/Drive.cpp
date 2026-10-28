@@ -17,7 +17,7 @@ namespace effects
         constexpr float diodeVolts = 0.6f;         // about where a silicon diode starts conducting
         constexpr float screamerOutputScale = 0.35f;   // so LEVEL 0 dB is roughly the guitar's own level
         constexpr float cosmonautOutputScale = 0.25f;  // the same for the fuzzes, at SUSTAIN noon
-        constexpr float faceOutputScale = 0.29f;
+        constexpr float haloOutputScale = 1.04f;       // the same for Halo, at FUZZ noon (the original's output is a low tap)
 
         float onePoleCoefficient (double rate, float hz)
         {
@@ -58,7 +58,6 @@ namespace effects
         screamerGain.reset (sampleRate, 0.02);
         screamerTone.reset (sampleRate, 0.02);
         screamerLevel.reset (sampleRate, 0.02);
-        fuzzStates.fill (0.0f);
         cosmonaut.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         fuzzGain.reset (sampleRate, 0.02);
         fuzzTone.reset (sampleRate, 0.02);
@@ -67,6 +66,7 @@ namespace effects
         rabid.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
         chimera.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         abyss.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
+        halo.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
         bypass.prepare (sampleRate, maxBlockSize);
     }
 
@@ -86,8 +86,8 @@ namespace effects
                 chimera.reset();
                 abyss.reset();
                 clipLowPassState = toneState = outputCouplingState = 0.0f;
-                fuzzStates.fill (0.0f);
                 cosmonaut.reset();
+                halo.reset();
             }
 
             switch (settings.model)
@@ -95,7 +95,7 @@ namespace effects
                 case Model::screamer: processScreamer (block, settings, skylineAttackHz (skylineTubeScreamerAttack), 0.0f); break;
                 case Model::skyline:  processScreamer (block, settings, skylineAttackHz (settings.attack), settings.gate); break;
                 case Model::muff:     processCosmonaut (block, settings); break;
-                case Model::face:     processFace (block, settings); break;
+                case Model::halo:     processHalo (block, settings); break;
                 case Model::rabid:    processRabid (block, settings); break;
                 case Model::chimera:  processChimera (block, settings); break;
                 case Model::abyss:    processAbyss (block, settings); break;
@@ -285,55 +285,21 @@ namespace effects
             samples[i] = (float) cosmonaut.finish (samples[i]) * fuzzLevel.getNextValue();
     }
 
-    void Drive::processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    void Drive::processHalo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
     {
-        const auto numSamples = (int) block.getNumSamples();
-        auto* samples = block.getChannelPointer (0);
-        auto& [loading, inputCut, transistorTop, outputCoupling, toneState2, unused1, unused2, unused3] = fuzzStates;
-        juce::ignoreUnused (unused1, unused2, unused3);
-
-        // FUZZ: the gain into the clipping, from about 8 to 42 dB.
-        const auto knob = juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f;
-        fuzzGain.setTargetValue (juce::Decibels::decibelsToGain (8.0f + 34.0f * knob));
-
-        // The Fuzz Face's low input impedance loads the pickup: a soft treble
-        // cut before it even starts. And a low cut at 40 Hz (its input capacitor).
-        const auto loadingCoefficient = onePoleCoefficient (sampleRate, 6000.0f);
-        const auto inputCutCoefficient = onePoleCoefficient (sampleRate, 40.0f);
-        for (int i = 0; i < numSamples; ++i)
-        {
-            loading += (samples[i] - loading) * loadingCoefficient;
-            inputCut += (loading - inputCut) * inputCutCoefficient;
-            samples[i] = loading - inputCut;
-        }
-
-        // At 8x the rate: gain, then a clip that's softer on top than below
-        // (the transistors saturate one way and cut off the other), and the
-        // transistors' own treble roll-off.
+        // The whole circuit at 8x the rate (against aliasing): FUZZ is its 1k
+        // pot (Halo glides it), LEVEL stands in for its volume pot. The
+        // original has no tone control, so TONE does nothing here.
+        halo.setFuzz (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzLevel.setTargetValue (haloOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
         auto upsampled = oversampling.processSamplesUp (block);
-        const auto fastRate = sampleRate * (double) oversampling.getOversamplingFactor();
-        const auto topCoefficient = onePoleCoefficient (fastRate, 7000.0f);
         auto* fast = upsampled.getChannelPointer (0);
         for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
-        {
-            const auto x = fast[i] * fuzzGain.getNextValue();
-            const auto clipped = x >= 0.0f ? std::tanh (x) : 0.6f * std::tanh (x / 0.6f);
-            transistorTop += (clipped - transistorTop) * topCoefficient;
-            fast[i] = transistorTop;
-        }
+            fast[i] = (float) halo.process (fast[i]);
         oversampling.processSamplesDown (block);
 
-        // TONE: a treble cut from 2.5 kHz (dark) to 12 kHz (open), after the
-        // output capacitor that removes the DC the uneven clipping leaves.
-        const auto couplingCoefficient = onePoleCoefficient (sampleRate, 20.0f);
-        fuzzTone.setTargetValue (knobToFrequency (settings.tone, 2500.0f, 12000.0f));
-        fuzzLevel.setTargetValue (faceOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
-        for (int i = 0; i < numSamples; ++i)
-        {
-            outputCoupling += (samples[i] - outputCoupling) * couplingCoefficient;
-            const auto coupled = samples[i] - outputCoupling;
-            toneState2 += (coupled - toneState2) * onePoleCoefficient (sampleRate, fuzzTone.getNextValue());
-            samples[i] = toneState2 * fuzzLevel.getNextValue();
-        }
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < (int) block.getNumSamples(); ++i)
+            samples[i] *= fuzzLevel.getNextValue();
     }
 }
