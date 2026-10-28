@@ -174,6 +174,82 @@ TEST_CASE ("HIDE RACK takes the rack away and shortens the window; a block click
     CHECK (effectPanels[3]->isVisible());
 }
 
+TEST_CASE ("HIDE RACK / SHOW RACK: each new window size already fits the shape and limits the DAW checks it against", "[ui][rack]")
+{
+    // A DAW like Cubase checks every size the plugin asks for against the
+    // plugin's limits and shape at that moment, and "corrects" it if it
+    // doesn't fit. This listener does the same check on every resize.
+    struct HostCheck final : juce::ComponentListener
+    {
+        void componentMovedOrResized (juce::Component& component, bool, bool wasResized) override
+        {
+            if (! wasResized)
+                return;
+            auto& editor = static_cast<juce::AudioProcessorEditor&> (component);
+            const auto* constrainer = editor.getConstrainer();
+            const auto width = editor.getWidth(), height = editor.getHeight();
+            const auto fits = width >= constrainer->getMinimumWidth() && width <= constrainer->getMaximumWidth()
+                           && height >= constrainer->getMinimumHeight() && height <= constrainer->getMaximumHeight()
+                           && std::abs ((double) width / constrainer->getFixedAspectRatio() - (double) height) <= 1.0;
+            if (! fits)
+                misfits.add (juce::String (width) + " x " + juce::String (height));
+        }
+        juce::StringArray misfits;
+    };
+
+    RackView::setShown (true, false);
+    ParagonX1AudioProcessor processor;
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    editor->setSize (1706, 959);   // the opening size on a 1080p screen
+    HostCheck host;
+    editor->addComponentListener (&host);
+    auto* rackButton = dynamic_cast<juce::TextButton*> (editor->getChildComponent (0)->findChildWithID ("rackButton"));
+    REQUIRE (rackButton != nullptr);
+
+    rackButton->onClick();   // hide
+    CHECK (editor->getWidth() == 1706);
+    CHECK (editor->getHeight() == juce::roundToInt (1706.0f * (float) (MainView::height - MainView::rackHeight) / (float) MainView::width));
+    rackButton->onClick();   // show: back to the size it had (to the pixel: 1706 x 9 / 16 is 959.6)
+    CHECK (editor->getWidth() == 1706);
+    CHECK (std::abs (editor->getHeight() - 959) <= 1);
+
+    // A width dragged to while hidden carries over to the shown window.
+    rackButton->onClick();
+    editor->setSize (1280, juce::roundToInt (1280.0f * (float) (MainView::height - MainView::rackHeight) / (float) MainView::width));
+    rackButton->onClick();
+    CHECK (editor->getWidth() == 1280);
+    CHECK (editor->getHeight() == 720);
+
+    INFO ("sizes the DAW would have changed: " << host.misfits.joinIntoString (", "));
+    CHECK (host.misfits.isEmpty());
+    editor->removeComponentListener (&host);
+    RackView::setShown (true, false);
+}
+
+TEST_CASE ("SHOW RACK never runs the window off the bottom of the screen", "[ui][rack]")
+{
+    // The DAW keeps the window's top left corner where it is, so a window
+    // placed low down grows downwards: SHOW RACK makes it narrower instead,
+    // just enough to fit. (Pictured on a 1080p screen with a 40-pixel taskbar.)
+    using Editor = ParagonX1AudioProcessorEditor;
+    const juce::Rectangle<int> screen (0, 0, 1920, 1040);
+    const auto shown = MainView::heightFor (true), hidden = MainView::heightFor (false);
+
+    // Cubase's window, as opened with the rack hidden: the plugin's top at 207.
+    const auto width = Editor::widthToFit (1706, shown, screen, 207);
+    CHECK (width < 1706);
+    CHECK (207 + width * shown / MainView::width <= 1040 - 16);
+    CHECK (207 + (width + 4) * shown / MainView::width > 1040 - 16);   // and no narrower than it needs to be (to a few pixels)
+
+    // Near the top of the screen there's room: the width chosen.
+    CHECK (Editor::widthToFit (1706, shown, screen, 60) == 1706);
+    // The shorter, rack-hidden window fits where the tall one doesn't.
+    CHECK (Editor::widthToFit (1706, hidden, screen, 207) == 1706);
+    // Never smaller than the smallest window, or bigger than the biggest.
+    CHECK (Editor::widthToFit (1706, shown, screen, 900) == 960);
+    CHECK (Editor::widthToFit (2400, hidden, screen, 0) == 1920);
+}
+
 TEST_CASE ("The window opens as big as fits above the taskbar, up to 1824 x 1026", "[ui]")
 {
     using Editor = ParagonX1AudioProcessorEditor;

@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.53.1
+
+- **SHOW RACK no longer makes the window too big.** In Cubase, showing the rack made the whole plugin about 12% bigger, running it off the right and bottom of the screen.
+  - The cause: the plugin asked Cubase for the taller size while still giving it the rack-hidden window's limits and shape. Cubase checks every new size against those, so it "corrected" the size to a bigger one.
+  - Now the new shape and limits go in first, then the size, so the window is exactly the width it was, only taller.
+- **The window stays on the screen.** The DAW keeps the window's top left corner where it is, so the window grows downwards when the rack opens. If the full-width window wouldn't fit below where it is, it's made narrower, just enough to fit. Hiding the rack again goes back to your width.
+  - To get the rack at full size, drag the window up and widen it from its corner.
+
 ## 0.53.0
 
 - **HIDE RACK:** a button at the top right of the SIGNAL CHAIN strip hides the rack when you're not editing an effect, for a smaller, cleaner window.
