@@ -2,6 +2,29 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.54.0
+
+- **GRAPHIC EQ: the fader lights now light up like the PR7's other keys.** While the EQ is on, the light on each fader's cap (all nine bands and LEVEL) is the same bright neon bar as the lit ON key, with its white-hot core and glow. Before, it was a thin pink line that looked the same whether the EQ was on or off.
+  - While the EQ is off they show the dim red of an unlit key, so the faders also tell you at a glance whether the EQ is working.
+  - They follow ON however it changes: a click, the stomp, a rig or the DAW's automation.
+  - In every finish (Pearl White, White + Neon, Pearl Black) the caps stay black, so the dim light stays visible on them too.
+
+## 0.53.1
+
+- **SHOW RACK no longer makes the window too big.** In Cubase, showing the rack made the whole plugin about 12% bigger, running it off the right and bottom of the screen.
+  - The cause: the plugin asked Cubase for the taller size while still giving it the rack-hidden window's limits and shape. Cubase checks every new size against those, so it "corrected" the size to a bigger one.
+  - Now the new shape and limits go in first, then the size, so the window is exactly the width it was, only taller.
+- **The window stays on the screen.** The DAW keeps the window's top left corner where it is, so the window grows downwards when the rack opens. If the full-width window wouldn't fit below where it is, it's made narrower, just enough to fit. Hiding the rack again goes back to your width.
+  - To get the rack at full size, drag the window up and widen it from its corner.
+
+## 0.53.0
+
+- **HIDE RACK:** a button at the top right of the SIGNAL CHAIN strip hides the rack when you're not editing an effect, for a smaller, cleaner window.
+  - The SIGNAL CHAIN moves up under the floor unit and the window gets shorter by the rack's height. It keeps its width, so the floor unit stays the same size.
+  - **SHOW RACK** (the same button) brings it back, and so does clicking a block in the SIGNAL CHAIN, which opens the rack on that block. Footswitches don't open it.
+  - It's remembered on this computer, like the finish: every PR7-G you open afterwards starts with the rack shown or hidden, the way you left it.
+  - The PRESETS and SETTINGS pages fit the shorter window too.
+
 ## 0.52.0
 
 - **THE RACK, stage 2: the GRAPHIC EQ rebuilt for the rack, at full size** (as on PR7-V). In 0.51.0 it sat in a screen on the rack at about four-fifths size; now it's on the unit's face like every other block, and nothing on the rack is scaled down.
