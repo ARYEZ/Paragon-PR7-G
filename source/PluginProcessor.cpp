@@ -108,6 +108,7 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     delay.prepare (sampleRate, preparedBlockSize);
     reverb.prepare (sampleRate, preparedBlockSize);
     loFi.prepare (sampleRate, preparedBlockSize);
+    havok.prepare (sampleRate, preparedBlockSize);
     glitch.prepare (sampleRate, preparedBlockSize);
     pitchBlock.prepare (sampleRate, preparedBlockSize);
     talkBox.prepare (sampleRate, preparedBlockSize);
@@ -174,6 +175,18 @@ void ParagonX1AudioProcessor::readMidiExpression (const juce::MidiBuffer& midi) 
         const auto message = metadata.getMessage();
         if (message.isControllerOfType (expressionCc.load()))
             pendingMidiExpression = (float) message.getControllerValue() / 127.0f;
+        // HAVOK's pad, on the controllers the original pad sends.
+        if (message.isController())
+        {
+            const auto value = (float) message.getControllerValue() / 127.0f;
+            switch (message.getControllerNumber())
+            {
+                case havokXCc:     pendingMidiPad[0] = value; break;
+                case havokYCc:     pendingMidiPad[1] = value; break;
+                case havokTouchCc: pendingMidiPad[2] = value >= 0.5f ? 1.0f : 0.0f; break;
+                default: break;
+            }
+        }
     }
 }
 
@@ -209,6 +222,26 @@ void ParagonX1AudioProcessor::syncMidiExpressionToParameter()
     // Only clear it if no newer MIDI value arrived meanwhile; that one is
     // picked up on the next tick.
     pendingMidiExpression.compare_exchange_strong (midi, -1.0f);
+}
+
+void ParagonX1AudioProcessor::syncMidiPadToParameters()
+{
+    // Copied into the parameters from the message thread, as the pedal is,
+    // so the DAW records and the pad shows what the MIDI pad played.
+    const char* ids[] = { ParamIDs::havokX, ParamIDs::havokY, ParamIDs::havokTouch };
+    for (size_t i = 0; i < pendingMidiPad.size(); ++i)
+    {
+        auto value = pendingMidiPad[i].load();
+        if (value < 0.0f)
+            continue;
+        if (auto* parameter = parameters.getParameter (ids[i]))
+        {
+            parameter->beginChangeGesture();
+            parameter->setValueNotifyingHost (parameter->convertTo0to1 (value));
+            parameter->endChangeGesture();
+        }
+        pendingMidiPad[i].compare_exchange_strong (value, -1.0f);
+    }
 }
 
 void ParagonX1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
@@ -405,6 +438,18 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     loFi.process (stereoBlock, { isOn (ParamIDs::lofiOn), (effects::LoFi::Type) (int) param (ParamIDs::lofiType),
                                  param (ParamIDs::lofiAmount), param (ParamIDs::lofiNoise),
                                  param (ParamIDs::lofiMix) * loFiPedal, param (ParamIDs::lofiLevel) });
+
+    // HAVOK last, so the pad works on everything: the effect while you touch
+    // the pad (or HOLD keeps it). A MIDI pad's latest move is used straight
+    // away, before the timer copies it into the parameters.
+    const auto padValue = [this] (size_t index, const char* id)
+    {
+        const auto midi = pendingMidiPad[index].load();
+        return midi >= 0.0f ? midi : param (id);
+    };
+    havok.process (stereoBlock, { isOn (ParamIDs::havokOn), (int) param (ParamIDs::havokProgram),
+                                  padValue (0, ParamIDs::havokX), padValue (1, ParamIDs::havokY),
+                                  padValue (2, ParamIDs::havokTouch) > 0.5f, isOn (ParamIDs::havokHold) });
 
     // The master OUTPUT knob plus the rig's own RIG LEVEL, and the
     // expression pedal when it's a VOLUME pedal. Squaring the position gives
@@ -605,6 +650,7 @@ void ParagonX1AudioProcessor::timerCallback()
         setLatencySamples (latency);
 
     syncMidiExpressionToParameter();
+    syncMidiPadToParameters();
     recordCheckpointIfReady();
 }
 
