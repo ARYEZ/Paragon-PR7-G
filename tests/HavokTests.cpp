@@ -7,6 +7,7 @@
 #include "dsp/effects/Havok.h"
 #include "ui/Faceplate.h"
 #include "ui/HavokPanel.h"
+#include "rigs/FactoryRigs.h"
 #include "ui/SignalChain.h"
 
 // HAVOK, the touch pad (inspired by the original Korg Kaoss Pad): the
@@ -594,6 +595,38 @@ TEST_CASE ("HAVOK scratch: silent until touched, then scratching our own sounds 
     CHECK_THAT (db (rms (dry.first, 2400)), WithinAbs (db (0.25f / std::sqrt (2.0f)), 0.1));
 }
 
+TEST_CASE ("HAVOK scratch: the stabs are where the scratch rigs start", "[havok][scratch][rigs]")
+{
+    // The owner's pick: the nu-metal rigs scratch the stabs (STAB, and DROP D on B12).
+    REQUIRE (Havok::scratchSoundNames.size() == 8);
+    CHECK (Havok::scratchSoundNames[4] == "STAB (DROP D)");
+    CHECK (Havok::scratchSoundNames[7] == "GRIT (LOW NOTE)");
+    int scratchRigs = 0;
+    for (const auto& rig : makeFactoryRigs())
+        if (rig.parameters.count (ParamIDs::havokScratchSound) != 0)
+        {
+            CAPTURE (rig.name);
+            ++scratchRigs;
+            CHECK (Havok::scratchSoundNames[(int) rig.parameters.at (ParamIDs::havokScratchSound)].startsWith ("STAB"));
+        }
+    CHECK (scratchRigs == 3);
+
+    // Each sound is as loud as the others while scratched (within 2 dB of STAB).
+    const auto scratched = [] (int sound)
+    {
+        Bench bench (Havok::firstScratch);
+        bench.settings.scratchSound = sound;
+        bench.touch (0.5f, 1.0f);
+        return db (rms (bench.silence (2.0f).first));
+    };
+    const auto reference = scratched (3);
+    for (int sound = 0; sound < Havok::scratchSoundNames.size(); ++sound)
+    {
+        CAPTURE (sound);
+        CHECK_THAT (scratched (sound), WithinAbs (reference, 2.0));
+    }
+}
+
 TEST_CASE ("HAVOK scratch: the crossfader cuts, in time with the song", "[havok][scratch]")
 {
     // At 120 BPM, CHIRP cuts every stroke: two bursts per back-and-forth.
@@ -673,8 +706,9 @@ TEST_CASE ("HAVOK scratch clips", "[.scratchclips]")
     constexpr double bpm = 95.0;
     const auto samplesPerBeat = rate * 60.0 / bpm;
     const char* moves[] = { "BABY", "CHIRP", "TRANSFORMER", "FLARE", "TEAR", "CRAB", "SCRIBBLE" };
-    const char* files[] = { "ahh", "laser", "noise", "stab" };
-    for (int sound = 0; sound < 4; ++sound)
+    const char* files[] = { "ahh", "laser", "noise", "stab", "stab-drop-d", "stab-low-b", "stab-short", "grit-low-note" };
+    static_assert (std::size (files) == 8);
+    for (int sound = 0; sound < Havok::scratchSoundNames.size(); ++sound)
     {
         juce::AudioBuffer<float> clip (2, (int) (samplesPerBeat * 8 * 7));
         clip.clear();

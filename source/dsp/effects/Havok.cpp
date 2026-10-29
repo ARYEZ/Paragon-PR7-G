@@ -348,9 +348,9 @@ namespace effects
         double playHead = 0.0, grainAnchor = 0.0;
         float scratchRate = 0.0f, grainPhase = 0.0f;
 
-        // The scratch programs: four "records" of our own sounds (made in
+        // The scratch programs: eight "records" of our own sounds (made in
         // prepare), the hand's place on the record and the crossfader.
-        std::vector<float> records[4];
+        std::vector<float> records[8];
         double recordPosition = 0.0, scratchBeats = 0.0, manualAnchor = 0.0, manualTarget = 0.0;
         float faderGain = 0.0f, faderStep = 0.01f, handLagAuto = 0.1f, handLagManual = 0.01f;
         Svf scratchDcCut;   // a record standing still under the needle is silent
@@ -603,19 +603,27 @@ namespace effects
                 for (int n = 0; n + cue < length; ++n)
                     records[2][(size_t) (n + cue)] = band.run (noise.nextFloat() * 2.0f - 1.0f).band * envelope (n, 0.002f, 0.7f);
             }
-            // STAB: a distorted low E power chord, hit hard.
+            // The stabs: distorted chords and notes, hit hard. Each: its notes
+            // (Hz), how hard it's driven, its top end and how quickly it dies.
+            const auto stab = [&] (std::vector<float>& record, std::initializer_list<float> notes, float drive, float topHz, float decay)
             {
                 Svf tone;
-                tone.set (3500.0f, 0.7f, sampleRate);
-                float phases[3] {};
-                const float hz[] = { 82.41f, 123.47f, 164.81f };
+                tone.set (topHz, 0.7f, sampleRate);
+                float phases[4] {};
                 for (int n = 0; n + cue < length; ++n)
                 {
                     float chord = 0.0f;
-                    for (int k = 0; k < 3; ++k) chord += saw (phases[k], hz[k] / sr);
-                    records[3][(size_t) (n + cue)] = tone.run (std::tanh (2.5f * chord)).low * envelope (n, 0.003f, 0.6f);
+                    int k = 0;
+                    for (const auto hz : notes)
+                        chord += saw (phases[k++], hz / sr);
+                    record[(size_t) (n + cue)] = tone.run (std::tanh (drive * chord)).low * envelope (n, 0.003f, decay);
                 }
-            }
+            };
+            stab (records[3], { 82.41f, 123.47f, 164.81f }, 2.5f, 3500.0f, 0.6f);    // STAB (CHORD): a low E power chord
+            stab (records[4], { 73.42f, 110.0f, 146.83f }, 2.5f, 3500.0f, 0.6f);     // STAB (DROP D): D power chord, as in drop-D tuning
+            stab (records[5], { 61.74f, 92.5f, 123.47f }, 3.0f, 3000.0f, 0.6f);      // STAB (LOW B): B power chord, tuned right down
+            stab (records[6], { 82.41f, 123.47f, 164.81f }, 3.5f, 5500.0f, 0.15f);   // STAB (SHORT): shorter, brighter, punchier
+            stab (records[7], { 73.42f, 146.83f }, 6.0f, 2800.0f, 0.5f);             // GRIT (LOW NOTE): one low D and its octave, driven hard
             // Each as loud as the others (by its average over the first 0.4 s
             // after the cue, so a steady tone isn't louder than a voice),
             // never peaking over 0.9.
@@ -635,7 +643,7 @@ namespace effects
 
         float readRecord (int sound, double position) const noexcept
         {
-            const auto& record = records[(size_t) juce::jlimit (0, 3, sound)];
+            const auto& record = records[(size_t) juce::jlimit (0, 7, sound)];
             const auto last = (double) record.size() - 3.0;
             position = juce::jlimit (1.0, last, position);
             const auto i = (int) position;

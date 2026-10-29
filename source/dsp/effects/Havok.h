@@ -48,7 +48,8 @@ namespace effects
         static constexpr int firstScratch = 60;
         static bool isScratch (int program) noexcept { return program >= firstScratch && program < numPrograms; }
         // What's on the "record": our own sounds (never samples from real records). Saved by number: only add to the end.
-        static inline const juce::StringArray scratchSoundNames { "AHH (VOCAL)", "LASER (TONE)", "NOISE", "STAB (CHORD)" };
+        static inline const juce::StringArray scratchSoundNames { "AHH (VOCAL)", "LASER (TONE)", "NOISE", "STAB (CHORD)",
+                                                                  "STAB (DROP D)", "STAB (LOW B)", "STAB (SHORT)", "GRIT (LOW NOTE)" };
         // X's speed for 61-67: one back-and-forth every 1/2, 1/4, 1/8, 1/16 or 1/32 note.
         static int scratchDivision (float x) noexcept { return juce::jlimit (0, 4, juce::roundToInt (x * 4.0f)); }
         static inline const juce::StringArray scratchDivisionNames { "1/2", "1/4", "1/8", "1/16", "1/32" };

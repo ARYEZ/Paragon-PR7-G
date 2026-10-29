@@ -38,7 +38,7 @@ namespace
     // HAVOK's scratch programs (61-68, indices 60-67) and sounds, and X for each speed.
     constexpr float scratchBaby = 60, scratchChirp = 61, scratchTransformer = 62, scratchFlare = 63, scratchTear = 64,
                     scratchCrab = 65, scratchScribble = 66, scratchManual = 67;
-    constexpr float soundAhh = 0, soundLaser = 1, soundStab = 3;
+    constexpr float soundStab = 3, soundDropD = 4;   // SOUND: the stabs scratch best
     constexpr float rateEighth = 0.5f, rateSixteenth = 0.75f;
     constexpr float digitalDelay = 0;
     constexpr float xpCryWah = 1, xpUpOctave = 12, xpOctDownOctUp = 20, xpUp4thUp5th = 23;   // Whammy-Wah programs 02, 13, 21 and 24
@@ -194,22 +194,23 @@ std::vector<Rig> makeFactoryRigs()
 
         // Nu-metal turntable rigs: a scooped, gated metal distortion and
         // HAVOK's scratch programs (ours, on our own sounds) in time with
-        // the song. Touch HAVOK's pad, or send MIDI CC 92 from a footswitch,
+        // the song, all on the stabs (the owner's pick: their hard front
+        // edge is what the crossfader cuts bite on). Touch HAVOK's pad, or send MIDI CC 92 from a footswitch,
         // to bring the scratching in; the PROGRAM MAP keys hold the other moves
         // (1 BABY, 2 CHIRP, 3 TRANSFORMER, 4 FLARE, 5 TEAR, 6 MANUAL).
         make ("Nu-Metal Turntable", B, 11, "High Gain,Scratch,Havok", {
             { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
             { driveOn, 1 }, { driveModel, abyss }, { driveGain, 6 }, { driveLow, 7 }, { driveMiddle, 3 }, { driveHigh, 6 },
             { eqOn, 1 }, { "eq63", -3 }, { "eq500", -2 }, { "eq1k", -1 }, { "eq4k", 2 },
-            { havokOn, 1 }, { havokProgram, scratchChirp }, { havokScratchSound, soundAhh }, { havokX, rateSixteenth }, { havokY, 0.7f },
+            { havokOn, 1 }, { havokProgram, scratchChirp }, { havokScratchSound, soundStab }, { havokX, rateSixteenth }, { havokY, 0.7f },
             { "havokMap1Program", scratchBaby }, { "havokMap2Program", scratchChirp }, { "havokMap3Program", scratchTransformer },
             { "havokMap4Program", scratchFlare }, { "havokMap5Program", scratchTear }, { "havokMap6Program", scratchManual } }),
 
-        // The tone being cut up by the crossfader: the transformer's stutter.
-        make ("Laser Transformer", B, 12, "High Gain,Scratch,Havok", {
+        // A drop-D stab cut up by the crossfader: the transformer's stutter.
+        make ("Stab Transformer", B, 12, "High Gain,Scratch,Havok", {
             { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
             { driveOn, 1 }, { driveModel, abyss }, { driveGain, 5 }, { driveLow, 6 }, { driveMiddle, 4 }, { driveHigh, 6 },
-            { havokOn, 1 }, { havokProgram, scratchTransformer }, { havokScratchSound, soundLaser }, { havokX, rateEighth }, { havokY, 0.55f },
+            { havokOn, 1 }, { havokProgram, scratchTransformer }, { havokScratchSound, soundDropD }, { havokX, rateEighth }, { havokY, 0.55f },
             { "havokMap1Program", scratchTransformer }, { "havokMap2Program", scratchCrab }, { "havokMap3Program", scratchFlare },
             { "havokMap4Program", scratchChirp }, { "havokMap5Program", scratchScribble }, { "havokMap6Program", scratchManual } }),
 
@@ -396,6 +397,8 @@ juce::String currentFactoryName (const juce::String& name)
         { "Money Solo (Floyd)", "Fuzz Echo Solo" },
         { "Jambi Talk Box (Tool)", "Heavy Talk Box" },
         { "Show Me the Way (Frampton)", "Warm Talk Box" },
+        // 0.58.0: B12 moved to a stab, so its name followed.
+        { "Laser Transformer", "Stab Transformer" },
     };
     for (const auto& [oldName, newName] : renamed)
         if (name == oldName)

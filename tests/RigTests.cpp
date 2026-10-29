@@ -210,7 +210,7 @@ TEST_CASE ("Renamed factory rigs are still found by their old names", "[rigs][st
     TempRigFolder temp;
     {
         RigLibrary library (temp.folder);
-        for (auto name : { "Leslie Spin", "Whammy Lead", "XP Wah Crunch", "Numb Solo (Floyd)", "Show Me the Way (Frampton)" })
+        for (auto name : { "Leslie Spin", "Whammy Lead", "XP Wah Crunch", "Numb Solo (Floyd)", "Show Me the Way (Frampton)", "Laser Transformer" })
         {
             CAPTURE (name);
             CHECK (library.findFactory (name) == nullptr);
