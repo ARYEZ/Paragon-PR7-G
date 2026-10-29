@@ -275,12 +275,48 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
         return names[model] + "  Drive " + valueText (ParamIDs::driveGain);
     };
     footswitches[2] = std::make_unique<Footswitch> (3, "MODULATION", state, juce::StringArray { ParamIDs::modOn });
-    footswitches[2]->describe = [this]
+    const auto isCyclone = [this] (const ParamIDs::ModIds& ids)
+    {
+        return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::rotary;
+    };
+    // Cyclone's rotors: STOP, FAST or SLOW (PEDAL while the expression pedal sets the speed).
+    const auto rotorState = [this] (const ParamIDs::ModIds& ids)
+    {
+        if (juce::roundToInt (rawValue (ParamIDs::expressionTarget)) == ExpressionTargets::cycloneSpeed)
+            return juce::String ("PEDAL");
+        return juce::String (rawValue (ids.cycStop) > 0.5f ? "STOP" : rawValue (ids.cycFast) > 0.5f ? "FAST" : "SLOW");
+    };
+    footswitches[2]->describe = [this, isCyclone, rotorState]
     {
         // Both MOD blocks' types when MOD 2 is on too ("Vortex + Flanger").
         if (rawValue (ParamIDs::mod2On) > 0.5f)
-            return valueText (ParamIDs::modType) + " + " + valueText (ParamIDs::mod2Type);
+            return valueText (ParamIDs::modType) + " + " + valueText (ParamIDs::mod2Type)
+                 + (isCyclone (ParamIDs::mod2Ids) ? "  " + rotorState (ParamIDs::mod2Ids) : juce::String());
+        if (isCyclone (ParamIDs::modIds))
+            return valueText (ParamIDs::modType) + "  " + rotorState (ParamIDs::modIds) + "  (hold: slow / fast)";
         return valueText (ParamIDs::modType) + "  " + valueText (rawValue (ParamIDs::modSync) > 0.5f ? ParamIDs::modSync : ParamIDs::modRate);
+    };
+    // Holding footswitch 3 switches Cyclone between SLOW and FAST, as the
+    // pedal's own SLOW / FAST switch (on MOD, and MOD 2 when it's on); a tap
+    // still switches the block on and off.
+    footswitches[2]->onHold = [this, isCyclone]
+    {
+        std::vector<const ParamIDs::ModIds*> rotary;
+        if (isCyclone (ParamIDs::modIds))
+            rotary.push_back (&ParamIDs::modIds);
+        if (isCyclone (ParamIDs::mod2Ids) && rawValue (ParamIDs::mod2On) > 0.5f)
+            rotary.push_back (&ParamIDs::mod2Ids);
+        if (rotary.empty())
+            return false;
+        const auto fast = rawValue (rotary.front()->cycFast) < 0.5f;   // the first one's opposite, for both
+        for (const auto* ids : rotary)
+            if (auto* parameter = audioProcessor.getParameters().getParameter (ids->cycFast))
+            {
+                parameter->beginChangeGesture();
+                parameter->setValueNotifyingHost (fast ? 1.0f : 0.0f);
+                parameter->endChangeGesture();
+            }
+        return true;
     };
     footswitches[3] = std::make_unique<Footswitch> (4, "REVERB / DELAY", state, juce::StringArray { ParamIDs::delayOn, ParamIDs::reverbOn });
     footswitches[3]->describe = [this]
@@ -372,12 +408,17 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
         const auto isHadron = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::phaser; };
         // Razor (the tremolo) adds the pedal's WAVE knob.
         const auto isRazor = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::tremolo; };
-        return std::make_unique<EffectPanel> (state, std::vector<Group> {
-            { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" }, { ids.sync, "SYNC" },
+        // CYCLONE (the rotary speaker) has its own speeds instead of RATE,
+        // SYNC and DEPTH, and its tone controls on a second page.
+        const auto isCyclone = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::rotary; };
+        const auto notCyclone = [isCyclone] { return ! isCyclone(); };
+        auto panel = std::make_unique<EffectPanel> (state, std::vector<Group> {
+            { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" },
+                       { ids.sync, "SYNC", notCyclone, true },
                        { ids.manual, "MANUAL", isAeon, true },
                        { ids.hadron, "CIRCUIT", isHadron, true },
-                       { ids.rate, "RATE", [this, ids] { return rawValue (ids.sync) < 0.5f; } },
-                       { ids.depth, "DEPTH", [isHadron] { return ! isHadron(); } },
+                       { ids.rate, "RATE", [this, ids, isCyclone] { return ! isCyclone() && rawValue (ids.sync) < 0.5f; } },
+                       { ids.depth, "DEPTH", [isHadron, isCyclone] { return ! isHadron() && ! isCyclone(); } },
                        { ids.wave, "WAVE", isRazor, true },
                        { ids.res, "RES", isAeon, true },
                        { ids.mix, "MIX", [this, ids] {
@@ -385,7 +426,21 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                        // The Vortex's own controls: its EQ, and mono or stereo outputs.
                        { ids.eq, "EQ", isVortex, true },
                        // STEREO needs two speakers after it, so only in POST (in PRE a single amp follows).
-                       { ids.stereo, "STEREO", [this, ids, isVortex] { return isVortex() && rawValue (ids.position) < 0.5f; }, true } } } });
+                       { ids.stereo, "STEREO", [this, ids, isVortex] { return isVortex() && rawValue (ids.position) < 0.5f; }, true },
+                       // CYCLONE's rotors.
+                       { ids.cycFast, "FAST", isCyclone, true },
+                       { ids.cycStop, "STOP", isCyclone, true },
+                       { ids.cycFastSpeed, "FAST SPEED", isCyclone, true },
+                       { ids.cycSlowSpeed, "SLOW SPEED", isCyclone, true },
+                       { ids.cycAccel, "ACCEL", isCyclone, true } } },
+            { title, { { ids.cycBalance, "BALANCE", isCyclone, true },
+                       { ids.cycDrive, "DRIVE", isCyclone, true },
+                       { ids.cycLow, "MIX/DIST LO", isCyclone, true },
+                       { ids.cycHigh, "MIX/DIST HI", isCyclone, true },
+                       { ids.cycMode, "MODE", isCyclone, true },
+                       { ids.cycLevel, "LEVEL", isCyclone, true } }, 1 } });
+        panel->setPages ({ "ROTORS", "TONE" });
+        return panel;
     };
     panels[modBlock] = modPanel ("MODULATION", ParamIDs::modIds);
     panels[mod2Block] = modPanel ("MODULATION 2", ParamIDs::mod2Ids);

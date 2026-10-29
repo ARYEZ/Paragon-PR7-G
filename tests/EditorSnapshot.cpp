@@ -3,6 +3,7 @@
 #include "Parameters.h"
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
+#include "ui/EffectPanel.h"
 #include "ui/Finish.h"
 #include "ui/RackView.h"
 
@@ -125,6 +126,20 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     // PARAGON_SNAPSHOT_RACK=hidden: the rack hidden (HIDE RACK), the window shorter.
     RackView::setShown (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK", {}) != "hidden", false);
 
+    // PARAGON_SNAPSHOT_RUN=seconds: run the audio that long first (silence),
+    // so things that move with the sound, like Cyclone's rotors, are going.
+    if (const auto run = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RUN", {}).getDoubleValue(); run > 0.0)
+    {
+        processor.prepareToPlay (48000.0, 480);
+        juce::AudioBuffer<float> block (2, 480);
+        juce::MidiBuffer midi;
+        for (int i = 0; i < juce::roundToInt (run * 100.0); ++i)
+        {
+            block.clear();
+            processor.processBlock (block, midi);
+        }
+    }
+
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
     if (showTuner)
         for (int i = 0; i < 12; ++i)   // let the editor's timers run: the tuner reads a few times
@@ -142,6 +157,23 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     if (const auto block = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_BLOCK", {}); block.isNotEmpty())
         if (auto* chain = findType<SignalChain> (*editor))
             chain->onSelect (block.getIntValue());
+    // PARAGON_SNAPSHOT_RACK_PAGE=n: the open block's page n (MOD's 1 is Cyclone's TONE).
+    if (const auto page = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK_PAGE", {}); page.isNotEmpty())
+    {
+        std::vector<EffectPanel*> panels;
+        std::function<void (juce::Component&)> collect = [&] (juce::Component& c)
+        {
+            for (auto* child : c.getChildren())
+            {
+                if (auto* panel = dynamic_cast<EffectPanel*> (child); panel != nullptr && panel->isVisible())
+                    panels.push_back (panel);
+                collect (*child);
+            }
+        };
+        collect (*editor);
+        for (auto* panel : panels)
+            panel->showPage (page.getIntValue());
+    }
     if (const auto width = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_WIDTH", {}).getIntValue(); width > 0)
         editor->setSize (width, width * editor->getHeight() / editor->getWidth());
     editor->resized();

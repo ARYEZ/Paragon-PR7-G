@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "Parameters.h"
 #include "PluginProcessor.h"
 #include "ui/Icons.h"
 
@@ -105,6 +106,7 @@ private:
     void paintDelay (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintReverb (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintModulation (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintCyclone (juce::Graphics&, juce::Rectangle<float> body, juce::Rectangle<float> settings, const ParamIDs::ModIds&, bool on);
     void paintFilterPitch (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintGlitch (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintEq (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);

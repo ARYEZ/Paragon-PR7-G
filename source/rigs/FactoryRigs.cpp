@@ -109,7 +109,8 @@ std::vector<Rig> makeFactoryRigs()
 
         make ("Rotary Spin", D, 2, "Modulation,Clean", {
             { compOn, 1 }, { compThreshold, -20 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, rotary }, { modRate, 6.5f }, { modDepth, 0.7f }, { modMix, 0.85f },
+            // Cyclone on FAST, its mics a little back from the rotors.
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 1 }, { modCycLow, 6 }, { modCycHigh, 6 },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.2f } }),
 
         make ("Nebula Lead", D, 3, "Modulation,Drive,Lead", {
@@ -236,7 +237,8 @@ std::vector<Rig> makeFactoryRigs()
         // rotating speaker (his Yamaha RA-200), with studio reverb.
         make ("Soaring Fuzz Solo", E, 3, "Song,Lead,Fuzz", {
             { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 7 }, { driveTone, 3.5f }, { driveLevel, -1.5f },
-            { modOn, 1 }, { modType, rotary }, { modRate, 0.9f }, { modDepth, 0.5f }, { modMix, 0.3f },
+            // Cyclone slow and mixed in lightly (a third of the way into each rotor's MIX).
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 0 }, { modCycSlowSpeed, 0.9f }, { modCycLow, 1.5f }, { modCycHigh, 1.5f },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 370 }, { delayFeedback, 0.3f }, { delayMix, 0.25f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.18f } }),
 
@@ -246,7 +248,8 @@ std::vector<Rig> makeFactoryRigs()
         // fuzz, is set up and waiting, as Gilmour kicked his in.
         make ("Slow Rotary Clean", E, 4, "Song,Clean,Modulation,Fuzz", {
             { driveOn, 0 }, { driveModel, halo }, { driveGain, 6 }, { driveLevel, 0 },
-            { modOn, 1 }, { modType, rotary }, { modRate, 0.7f }, { modDepth, 0.6f }, { modMix, 0.6f },
+            // Cyclone slow and well in the sound.
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 0 }, { modCycSlowSpeed, 0.7f }, { modCycLow, 4 }, { modCycHigh, 4 },
             { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, syncOff }, { delayTime, 420 }, { delayFeedback, 0.25f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbMix, 0.25f } }),
 

@@ -293,5 +293,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::driveLow, "Abyss Low", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
     layout.add (makeFloat (ParamIDs::driveMiddle, "Abyss Middle", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
     layout.add (makeFloat (ParamIDs::driveMidFreq, "Abyss Mid Freq", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    // Added in PR7-G 0.55.0: CYCLONE, the rotary speaker (inspired by the Neo
+    // Ventilator II), on MOD and MOD 2. Its defaults are the manual's
+    // starting points: the speeds of an average 122, ACCELERATION at 1
+    // o'clock, the MIX / DIST knobs at 2 o'clock, GIT 2 for guitar.
+    constexpr int v33 = 33;
+    using effects::Cyclone;
+    for (const auto* ids : { &ParamIDs::modIds, &ParamIDs::mod2Ids })
+    {
+        const juce::String prefix = ids == &ParamIDs::modIds ? "Cyclone " : "Mod 2 Cyclone ";
+        layout.add (makeSwitch (ids->cycFast, prefix + "Fast", v33, false));
+        layout.add (makeSwitch (ids->cycStop, prefix + "Stop", v33, false));
+        layout.add (makeFloat (ids->cycFastSpeed, prefix + "Fast Speed", skewed (Cyclone::fastMinHz, Cyclone::fastMaxHz, Cyclone::fastDefaultHz, 0.01f),
+                               Cyclone::fastDefaultHz, v33, asHz));
+        layout.add (makeFloat (ids->cycSlowSpeed, prefix + "Slow Speed", skewed (Cyclone::slowMinHz, Cyclone::slowMaxHz, Cyclone::slowDefaultHz, 0.01f),
+                               Cyclone::slowDefaultHz, v33, asHz));
+        layout.add (makeFloat (ids->cycAccel, prefix + "Acceleration", { 0.0f, 10.0f, 0.1f }, 6.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycBalance, prefix + "Balance", { 0.0f, 10.0f, 0.1f }, 5.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycDrive, prefix + "Drive", { 0.0f, 10.0f, 0.1f }, 0.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycLow, prefix + "Mix / Dist Lo", { 0.0f, 10.0f, 0.1f }, 7.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycHigh, prefix + "Mix / Dist Hi", { 0.0f, 10.0f, 0.1f }, 7.0f, v33, asKnob));
+        layout.add (makeChoice (ids->cycMode, prefix + "Mode", v33, Cyclone::modeNames, (int) Cyclone::Mode::guitar2));
+        layout.add (makeFloat (ids->cycLevel, prefix + "Level", { 0.0f, 10.0f, 0.1f }, 5.0f, v33, asKnob));
+    }
     return layout;
 }

@@ -322,14 +322,21 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
             rate = juce::jlimit (0.02f, 40.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);   // 1/32 at 300 BPM
 
         const auto pre = (int) param (ids.position) == (int) effects::Modulation::Position::pre;
-        return std::pair { effects::Modulation::Settings { isOn (ids.on), type, rate,
-                                                           param (ids.depth) * (morphsDepth ? morph : 1.0f),
-                                                           param (ids.mix) * (morphsDepth ? 1.0f : morph),
-                                                           param (ids.eq),
-                                                           param (ids.stereo) > 0.5f && ! pre,
-                                                           param (ids.manual), param (ids.res),
-                                                           param (ids.hadron) > 0.5f, param (ids.wave) },
-                           pre };
+        effects::Modulation::Settings settings { isOn (ids.on), type, rate,
+                                                 param (ids.depth) * (morphsDepth ? morph : 1.0f),
+                                                 param (ids.mix) * (morphsDepth ? 1.0f : morph),
+                                                 param (ids.eq),
+                                                 param (ids.stereo) > 0.5f && ! pre,
+                                                 param (ids.manual), param (ids.res),
+                                                 param (ids.hadron) > 0.5f, param (ids.wave) };
+        // CYCLONE: its own controls. MORPH FX fades it in over the dry sound;
+        // the pedal on CYCLONE SPEED sets the rotors' speed.
+        settings.cyclone = { param (ids.cycFast) > 0.5f, param (ids.cycStop) > 0.5f,
+                             param (ids.cycFastSpeed), param (ids.cycSlowSpeed), param (ids.cycAccel),
+                             param (ids.cycBalance), param (ids.cycDrive), param (ids.cycLow), param (ids.cycHigh),
+                             (effects::Cyclone::Mode) (int) param (ids.cycMode), param (ids.cycLevel),
+                             expressionTarget == ExpressionTargets::cycloneSpeed ? pedal : -1.0f, morph };
+        return std::pair { settings, pre };
     };
     const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);
     const auto [mod2Settings, mod2Pre] = modSettingsFor (ParamIDs::mod2Ids);
@@ -910,6 +917,26 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
     };
     addIfMissing (ParamIDs::driveModel, (int) effects::Drive::Model::rabid);      // before the drive had a MODEL (then the original overdrive)
     addIfMissing (ParamIDs::reverbType, (int) effects::Reverb::Type::classic);    // before the reverb had a TYPE
+
+    // Saved with the original rotary speaker: Cyclone, set as close to it as it goes.
+    for (const auto* ids : { &ParamIDs::modIds, &ParamIDs::mod2Ids })
+    {
+        std::map<juce::String, float> saved;
+        for (const auto* id : { ids->type, ids->rate, ids->depth, ids->mix, ids->cycFast })
+            if (const auto parameter = state.getChildWithProperty ("id", id); parameter.isValid())
+                saved[id] = (float) parameter.getProperty ("value");
+        const auto before = saved.size();
+        Rig::convertOldRotary (saved, *ids);
+        if (saved.size() == before)
+            continue;
+        for (const auto* id : { ids->cycFast, ids->cycFastSpeed, ids->cycSlowSpeed, ids->cycLow, ids->cycHigh, ids->cycMode })
+        {
+            juce::ValueTree parameter ("PARAM");
+            parameter.setProperty ("id", id, nullptr);
+            parameter.setProperty ("value", saved[id], nullptr);
+            state.appendChild (parameter, nullptr);
+        }
+    }
     parameters.replaceState (state);
 
     const auto restore = [] (const juce::var& path, auto load, auto clear)

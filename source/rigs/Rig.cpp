@@ -1,5 +1,8 @@
 #include "Rig.h"
 
+#include "Parameters.h"
+#include "dsp/effects/Modulation.h"
+
 namespace
 {
     // Bump when the file layout changes in a way older code can't read.
@@ -49,6 +52,21 @@ std::unique_ptr<juce::XmlElement> Rig::toXml() const
     return xml;
 }
 
+void Rig::convertOldRotary (std::map<juce::String, float>& parameters, const ParamIDs::ModIds& ids)
+{
+    const auto found = [&parameters] (const char* id) { return parameters.find (id) != parameters.end(); };
+    if (found (ids.cycFast) || ! found (ids.type)
+        || juce::roundToInt (parameters[ids.type]) != (int) effects::Modulation::Type::rotary)
+        return;
+    const auto valueOr = [&] (const char* id, float otherwise) { return found (id) ? parameters[id] : otherwise; };
+    const auto cyclone = effects::Cyclone::fromOldRotary (valueOr (ids.rate, 0.8f), valueOr (ids.depth, 0.5f), valueOr (ids.mix, 0.5f));
+    parameters[ids.cycFast] = cyclone.fast ? 1.0f : 0.0f;
+    parameters[ids.cycFastSpeed] = cyclone.fastHz;
+    parameters[ids.cycSlowSpeed] = cyclone.slowHz;
+    parameters[ids.cycLow] = parameters[ids.cycHigh] = cyclone.mixDist;
+    parameters[ids.cycMode] = (float) cyclone.mode;
+}
+
 std::optional<Rig> Rig::fromXml (const juce::XmlElement& xml)
 {
     if (! xml.hasTagName (rigTag) || xml.getIntAttribute ("version", 0) > fileVersion)
@@ -82,6 +100,9 @@ std::optional<Rig> Rig::fromXml (const juce::XmlElement& xml)
     // Saved before the reverb had a TYPE: it was the original, now CLASSIC (0).
     if (savedWith < 15 && rig.parameters.count ("reverbType") == 0)
         rig.parameters["reverbType"] = 0.0f;
+    // Saved with the original rotary speaker: Cyclone, set as close to it as it goes.
+    for (const auto* ids : { &ParamIDs::modIds, &ParamIDs::mod2Ids })
+        convertOldRotary (rig.parameters, *ids);
 
     return rig;
 }
