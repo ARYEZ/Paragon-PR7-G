@@ -8,6 +8,7 @@
 #include "ui/Faceplate.h"
 #include "ui/Finish.h"
 #include "ui/GraphicEqPanel.h"
+#include "ui/HavokPanel.h"
 #include "ui/Footswitch.h"
 #include "ui/LedDisplay.h"
 #include "ui/LevelMeter.h"
@@ -88,7 +89,7 @@ public:
 private:
     // The blocks in signal-chain order; footswitches, the chain strip and
     // the summary cards select these to show their knobs.
-    enum Block { pitchBlock, compBlock, filterPitchBlock, driveBlock, ampBlock, cabBlock, eqBlock, glitchBlock, modBlock, mod2Block, delayBlock, reverbBlock, loFiBlock, numBlocks };
+    enum Block { pitchBlock, compBlock, filterPitchBlock, driveBlock, ampBlock, cabBlock, eqBlock, glitchBlock, modBlock, mod2Block, delayBlock, reverbBlock, loFiBlock, havokBlock, numBlocks };
 
     enum class Page { processor, presets, settings };
 
@@ -154,8 +155,9 @@ private:
     // Dock and signal chain
     Faceplate faceplate;   // the selected block as hardware, beside its knobs
     ExpressionPanel expressionPanel;
-    std::array<std::unique_ptr<EffectPanel>, numBlocks> panels;   // empty at eqBlock: the EQ has its own panel
+    std::array<std::unique_ptr<EffectPanel>, numBlocks> panels;   // empty at eqBlock and havokBlock: they have their own panels
     GraphicEqPanel eqPanel;
+    HavokPanel havokPanel;   // the touch pad, in the rack's display, and its keys
     juce::TextButton closePanel { "GRAPHIC EQ" };   // back to the EQ, the dock's default
     juce::TextButton rackButton;                     // HIDE RACK / SHOW RACK, on the SIGNAL CHAIN strip
     SignalChain signalChain;

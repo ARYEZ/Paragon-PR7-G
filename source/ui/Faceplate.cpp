@@ -209,6 +209,7 @@ Faceplate::Look Faceplate::getLook() const
         case Unit::glitch:   return Look::glitch;
         case Unit::eq:       return Look::eq;
         case Unit::loFi:     return Look::loFi;
+        case Unit::havok:    return Look::havok;
         case Unit::other:    break;
     }
     return Look::generic;
@@ -360,6 +361,7 @@ void Faceplate::paint (juce::Graphics& g)
         case Look::glitch:   paintGlitch (g, header, content); break;
         case Look::eq:       paintEq (g, header, content); break;
         case Look::loFi:     paintLoFi (g, header, content); break;
+        case Look::havok:    paintHavok (g, header, content); break;
         case Look::generic: paintGeneric (g, header, content); break;
     }
 }
@@ -1273,4 +1275,10 @@ void Faceplate::paintLoFi (juce::Graphics& g, juce::Rectangle<float> header, juc
     bigKnob (g, knobs.removeFromLeft (third).reduced (2.0f, 0.0f), "AMOUNT", normalised (ParamIDs::lofiAmount));
     bigKnob (g, knobs.removeFromLeft (third).reduced (2.0f, 0.0f), "NOISE", normalised (ParamIDs::lofiNoise));
     bigKnob (g, knobs.reduced (2.0f, 0.0f), "MIX", normalised (ParamIDs::lofiMix));
+}
+
+void Faceplate::paintHavok (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float>)
+{
+    // The name; HAVOK's panel draws the pad and its readout in the display.
+    nameplate (g, header, "HAVOK", "TOUCH PAD MULTI-FX");
 }

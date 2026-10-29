@@ -7,6 +7,7 @@
 #include "dsp/effects/LoFi.h"
 #include "dsp/effects/Glitch.h"
 #include "dsp/effects/GraphicEq.h"
+#include "dsp/effects/Havok.h"
 #include "dsp/effects/Modulation.h"
 #include "dsp/effects/Reverb.h"
 
@@ -315,6 +316,27 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         layout.add (makeFloat (ids->cycHigh, prefix + "Mix / Dist Hi", { 0.0f, 10.0f, 0.1f }, 7.0f, v33, asKnob));
         layout.add (makeChoice (ids->cycMode, prefix + "Mode", v33, Cyclone::modeNames, (int) Cyclone::Mode::guitar2));
         layout.add (makeFloat (ids->cycLevel, prefix + "Level", { 0.0f, 10.0f, 0.1f }, 5.0f, v33, asKnob));
+    }
+    // Added in PR7-G 0.56.0: HAVOK, the X/Y touch pad. The pad starts in the
+    // middle (the display's 5.5); the PROGRAM MAP keys start on six of the
+    // programs (our pick: a filter, a flanger, the tape echo, the hall, the
+    // ring modulator and the first sampler).
+    constexpr int v34 = 34;
+    const auto havokPrograms = effects::Havok::programNames();
+    layout.add (makeSwitch (ParamIDs::havokOn, "Havok On", v34, false));
+    layout.add (makeChoice (ParamIDs::havokProgram, "Havok Program", v34, havokPrograms, 0));
+    layout.add (makeFloat (ParamIDs::havokX, "Havok X", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+    layout.add (makeFloat (ParamIDs::havokY, "Havok Y", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+    layout.add (makeSwitch (ParamIDs::havokTouch, "Havok Touch", v34, false));
+    layout.add (makeSwitch (ParamIDs::havokHold, "Havok Hold", v34, false));
+    const int mapDefaults[ParamIDs::havokMapKeys] = { 0, 15, 20, 30, 41, 50 };
+    for (int key = 1; key <= ParamIDs::havokMapKeys; ++key)
+    {
+        const auto name = "Havok Map " + juce::String (key) + " ";
+        layout.add (makeChoice (ParamIDs::havokMap (key, "Program").toRawUTF8(), name + "Program", v34, havokPrograms, mapDefaults[key - 1]));
+        layout.add (makeSwitch (ParamIDs::havokMap (key, "Hold").toRawUTF8(), name + "Hold", v34, false));
+        layout.add (makeFloat (ParamIDs::havokMap (key, "X").toRawUTF8(), name + "X", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+        layout.add (makeFloat (ParamIDs::havokMap (key, "Y").toRawUTF8(), name + "Y", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
     }
     return layout;
 }

@@ -207,11 +207,26 @@ namespace ParamIDs
     inline constexpr auto freezeAttack   = "freezeAttack";     // ms
     inline constexpr auto freezeRelease  = "freezeRelease";    // ms
 
+    // Version 34: HAVOK, the X/Y touch pad effect (inspired by the original
+    // Korg Kaoss Pad), last in the chain. X, Y and TOUCH are the pad (TOUCH
+    // is where your finger is, like the expression pedal, so not in rigs);
+    // HOLD keeps the effect at the last position.
+    inline constexpr auto havokOn      = "havokOn";
+    inline constexpr auto havokProgram = "havokProgram";   // 1 to 60, the manual's programs
+    inline constexpr auto havokX       = "havokX";         // 0 to 1, left to right
+    inline constexpr auto havokY       = "havokY";         // 0 to 1, bottom to top
+    inline constexpr auto havokTouch   = "havokTouch";
+    inline constexpr auto havokHold    = "havokHold";
+    // The six PROGRAM MAP keys: each holds a program and, if it was stored
+    // with HOLD on, the held position. `part` is "Program", "Hold", "X" or "Y".
+    inline constexpr int havokMapKeys = 6;
+    inline juce::String havokMap (int key, const char* part) { return "havokMap" + juce::String (key) + part; }
+
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real
     // pedal's is: it's where your foot is, not part of the sound. What the
     // pedal is assigned to, and its range, are saved with each rig.
-    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression };
+    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression, havokTouch };
 }
 
 namespace ExpressionTargets

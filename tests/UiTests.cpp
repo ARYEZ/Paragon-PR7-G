@@ -624,9 +624,9 @@ TEST_CASE ("The FACEPLATE shows the selected block, and the guitar's level going
     // Every block from the signal chain gets its own faceplate.
     using Look = Faceplate::Look;
     const Look looks[] { Look::pitch, Look::classic, Look::filterPitch, Look::drive, Look::amp, Look::cabinet, Look::eq,
-                         Look::glitch, Look::modulation, Look::modulation, Look::delay, Look::reverb, Look::loFi };
-    static_assert (std::size (looks) == 13);
-    for (int block = 0; block < 13; ++block)
+                         Look::glitch, Look::modulation, Look::modulation, Look::delay, Look::reverb, Look::loFi, Look::havok };
+    static_assert (std::size (looks) == 14);
+    for (int block = 0; block < 14; ++block)
     {
         chains[0]->onSelect (block);
         CAPTURE (block);

@@ -2,6 +2,21 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.56.0
+
+- **HAVOK: a new X/Y touch pad effect, the last block in the chain.** It's our own design, inspired by the original Korg Kaoss Pad (the KP1). Play it by clicking and dragging on the pad in the rack's display: the effect sounds while you touch the pad, and stops when you let go.
+  - **Taken from the KP1's manual:**
+    - All 60 programs, with their names, what X (left to right) and Y (bottom to top) control on each, and the manual's playing hint ("Rub slowly", "Tap with snare drum"...). They're filters, wahs, distortions, phasers, flangers, pitch shift, tremolo, delays and tape echoes, reverbs and gate reverbs, ring modulators, 3D pan, vibrato and step effects, and the sample/play programs 51 to 60.
+    - **HOLD:** the effect stays where you last touched, as if your finger were still on the pad.
+    - **The display:** the program number, or, while you touch the pad, where you're touching as 1.1 (bottom left) to 9.9 (top right), 5.5 in the centre. With HOLD on, it shows the held position.
+    - **PROGRAM MAP keys 1 to 6:** press one for its program; hold it for two seconds to store the program you're on there. Stored with HOLD on, it keeps the held position too.
+    - **Sample/play (51 to 60):** press REC to record a phrase (up to 6 seconds), press it again to stop, then touch the pad to play it back. Depending on the program, X sets the loop length, plays it forwards or backwards like a scratch, or stretches it without changing the pitch. Programs 54 to 56 start recording by themselves when sound comes in (AUTO REC); 57 and 58 keep your playing under the phrase. Changing program erases the phrase, as on the original.
+    - **When you let go**, filters, distortion and modulation go straight back to the dry sound. Delays and reverbs stop taking in sound but ring out, so tapping the pad on one note sends only that note into the echo.
+  - **Ranges from Korg's KC KAOSS PAD plugin manual:** the filter sweeps from about 6 Hz to 21.7 kHz, the flanger's delay up to 50 ms, the ring modulator up to 12 kHz, pitch shift ±24 semitones (two octaves each way), the REVERB program's time from 0.2 to 10 seconds, and the LFOs up to 32 Hz.
+  - **Our guesses**, as neither manual says: how every program actually sounds (filter slopes, drive curves, the fixed delay times, reverb sizes, LFO shapes), the level balance between programs, the longest phrase the sampler records, the AUTO REC threshold, and how SPECIAL ECHO (we play the repeats backwards) and STEP MODULATION (random pitch steps) work.
+  - **MIDI:** a MIDI X/Y pad or a hardware Kaoss Pad plays HAVOK on the controllers the original sends: CC 12 for X, CC 13 for Y, CC 92 for touch. Your DAW can also record X, Y and Touch as automation.
+  - **In rigs:** the program, HOLD, the pad's position and the PROGRAM MAP keys are saved with each rig. Touch isn't, because it's where your finger is.
+
 ## 0.55.0
 
 - **CYCLONE: a new rotary speaker, replacing MODULATION's old Rotary type.** It's our own design, inspired by the Neo Instruments Ventilator II, which simulates a model 122 rotary speaker cabinet. MOD and MOD 2 both have it.

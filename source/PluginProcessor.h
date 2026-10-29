@@ -12,6 +12,7 @@
 #include "dsp/effects/Drive.h"
 #include "dsp/effects/FilterPitch.h"
 #include "dsp/effects/GraphicEq.h"
+#include "dsp/effects/Havok.h"
 #include "dsp/effects/LoFi.h"
 #include "dsp/effects/Glitch.h"
 #include "dsp/effects/PitchBlock.h"
@@ -184,6 +185,15 @@ public:
     float getCompGainReductionDb() const noexcept { return compGate.getGainReductionDb(); }
     LevelMeterSource& getOutputMeter() noexcept { return outputMeter; }
 
+    // HAVOK, the touch pad: its REC switch and what its sampler is doing, for the panel.
+    effects::Havok& getHavok() noexcept { return havok; }
+
+    // The MIDI controllers that play HAVOK's pad, as the original sends them:
+    // CC 12 is X, CC 13 is Y, CC 92 is touch (64 and up: touching).
+    static constexpr int havokXCc = 12, havokYCc = 13, havokTouchCc = 92;
+    // Copies a MIDI pad's moves into the parameters now instead of on the next timer tick. For tests.
+    void flushMidiPad() { syncMidiPadToParameters(); }
+
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int numSamples);
     void readHostTempo();
@@ -246,7 +256,8 @@ private:
     effects::Modulation modulation, modulation2;   // MOD, then MOD 2
     effects::Delay delay;
     effects::Reverb reverb;
-    effects::LoFi loFi;   // last: after the reverb
+    effects::LoFi loFi;   // after the reverb
+    effects::Havok havok; // last: the touch pad, after LO-FI
     effects::Glitch glitch;
     effects::PitchBlock pitchBlock;
     effects::TalkBox talkBox;   // FILTER / PITCH's Talk Box type, after the cab   // first: TUNING, OCTAVER and FREEZE, before the wah   // after the EQ (POST), or after FILTER / PITCH (PRE)
@@ -271,6 +282,9 @@ private:
 
     // The last MIDI expression value not yet copied into the expression parameter (-1 = none).
     std::atomic<float> pendingMidiExpression { -1.0f };
+    // The same for HAVOK's pad from MIDI: X, Y and touch (-1 = none).
+    std::array<std::atomic<float>, 3> pendingMidiPad { -1.0f, -1.0f, -1.0f };
+    void syncMidiPadToParameters();
     std::atomic<int> expressionCc { 11 };
     std::atomic<double> tunerReferenceHz { 440.0 };
 

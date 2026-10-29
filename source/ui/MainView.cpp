@@ -128,6 +128,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
       faceplate (processorToShow),
       expressionPanel (processorToShow.getParameters()),
       eqPanel (processorToShow.getParameters()),
+      havokPanel (processorToShow),
       // Each block in the red to pink to orange of the PR7 family's chains, by
       // its place in the chain: red first, orange last.
       signalChain (processorToShow.getParameters(), {
@@ -143,7 +144,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
           { "MOD 2", Icons::Type::modulation, ParagonColours::chainColour (9, numBlocks), ParamIDs::mod2On },
           { "DELAY", Icons::Type::delay, ParagonColours::chainColour (10, numBlocks), ParamIDs::delayOn },
           { "REVERB", Icons::Type::reverb, ParagonColours::chainColour (11, numBlocks), ParamIDs::reverbOn },
-          { "LO-FI", Icons::Type::loFi, ParagonColours::chainColour (12, numBlocks), ParamIDs::lofiOn } }),
+          { "LO-FI", Icons::Type::loFi, ParagonColours::chainColour (12, numBlocks), ParamIDs::lofiOn },
+          { "HAVOK", Icons::Type::havok, ParagonColours::chainColour (13, numBlocks), ParamIDs::havokOn } }),
       rigBrowser (processorToShow),
       settingsPage (processorToShow)
 {
@@ -470,8 +472,9 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     const Icons::Type headers[] = { Icons::Type::pitch, Icons::Type::comp, Icons::Type::filterPitch, Icons::Type::drive,
                                     Icons::Type::amp, Icons::Type::cabinet, Icons::Type::eq, Icons::Type::glitch,
                                     Icons::Type::modulation, Icons::Type::modulation, Icons::Type::delay,
-                                    Icons::Type::reverb, Icons::Type::loFi };
-    const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "MODULATION 2", "DELAY", "REVERB", "LO-FI" };
+                                    Icons::Type::reverb, Icons::Type::loFi, Icons::Type::havok };
+    const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "MODULATION 2", "DELAY", "REVERB", "LO-FI", "HAVOK" };
+    static_assert (std::size (headers) == numBlocks && std::size (titles) == numBlocks);
     for (size_t i = 0; i < panels.size(); ++i)
     {
         if (panels[i] == nullptr)
@@ -481,6 +484,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     }
     eqPanel.setAccent (ParagonColours::chainColour (eqBlock, numBlocks));
     addChildComponent (eqPanel);
+    addChildComponent (havokPanel);
 
     closePanel.setTooltip ("Back to the graphic EQ");
     closePanel.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff151217));
@@ -554,6 +558,7 @@ void MainView::selectBlock (int block)
         if (panels[i] != nullptr)
             panels[i]->setVisible ((int) i == block && rackVisible);
     eqPanel.setVisible (block == eqBlock && rackVisible);
+    havokPanel.setVisible (block == havokBlock && rackVisible);
     closePanel.setVisible (block != eqBlock && rackVisible);
     layoutDock();
 
@@ -573,7 +578,8 @@ void MainView::selectBlock (int block)
         { "MODULATION 2", Icons::Type::modulation, ParamIDs::mod2On, ParamIDs::mod2Type },
         { "DELAY", Icons::Type::delay, ParamIDs::delayOn, ParamIDs::delayType },
         { "REVERB", Icons::Type::reverb, ParamIDs::reverbOn, ParamIDs::reverbType },
-        { "LO-FI", Icons::Type::loFi, ParamIDs::lofiOn, ParamIDs::lofiType } };
+        { "LO-FI", Icons::Type::loFi, ParamIDs::lofiOn, ParamIDs::lofiType },
+        { "HAVOK", Icons::Type::havok, ParamIDs::havokOn, ParamIDs::havokProgram } };
     static_assert (std::size (about) == numBlocks);
     const auto& shown = about[(size_t) juce::jlimit (0, numBlocks - 1, block)];
     const auto unit = [block]
@@ -593,6 +599,7 @@ void MainView::selectBlock (int block)
             case glitchBlock: return Faceplate::Unit::glitch;
             case eqBlock:     return Faceplate::Unit::eq;
             case loFiBlock:   return Faceplate::Unit::loFi;
+            case havokBlock:  return Faceplate::Unit::havok;
             default:          return Faceplate::Unit::other;
         }
     }();
@@ -758,6 +765,11 @@ void MainView::layoutDock()
     eqPanel.setBounds (controls);
     if (eqPanel.isVisible())
         eqPanel.toFront (false);
+
+    // HAVOK: the touch pad in the display and its keys on the face.
+    havokPanel.setAreas (faceplate.getDisplayArea() + faceplate.getPosition(), controls);
+    if (havokPanel.isVisible())
+        havokPanel.toFront (false);
 
     // GRAPHIC EQ (back to the default block): one of the unit's keys, top
     // right over the controls' row of keys.

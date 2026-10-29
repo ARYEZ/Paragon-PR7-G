@@ -20,7 +20,9 @@ namespace Icons
                       // Version 0.24
                       glitch,
                       // Version 0.27
-                      pitch };
+                      pitch,
+                      // Version 0.56
+                      havok };
 
     juce::Path get (Type type);
 
