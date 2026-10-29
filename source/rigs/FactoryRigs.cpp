@@ -34,7 +34,12 @@ namespace
     constexpr float pedalWah = 2;      // the expression pedal's WAH / FILTER setting
     constexpr float glitchKillswitch = 4;
     constexpr int E = 4;               // bank E: rigs inspired by particular songs
-    constexpr float cosmonaut = 2, halo = 3;   // OD / DISTORTION's MODEL
+    constexpr float cosmonaut = 2, halo = 3, abyss = 6;   // OD / DISTORTION's MODEL
+    // HAVOK's scratch programs (61-68, indices 60-67) and sounds, and X for each speed.
+    constexpr float scratchBaby = 60, scratchChirp = 61, scratchTransformer = 62, scratchFlare = 63, scratchTear = 64,
+                    scratchCrab = 65, scratchScribble = 66, scratchManual = 67;
+    constexpr float soundAhh = 0, soundLaser = 1, soundStab = 3;
+    constexpr float rateEighth = 0.5f, rateSixteenth = 0.75f;
     constexpr float digitalDelay = 0;
     constexpr float xpCryWah = 1, xpUpOctave = 12, xpOctDownOctUp = 20, xpUp4thUp5th = 23;   // Whammy-Wah programs 02, 13, 21 and 24
     constexpr float pedalWhammyWah = 6;   // the expression pedal's WHAMMY-WAH setting
@@ -186,6 +191,35 @@ std::vector<Rig> makeFactoryRigs()
             { eqOn, 1 }, { "eq63", -6 }, { "eq125", -4 }, { "eq250", -1 }, { "eq1k", 1 }, { "eq2k", 2 }, { "eq4k", 2 }, { "eq8k", 1 },
             { eqLevel, -0.5f },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.25f }, { reverbMix, 0.1f } }),
+
+        // Nu-metal turntable rigs: a scooped, gated metal distortion and
+        // HAVOK's scratch programs (ours, on our own sounds) in time with
+        // the song. Touch HAVOK's pad, or send MIDI CC 92 from a footswitch,
+        // to bring the scratching in; the PROGRAM MAP keys hold the other moves
+        // (1 BABY, 2 CHIRP, 3 TRANSFORMER, 4 FLARE, 5 TEAR, 6 MANUAL).
+        make ("Nu-Metal Turntable", B, 11, "High Gain,Scratch,Havok", {
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
+            { driveOn, 1 }, { driveModel, abyss }, { driveGain, 6 }, { driveLow, 7 }, { driveMiddle, 3 }, { driveHigh, 6 },
+            { eqOn, 1 }, { "eq63", -3 }, { "eq500", -2 }, { "eq1k", -1 }, { "eq4k", 2 },
+            { havokOn, 1 }, { havokProgram, scratchChirp }, { havokScratchSound, soundAhh }, { havokX, rateSixteenth }, { havokY, 0.7f },
+            { "havokMap1Program", scratchBaby }, { "havokMap2Program", scratchChirp }, { "havokMap3Program", scratchTransformer },
+            { "havokMap4Program", scratchFlare }, { "havokMap5Program", scratchTear }, { "havokMap6Program", scratchManual } }),
+
+        // The tone being cut up by the crossfader: the transformer's stutter.
+        make ("Laser Transformer", B, 12, "High Gain,Scratch,Havok", {
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
+            { driveOn, 1 }, { driveModel, abyss }, { driveGain, 5 }, { driveLow, 6 }, { driveMiddle, 4 }, { driveHigh, 6 },
+            { havokOn, 1 }, { havokProgram, scratchTransformer }, { havokScratchSound, soundLaser }, { havokX, rateEighth }, { havokY, 0.55f },
+            { "havokMap1Program", scratchTransformer }, { "havokMap2Program", scratchCrab }, { "havokMap3Program", scratchFlare },
+            { "havokMap4Program", scratchChirp }, { "havokMap5Program", scratchScribble }, { "havokMap6Program", scratchManual } }),
+
+        // A distorted chord stab scribbled and torn over a heavy rhythm.
+        make ("Stab Scribble", B, 13, "High Gain,Scratch,Havok", {
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
+            { driveOn, 1 }, { driveModel, abyss }, { driveGain, 6 }, { driveLow, 7 }, { driveMiddle, 3 }, { driveHigh, 5 },
+            { havokOn, 1 }, { havokProgram, scratchScribble }, { havokScratchSound, soundStab }, { havokX, rateEighth }, { havokY, 0.6f },
+            { "havokMap1Program", scratchScribble }, { "havokMap2Program", scratchTear }, { "havokMap3Program", scratchBaby },
+            { "havokMap4Program", scratchCrab }, { "havokMap5Program", scratchChirp }, { "havokMap6Program", scratchManual } }),
 
         // Tempo-locked stutters on a crunch, faded in with the pedal: rock
         // forward on a transition or the end of a riff.

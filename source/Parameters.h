@@ -221,6 +221,8 @@ namespace ParamIDs
     // with HOLD on, the held position. `part` is "Program", "Hold", "X" or "Y".
     inline constexpr int havokMapKeys = 6;
     inline juce::String havokMap (int key, const char* part) { return "havokMap" + juce::String (key) + part; }
+    // Version 35: what the scratch programs (61-68) scratch: one of our own sounds.
+    inline constexpr auto havokScratchSound = "havokScratchSound";
 
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real

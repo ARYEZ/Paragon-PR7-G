@@ -338,5 +338,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
         layout.add (makeFloat (ParamIDs::havokMap (key, "X").toRawUTF8(), name + "X", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
         layout.add (makeFloat (ParamIDs::havokMap (key, "Y").toRawUTF8(), name + "Y", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
     }
+    // Added in PR7-G 0.57.0: the scratch programs' sound (the vocal "ahh" to start).
+    layout.add (makeChoice (ParamIDs::havokScratchSound, "Havok Scratch Sound", 35, effects::Havok::scratchSoundNames, 0));
     return layout;
 }

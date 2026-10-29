@@ -449,7 +449,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     };
     havok.process (stereoBlock, { isOn (ParamIDs::havokOn), (int) param (ParamIDs::havokProgram),
                                   padValue (0, ParamIDs::havokX), padValue (1, ParamIDs::havokY),
-                                  padValue (2, ParamIDs::havokTouch) > 0.5f, isOn (ParamIDs::havokHold) });
+                                  padValue (2, ParamIDs::havokTouch) > 0.5f, isOn (ParamIDs::havokHold),
+                                  (int) param (ParamIDs::havokScratchSound), getTempoBpm(), songBeats });
 
     // The master OUTPUT knob plus the rig's own RIG LEVEL, and the
     // expression pedal when it's a VOLUME pedal. Squaring the position gives

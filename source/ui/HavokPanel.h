@@ -58,9 +58,11 @@ private:
     juce::AudioProcessorValueTreeState::SliderAttachment programKnobAttachment;
     juce::ComboBox programList;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> programListAttachment;   // made once the list has its items
+    juce::ComboBox soundList;   // the scratch programs' SOUND, where REC is for the sample programs
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> soundListAttachment;
 
     juce::Rectangle<int> display, controls;            // in this panel's own coordinates
-    juce::Rectangle<float> screenArea, onLabel, holdLabel, mapLabel, knobLabel, infoArea;
+    juce::Rectangle<float> screenArea, onLabel, holdLabel, mapLabel, knobLabel, infoArea, soundLabel;
     mutable std::vector<juce::Rectangle<float>> glasses;
     int shownProgram = -1;
     juce::uint32 programShownSince = 0;   // a program with HOLD shows its number first, then the held position

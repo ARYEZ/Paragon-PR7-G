@@ -2,6 +2,19 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.57.0
+
+- **HAVOK: nu-metal DJ scratching.** Eight new programs after the KP1's 60, our own (the original has no scratch programs), for the aggressive turntable sound of late-90s and early-2000s nu-metal.
+  - **61 to 67, scratch patterns in time with the song:** BABY (back and forth), CHIRP (cut in the middle of each stroke), TRANSFORMER (fast crossfader chops), FLARE (the fader clicked shut mid-stroke), TEAR (out in one move, back in two), CRAB (quick finger taps on the fader) and SCRIBBLE (tense, tiny, fast wiggles). Touch the pad, or send MIDI CC 92 from a footswitch, and the DJ joins in.
+    - **X:** how fast, one back-and-forth every 1/2, 1/4, 1/8, 1/16 or 1/32 note at your DAW's (or the tapped) tempo. While the DAW plays, the moves land on the song's grid. The display shows the rate.
+    - **Y:** how loud the scratching is.
+  - **68 SCRATCH MANUAL, played by hand:** the record follows your hand across the pad, with a platter's little lag (modelled on the "Vinyl Break" scratch in Korg's KC KAOSS PAD manual). Your hand grabs the record where it is, as a hand on a real record does. Y is the crossfader: low on the pad cuts the sound.
+  - **SOUND, what's on the record:** AHH (a shouted vocal "ah"), LASER (a tone, the classic sound to scratch), NOISE (a breathy burst) and STAB (a distorted power chord). These are our own synthesized sounds, matched in level. They aren't samples from real records, which are other people's recordings.
+  - Your playing passes underneath, untouched; the scratching sits on top.
+  - **Three factory rigs** with a scooped, gated metal distortion (Abyss) and the scratching ready on HAVOK: **Nu-Metal Turntable** (B11, CHIRP on the vocal), **Laser Transformer** (B12) and **Stab Scribble** (B13). Their PROGRAM MAP keys hold the other moves.
+  - **Our design throughout:** the patterns, the sounds, the stroke length and the lag. They're our versions of the classic scratch moves, not copies of any DJ's playing.
+- HAVOK's program list is now 68 long. Programs 1 to 60 are unchanged, so saved rigs and projects keep theirs.
+
 ## 0.56.0
 
 - **HAVOK: a new X/Y touch pad effect, the last block in the chain.** It's our own design, inspired by the original Korg Kaoss Pad (the KP1). Play it by clicking and dragging on the pad in the rack's display: the effect sounds while you touch the pad, and stops when you let go.
