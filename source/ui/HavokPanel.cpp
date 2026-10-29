@@ -191,6 +191,16 @@ HavokPanel::HavokPanel (ParagonX1AudioProcessor& processorToUse)
     programListAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (parameters, ParamIDs::havokProgram, programList);
     addAndMakeVisible (programList);
 
+    // SOUND, for the scratch programs (61-68): what's on the record.
+    soundList.setColour (juce::ComboBox::backgroundColourId, juce::Colours::transparentBlack);
+    soundList.setColour (juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
+    soundList.setColour (juce::ComboBox::textColourId, orange);
+    soundList.setColour (juce::ComboBox::arrowColourId, orange.withAlpha (0.6f));
+    soundList.setTooltip ("SOUND: what the scratch programs scratch (our own sounds)");
+    soundList.addItemList (effects::Havok::scratchSoundNames, 1);
+    soundListAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (parameters, ParamIDs::havokScratchSound, soundList);
+    addChildComponent (soundList);
+
     startTimerHz (30);
 }
 
@@ -304,6 +314,7 @@ void HavokPanel::timerCallback()
         shownProgram = program();
         programShownSince = juce::Time::getMillisecondCounter();
         recKey.setVisible (effects::Havok::isSampler (shownProgram));
+        soundList.setVisible (effects::Havok::isScratch (shownProgram));
     }
 
     // REC's light: blinking while it waits (for REC, or for sound with AUTO
@@ -321,7 +332,8 @@ void HavokPanel::timerCallback()
 
 void HavokPanel::resized()
 {
-    recKey.setVisible (effects::Havok::isSampler (program()));   // REC belongs to programs 51-60
+    recKey.setVisible (effects::Havok::isSampler (program()));     // REC belongs to programs 51-60
+    soundList.setVisible (effects::Havok::isScratch (program()));  // SOUND to 61-68
     if (display.isEmpty())
         return;
 
@@ -342,7 +354,12 @@ void HavokPanel::resized()
     holdLabel = keys.removeFromLeft (44).toFloat();
     holdKey.setBounds (keys.removeFromLeft (48).withSizeKeepingCentre (44, 24));
     keys.removeFromLeft (26);
+    const auto recPlace = keys;
     recKey.setBounds (keys.removeFromLeft (64));
+    auto soundPlace = recPlace;
+    soundLabel = soundPlace.removeFromLeft (52).toFloat();
+    soundPlace.removeFromLeft (10);
+    soundList.setBounds (soundPlace.removeFromLeft (180).reduced (0, 1));
 
     area.removeFromTop (14);
     auto mapRow = area.removeFromTop (24);
@@ -410,7 +427,10 @@ void HavokPanel::paint (juce::Graphics& g)
         g.drawFittedText (s, inside.removeFromTop (height + 3.0f).toNearestInt(), juce::Justification::centredLeft, 1, 0.7f);
     };
     line (juce::String (prog + 1) + " " + info.name, 1.0f, 12.0f);
-    line ("X  " + juce::String (info.x), 0.75f, 10.0f);
+    // The scratch programs' X shows the speed it's set to.
+    line ("X  " + (effects::Havok::isScratch (prog) && prog != effects::Havok::numPrograms - 1
+                       ? "RATE " + effects::Havok::scratchDivisionNames[effects::Havok::scratchDivision (raw (ParamIDs::havokX))]
+                       : juce::String (info.x)), 0.75f, 10.0f);
     line ("Y  " + juce::String (info.y), 0.75f, 10.0f);
     if (effects::Havok::isSampler (prog))
     {
@@ -430,13 +450,21 @@ void HavokPanel::paint (juce::Graphics& g)
     stamped (g, "PROGRAM MAP", mapLabel, 9.0f);
     stamped (g, "PROGRAM", knobLabel, 9.0f, juce::Justification::centred);
     glasses.push_back (LedDisplay::paintScreen (g, programList.getBounds().toFloat().expanded (2.0f, 3.0f), 0.35f));
+    if (soundList.isVisible())
+    {
+        stamped (g, "SOUND", soundLabel, 9.0f, juce::Justification::centredRight);
+        glasses.push_back (LedDisplay::paintScreen (g, soundList.getBounds().toFloat().expanded (2.0f, 3.0f), 0.35f));
+    }
 
     auto hints = infoArea;
     g.setColour (Finish::printedRed());
     g.setFont (font (10.0f));
     g.drawText (juce::String (info.hint).toUpperCase(), hints.removeFromTop (14.0f), juce::Justification::centredLeft, false);
     g.setFont (font (8.5f));
-    g.drawText ("TOUCH THE PAD TO PLAY  /  HOLD A MAP KEY 2 S TO STORE", hints.removeFromTop (14.0f), juce::Justification::centredLeft, false);
+    g.drawText (effects::Havok::isScratch (prog) && prog != effects::Havok::numPrograms - 1
+                    ? "TOUCH THE PAD (OR MIDI CC 92) TO SCRATCH, IN TIME WITH THE SONG  /  HOLD A MAP KEY 2 S TO STORE"
+                    : "TOUCH THE PAD TO PLAY  /  HOLD A MAP KEY 2 S TO STORE",
+                hints.removeFromTop (14.0f), juce::Justification::centredLeft, false);
 }
 
 void HavokPanel::paintOverChildren (juce::Graphics& g)

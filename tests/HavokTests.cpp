@@ -121,7 +121,7 @@ namespace
 TEST_CASE ("HAVOK has the manual's 60 programs, with what X and Y do on each", "[havok]")
 {
     const auto& programs = Havok::programs();
-    REQUIRE (programs.size() == 60);
+    REQUIRE (programs.size() == 68);   // the KP1's 60, then our 8 scratch programs
     CHECK (juce::String (programs[0].name) == "LOW PASS FILTER");
     CHECK (juce::String (programs[0].y) == "DI/FX BALANCE, RESONANCE");
     CHECK (juce::String (programs[17].name) == "PITCH SHIFT");
@@ -131,10 +131,13 @@ TEST_CASE ("HAVOK has the manual's 60 programs, with what X and Y do on each", "
     CHECK (juce::String (programs[59].name) == "SAMPLE/PLAY2+PAN");
     CHECK (Havok::programNames()[0] == "1 LOW PASS FILTER");
     CHECK (Havok::programNames()[59] == "60 SAMPLE/PLAY2+PAN");
-    for (int p = 0; p < 60; ++p)
+    CHECK (Havok::programNames()[60] == "61 SCRATCH BABY");
+    CHECK (Havok::programNames()[67] == "68 SCRATCH MANUAL");
+    for (int p = 0; p < Havok::numPrograms; ++p)
     {
         CAPTURE (p);
-        CHECK (Havok::isSampler (p) == (p >= 50));
+        CHECK (Havok::isSampler (p) == (p >= 50 && p < 60));
+        CHECK (Havok::isScratch (p) == (p >= 60));
         CHECK (juce::String (programs[(size_t) p].hint).isNotEmpty());
     }
 }
@@ -376,7 +379,7 @@ TEST_CASE ("HAVOK: every program runs cleanly, touched or held, and switching pr
 {
     Bench bench (0);
     juce::Random noise (3);
-    for (int p = 0; p < 60; ++p)
+    for (int p = 0; p < Havok::numPrograms; ++p)
     {
         CAPTURE (p);
         bench.settings.program = p;
@@ -515,10 +518,207 @@ TEST_CASE ("HAVOK's panel: the pad plays, the display reads 1.1 to 9.9, PROGRAM 
     CHECK (raw (ParamIDs::havokHold) > 0.5f);
     CHECK_THAT (raw (ParamIDs::havokX), WithinAbs (0.3, 0.02));
 
+    // The scratch programs show SOUND in REC's place.
+    std::vector<juce::ComboBox*> lists;
+    findAll (panel, lists);
+    const auto soundShowing = [&]
+    {
+        for (auto* list : lists)
+            if (list->isVisible() && list->getText() == Havok::scratchSoundNames[0])
+                return true;
+        return false;
+    };
+    set (processor, ParamIDs::havokProgram, 5.0f);
+    panel.resized();
+    CHECK_FALSE (soundShowing());
+    set (processor, ParamIDs::havokProgram, 61.0f);
+    panel.resized();
+    CHECK (soundShowing());
+
     // Every program draws.
-    for (int p = 0; p < 60; ++p)
+    for (int p = 0; p < Havok::numPrograms; ++p)
     {
         set (processor, ParamIDs::havokProgram, (float) p);
         CHECK (panel.createComponentSnapshot (panel.getLocalBounds()).isValid());
     }
+}
+
+namespace
+{
+    // How many separate bursts of sound in a signal: sound (over -40 dB, in
+    // 1 ms steps) with at least 8 ms of silence between (a record moving
+    // slowly at the start of a stroke dips for a moment; that's not a cut).
+    int bursts (const std::vector<float>& signal, size_t from = 0)
+    {
+        int count = 0, quiet = 100;
+        for (auto at = from; at + 48 <= signal.size(); at += 48)
+        {
+            if (rms (signal, at, at + 48) > 0.01f)
+            {
+                if (quiet >= 8)
+                    ++count;
+                quiet = 0;
+            }
+            else
+            {
+                ++quiet;
+            }
+        }
+        return count;
+    }
+}
+
+TEST_CASE ("HAVOK scratch: silent until touched, then scratching our own sounds over the playing", "[havok][scratch]")
+{
+    for (int sound = 0; sound < Havok::scratchSoundNames.size(); ++sound)
+    {
+        CAPTURE (sound);
+        Bench bench (Havok::firstScratch);   // 61 SCRATCH BABY
+        bench.settings.scratchSound = sound;
+        CHECK (rms (bench.silence (0.3f).first) < 1.0e-5f);
+        bench.touch (0.25f, 1.0f);   // a back-and-forth every quarter note
+        const auto scratching = bench.silence (1.0f).first;
+        CHECK (rms (scratching) > 0.05f);
+        bench.release();
+        bench.silence (0.05f);
+        CHECK (rms (bench.silence (0.3f).first) < 1.0e-4f);
+    }
+
+    // Y is the level; your playing passes underneath, untouched.
+    Bench quiet (Havok::firstScratch), loud (Havok::firstScratch);
+    quiet.touch (0.25f, 0.25f);
+    loud.touch (0.25f, 1.0f);
+    CHECK_THAT (db (rms (loud.silence (1.0f).first)) - db (rms (quiet.silence (1.0f).first)), WithinAbs (12.0, 0.5));
+    Bench playing (Havok::firstScratch);
+    const auto dry = playing.sine (0.3f, 220.0f);
+    CHECK_THAT (db (rms (dry.first, 2400)), WithinAbs (db (0.25f / std::sqrt (2.0f)), 0.1));
+}
+
+TEST_CASE ("HAVOK scratch: the crossfader cuts, in time with the song", "[havok][scratch]")
+{
+    // At 120 BPM, CHIRP cuts every stroke: two bursts per back-and-forth.
+    const auto chirps = [] (float x)
+    {
+        Bench bench (Havok::firstScratch + 1);   // 62 SCRATCH CHIRP
+        bench.settings.scratchSound = 1;         // the tone, so every burst is clear
+        bench.settings.bpm = 120.0;
+        bench.touch (x, 1.0f);
+        return bursts (bench.silence (2.0f).first);
+    };
+    CHECK (std::abs (chirps (0.25f) - 8) <= 1);    // a quarter note per cycle: 4 strokes a second
+    CHECK (std::abs (chirps (0.75f) - 32) <= 2);   // 1/16: four times as many
+
+    // TRANSFORMER chops far more than BABY does.
+    const auto chops = [] (int program)
+    {
+        Bench bench (program);
+        bench.settings.scratchSound = 1;
+        bench.touch (0.25f, 1.0f);
+        return bursts (bench.silence (2.0f).first);
+    };
+    CHECK (chops (Havok::firstScratch + 2) > 3 * chops (Havok::firstScratch));
+
+    // On the song's grid while the DAW plays: the same place in the song sounds the same, whenever you touch.
+    const auto fromBeat = [] (double beat)
+    {
+        Bench bench (Havok::firstScratch + 1);
+        bench.settings.scratchSound = 1;
+        bench.touch (0.25f, 1.0f);
+        bench.settings.songBeats = beat;
+        bench.buffer.clear();
+        bench.havok.process (juce::dsp::AudioBlock<float> (bench.buffer), bench.settings);
+        bench.buffer.clear();
+        bench.settings.songBeats = beat + 2.0;   // two beats later, the same place in the bar
+        bench.havok.process (juce::dsp::AudioBlock<float> (bench.buffer), bench.settings);
+        return std::vector<float> (bench.buffer.getReadPointer (0) + 240, bench.buffer.getReadPointer (0) + blockSize);
+    };
+    const auto a = fromBeat (0.0), b = fromBeat (4.0);
+    float difference = 0.0f;
+    for (size_t i = 0; i < a.size(); ++i)
+        difference = juce::jmax (difference, std::abs (a[i] - b[i]));
+    CHECK (difference < 0.02f);
+}
+
+TEST_CASE ("HAVOK scratch MANUAL: the record follows the hand; Y is the crossfader", "[havok][scratch]")
+{
+    Bench bench (Havok::numPrograms - 1);   // 68 SCRATCH MANUAL
+    bench.settings.scratchSound = 1;
+    // A hand landing on the record grabs it where it is: no sound until it moves.
+    bench.touch (0.3f, 1.0f);
+    CHECK (rms (bench.silence (0.2f).first) < 1.0e-3f);
+    // Rubbing: the record moves, and sounds.
+    const auto rub = [&] (float y)
+    {
+        std::vector<float> out;
+        for (int step = 0; step < 40; ++step)
+        {
+            bench.touch (step % 2 == 0 ? 0.2f : 0.5f, y);
+            const auto part = bench.silence (0.05f).first;
+            out.insert (out.end(), part.begin(), part.end());
+        }
+        return out;
+    };
+    CHECK (rms (rub (1.0f)) > 0.05f);
+    // The crossfader closed (Y low): rubbing is silent (once the last sound has gone, a few ms).
+    bench.touch (0.5f, 0.1f);
+    bench.silence (0.02f);
+    CHECK (rms (rub (0.1f)) < 1.0e-3f);
+}
+
+// Writes listening clips (PARAGON_SCRATCH_WAVS=folder): each sound through
+// the seven moves, two bars each at 95 BPM, over a plain kick and snare.
+TEST_CASE ("HAVOK scratch clips", "[.scratchclips]")
+{
+    const auto folder = juce::File (juce::SystemStats::getEnvironmentVariable ("PARAGON_SCRATCH_WAVS", "."));
+    constexpr double bpm = 95.0;
+    const auto samplesPerBeat = rate * 60.0 / bpm;
+    const char* moves[] = { "BABY", "CHIRP", "TRANSFORMER", "FLARE", "TEAR", "CRAB", "SCRIBBLE" };
+    const char* files[] = { "ahh", "laser", "noise", "stab" };
+    for (int sound = 0; sound < 4; ++sound)
+    {
+        juce::AudioBuffer<float> clip (2, (int) (samplesPerBeat * 8 * 7));
+        clip.clear();
+        juce::Random noise (9);
+        // The beat: kick on 1 and 3, snare on 2 and 4.
+        for (int n = 0; n < clip.getNumSamples(); ++n)
+        {
+            const auto beat = n / samplesPerBeat;
+            const auto inBeat = (beat - std::floor (beat)) * samplesPerBeat / rate;   // seconds since the beat
+            const auto kick = ((int) beat % 2 == 0) ? 0.6f * (float) std::sin (twoPi * (50.0 + 90.0 * std::exp (-inBeat * 30.0)) * inBeat) * (float) std::exp (-inBeat * 9.0) : 0.0f;
+            const auto snare = ((int) beat % 2 == 1) ? (0.3f * (noise.nextFloat() * 2.0f - 1.0f) + 0.2f * (float) std::sin (twoPi * 190.0 * inBeat)) * (float) std::exp (-inBeat * 14.0) : 0.0f;
+            clip.setSample (0, n, kick + snare);
+            clip.setSample (1, n, kick + snare);
+        }
+        Havok havok;
+        havok.prepare (rate, blockSize);
+        Havok::Settings settings;
+        settings.on = true;
+        settings.scratchSound = sound;
+        settings.bpm = bpm;
+        settings.touch = true;
+        settings.x = 0.5f;   // a back-and-forth every eighth note
+        settings.y = 0.8f;
+        juce::AudioBuffer<float> block (2, blockSize);
+        for (int start = 0; start + blockSize <= clip.getNumSamples(); start += blockSize)
+        {
+            const auto beat = start / samplesPerBeat;
+            settings.program = Havok::firstScratch + juce::jmin (6, (int) (beat / 8.0));
+            settings.songBeats = beat;
+            for (int c = 0; c < 2; ++c)
+                block.copyFrom (c, 0, clip, c, start, blockSize);
+            havok.process (juce::dsp::AudioBlock<float> (block), settings);
+            for (int c = 0; c < 2; ++c)
+                clip.copyFrom (c, start, block, c, 0, blockSize);
+        }
+        clip.applyGain (0.7f);
+        const auto file = folder.getChildFile (juce::String ("havok-scratch-") + files[sound] + ".wav");
+        file.deleteFile();
+        std::unique_ptr<juce::OutputStream> stream (file.createOutputStream().release());
+        REQUIRE (stream != nullptr);
+        std::unique_ptr<juce::AudioFormatWriter> writer (juce::WavAudioFormat().createWriterFor (stream.get(), rate, 2, 16, {}, 0));
+        REQUIRE (writer != nullptr);
+        stream.release();
+        writer->writeFromAudioSampleBuffer (clip, 0, clip.getNumSamples());
+    }
+    juce::ignoreUnused (moves);
 }

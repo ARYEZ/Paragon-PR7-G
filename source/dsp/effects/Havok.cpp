@@ -279,7 +279,16 @@ namespace effects
                 { "SAMPLE/PLAY1 (DIRECT MIX)", "LOOP TIME", "FX LEVEL", "Tap for playback" },
                 { "SAMPLE/PLAY2 (DIRECT MIX)", "FORWARD/REVERSE", "FX LEVEL", "Rub like scratch" },
                 { "SAMPLE/PLAY1+PAN", "PAN", "LOOP TIME", "Tap (L <-> R)" },
-                { "SAMPLE/PLAY2+PAN", "PAN", "FORWARD/REVERSE", "Tap (L <-> R)" } }};
+                { "SAMPLE/PLAY2+PAN", "PAN", "FORWARD/REVERSE", "Tap (L <-> R)" },
+                // Ours, not the KP1's: nu-metal scratching on our own sounds.
+                { "SCRATCH BABY", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH CHIRP", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH TRANSFORMER", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH FLARE", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH TEAR", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH CRAB", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH SCRIBBLE", "RATE (1/2 - 1/32)", "FX LEVEL", "Touch on the beat" },
+                { "SCRATCH MANUAL", "RECORD (HAND)", "CROSSFADER", "Rub like scratch, low Y cuts" } }};
         };
     }
 
@@ -339,6 +348,13 @@ namespace effects
         double playHead = 0.0, grainAnchor = 0.0;
         float scratchRate = 0.0f, grainPhase = 0.0f;
 
+        // The scratch programs: four "records" of our own sounds (made in
+        // prepare), the hand's place on the record and the crossfader.
+        std::vector<float> records[4];
+        double recordPosition = 0.0, scratchBeats = 0.0, manualAnchor = 0.0, manualTarget = 0.0;
+        float faderGain = 0.0f, faderStep = 0.01f, handLagAuto = 0.1f, handLagManual = 0.01f;
+        Svf scratchDcCut;   // a record standing still under the needle is silent
+
         void prepare (double rate, int)
         {
             sampleRate = rate;
@@ -356,6 +372,11 @@ namespace effects
                 s.prepare (rate);
             for (auto& p : phrase)
                 p.assign ((size_t) (maxRecordSeconds * rate) + 1, 0.0f);
+            makeRecords();
+            faderStep = 1.0f / (0.0007f * (float) rate);                       // a crossfader cut: sharp, without a click
+            handLagAuto = 1.0f - std::exp (-1.0f / (0.0015f * (float) rate));
+            handLagManual = 1.0f - std::exp (-1.0f / (0.012f * (float) rate)); // a platter's lag under the hand (ours)
+            scratchDcCut.set (40.0f, 0.7f, rate);
             gateHoldSamples = 0.0f;
             clear();
         }
@@ -377,6 +398,10 @@ namespace effects
             lfo = lfo2 = ring = stepValue = 0.0f;
             gateFollower = gateOpen = gateHold = 0.0f;
             reverseCounter = 0;
+            recordPosition = manualTarget = cueSamples();
+            scratchBeats = 0.0;
+            faderGain = 0.0f;
+            scratchDcCut.clear();
         }
 
         void erasePhrase() noexcept
@@ -515,6 +540,188 @@ namespace effects
                 case 49: rateHz = lfoSpeed (x); steps = 8.0f; level = y; feedback = 0.5f; break;
                 default: break;   // the sampler reads the pad directly
             }
+        }
+
+        //======================================================================
+        // The scratch programs (61-68, ours). Each "record" holds silence,
+        // then the sound from its cue point on, as a DJ marks a sample.
+        static constexpr double recordSeconds = 2.0, cueSeconds = 0.15, strokeSeconds = 0.3;
+        double cueSamples() const noexcept { return cueSeconds * sampleRate; }
+
+        void makeRecords()
+        {
+            const auto length = (int) (recordSeconds * sampleRate);
+            const auto sr = (float) sampleRate;
+            const auto cue = (int) cueSamples();
+            juce::Random noise (61);
+            for (auto& record : records)
+                record.assign ((size_t) length, 0.0f);
+
+            // A band-limited saw (polyBLEP), for the voice and the chord.
+            const auto saw = [] (float& phase, float increment)
+            {
+                phase += increment;
+                if (phase >= 1.0f) phase -= 1.0f;
+                auto value = 2.0f * phase - 1.0f;
+                if (phase < increment)               { const auto t = phase / increment; value -= t + t - t * t - 1.0f; }
+                else if (phase > 1.0f - increment)   { const auto t = (phase - 1.0f) / increment; value -= t * t + t + t + 1.0f; }
+                return value;
+            };
+            const auto envelope = [sr] (int n, float attack, float decay)
+            {
+                const auto t = (float) n / sr;
+                return juce::jmin (1.0f, t / attack) * std::exp (-t / decay);
+            };
+
+            // AHH: a shouted "ah" (a voice at about 200 Hz through the "a" formants).
+            {
+                Svf formants[3];
+                const float hz[] = { 730.0f, 1090.0f, 2440.0f }, gains[] = { 1.0f, 0.6f, 0.3f };
+                for (int f = 0; f < 3; ++f) formants[f].set (hz[f], 7.0f, sampleRate);
+                float phase = 0.0f;
+                for (int n = 0; n + cue < length; ++n)
+                {
+                    const auto t = (float) n / sr;
+                    const auto pitch = 200.0f * (1.0f + 0.012f * std::sin (2.0f * pi * 5.5f * t));
+                    const auto source = saw (phase, pitch / sr) + 0.08f * (noise.nextFloat() * 2.0f - 1.0f);
+                    float voice = 0.0f;
+                    for (int f = 0; f < 3; ++f) voice += gains[f] * formants[f].run (source).band;
+                    records[0][(size_t) (n + cue)] = voice * envelope (n, 0.012f, 0.9f) * (t < 1.2f ? 1.0f : juce::jmax (0.0f, 1.0f - (t - 1.2f) / 0.1f));
+                }
+            }
+            // LASER: a steady tone, the classic sound to scratch (900 Hz, a little edge).
+            for (int n = 0; n + cue < length; ++n)
+            {
+                const auto t = (float) n / sr;
+                records[1][(size_t) (n + cue)] = (std::sin (2.0f * pi * 900.0f * t) + 0.12f * std::sin (2.0f * pi * 2700.0f * t))
+                                                 * juce::jmin (1.0f, t / 0.002f);
+            }
+            // NOISE: a breathy burst, brightest in the middle.
+            {
+                Svf band;
+                band.set (2200.0f, 0.8f, sampleRate);
+                for (int n = 0; n + cue < length; ++n)
+                    records[2][(size_t) (n + cue)] = band.run (noise.nextFloat() * 2.0f - 1.0f).band * envelope (n, 0.002f, 0.7f);
+            }
+            // STAB: a distorted low E power chord, hit hard.
+            {
+                Svf tone;
+                tone.set (3500.0f, 0.7f, sampleRate);
+                float phases[3] {};
+                const float hz[] = { 82.41f, 123.47f, 164.81f };
+                for (int n = 0; n + cue < length; ++n)
+                {
+                    float chord = 0.0f;
+                    for (int k = 0; k < 3; ++k) chord += saw (phases[k], hz[k] / sr);
+                    records[3][(size_t) (n + cue)] = tone.run (std::tanh (2.5f * chord)).low * envelope (n, 0.003f, 0.6f);
+                }
+            }
+            // Each as loud as the others (by its average over the first 0.4 s
+            // after the cue, so a steady tone isn't louder than a voice),
+            // never peaking over 0.9.
+            for (auto& record : records)
+            {
+                double sum = 0.0;
+                const auto span = (int) (0.4 * sampleRate);
+                for (int n = cue; n < cue + span; ++n)
+                    sum += (double) record[(size_t) n] * record[(size_t) n];
+                const auto average = (float) std::sqrt (sum / span);
+                const auto range = juce::FloatVectorOperations::findMinAndMax (record.data(), (int) record.size());
+                const auto peak = juce::jmax (-range.getStart(), range.getEnd(), 1.0e-6f);
+                const auto gain = juce::jmin (0.22f / juce::jmax (average, 1.0e-6f), 0.9f / peak);
+                juce::FloatVectorOperations::multiply (record.data(), gain, (int) record.size());
+            }
+        }
+
+        float readRecord (int sound, double position) const noexcept
+        {
+            const auto& record = records[(size_t) juce::jlimit (0, 3, sound)];
+            const auto last = (double) record.size() - 3.0;
+            position = juce::jlimit (1.0, last, position);
+            const auto i = (int) position;
+            const auto t = (float) (position - i);
+            const auto ym1 = record[(size_t) i - 1], y0 = record[(size_t) i], y1 = record[(size_t) i + 1], y2 = record[(size_t) i + 2];
+            const auto c1 = 0.5f * (y1 - ym1);
+            const auto c2 = ym1 - 2.5f * y0 + 2.0f * y1 - 0.5f * y2;
+            const auto c3 = 0.5f * (y2 - ym1) + 1.5f * (y0 - y1);
+            return ((c3 * t + c2) * t + c1) * t + y0;
+        }
+
+        // The patterns: over one back-and-forth (phase 0 to 1), where the
+        // hand has the record (0 at the cue, 1 a stroke on) and whether the
+        // crossfader is open. Our versions of the classic moves.
+        static void pattern (int move, double phase, float& stroke, bool& open) noexcept
+        {
+            const auto smooth = [] (double t) { return (float) (0.5 - 0.5 * std::cos (juce::MathConstants<double>::pi * juce::jlimit (0.0, 1.0, t))); };
+            const auto half = std::fmod (phase * 2.0, 1.0);   // where in this stroke (forward or back)
+            const auto baby = phase < 0.5 ? smooth (phase * 2.0) : smooth (2.0 - phase * 2.0);
+            stroke = baby;
+            open = true;
+            switch (move)
+            {
+                case 0: break;                                                   // BABY: back and forth, fader open
+                case 1: open = half < 0.5; break;                                // CHIRP: each stroke's start, cut in its middle
+                case 2: open = std::fmod (phase * 8.0, 1.0) < 0.45; break;       // TRANSFORMER: eight fast cuts over the stroke
+                case 3: open = half < 0.42 || half > 0.58; break;                // FLARE: open, clicked shut mid-stroke
+                case 4:                                                          // TEAR: out in one, back in two jerks
+                    stroke = phase < 0.4 ? smooth (phase / 0.4)
+                           : phase < 0.6 ? 1.0f - 0.5f * smooth ((phase - 0.4) / 0.2)
+                           : phase < 0.7 ? 0.5f
+                                         : 0.5f - 0.5f * smooth ((phase - 0.7) / 0.3);
+                    break;
+                case 5: open = half < 0.7 && std::fmod (half * 8.0, 1.0) < 0.5; break;   // CRAB: four fingers' quick taps each stroke
+                case 6:                                                          // SCRIBBLE: tense, tiny, fast wiggles riding a slow push
+                    stroke = 0.35f * smooth (phase < 0.5 ? phase * 2.0 : 2.0 - phase * 2.0)
+                           + 0.08f * (float) std::sin (juce::MathConstants<double>::twoPi * phase * 8.0);
+                    break;
+                default: break;
+            }
+        }
+
+        // One sample of a scratch program: your playing passes, the scratch on top.
+        void scratch (int p, const Settings& settings, double beatsPerSample, int i, bool active, float inL, float inR,
+                      float& outL, float& outR) noexcept
+        {
+            const auto move = p - firstScratch;
+            const auto manual = move == 7;
+            const auto stroke = strokeSeconds * sampleRate;
+            float target = 0.0f;
+            bool open = false;
+            if (manual)
+            {
+                // The hand grabs the record where it is and moves it: across the
+                // whole pad is a second of record. Y is the crossfader, at once
+                // (the unsmoothed pad, as a fader is quick).
+                if (active && ! wasActive)
+                    manualAnchor = recordPosition - (double) settings.x * sampleRate;
+                if (active)
+                    manualTarget = juce::jlimit (cueSamples() * 0.5, recordSeconds * sampleRate - 4.0, manualAnchor + (double) settings.x * sampleRate);
+                open = active && settings.y > 0.3f;
+                recordPosition += (manualTarget - recordPosition) * handLagManual;
+            }
+            else
+            {
+                // In time with the song: on its grid while the DAW plays, else from the touch.
+                static constexpr double cycleBeats[] = { 2.0, 1.0, 0.5, 0.25, 0.125 };
+                auto cycle = cycleBeats[scratchDivision (x)];
+                if (move == 2)
+                    cycle *= 2.0;   // the transformer's hand moves slowly under its fast cuts
+                if (active && ! wasActive && settings.songBeats < 0.0)
+                    scratchBeats = 0.0;
+                const auto beats = settings.songBeats >= 0.0 ? settings.songBeats + beatsPerSample * i : scratchBeats;
+                scratchBeats += beatsPerSample;
+                float shape = 0.0f;
+                pattern (move, std::fmod (beats / cycle, 1.0), shape, open);
+                open = open && active;
+                target = (float) (cueSamples() + shape * stroke);
+                recordPosition += ((double) target - recordPosition) * handLagAuto;
+            }
+            faderGain = open ? juce::jmin (1.0f, faderGain + faderStep) : juce::jmax (0.0f, faderGain - faderStep);
+            const auto sound = scratchDcCut.run (readRecord (settings.scratchSound, recordPosition)).high;
+            const auto level = manual ? 1.0f : y;
+            const auto wet = sound * faderGain * level;
+            outL = inL + wet;
+            outR = inR + wet;
         }
 
         static float panLeft (float p) noexcept { return std::cos (0.5f * pi * p) * 1.4142f; }
@@ -992,6 +1199,7 @@ namespace effects
             auto* left = wet.getChannelPointer (0);
             auto* right = wet.getNumChannels() > 1 ? wet.getChannelPointer (1) : left;
             const auto active = settings.touch || settings.hold;
+            const auto beatsPerSample = juce::jmax (1.0, settings.bpm) / 60.0 / e.sampleRate;
 
             for (int n = 0; n < newPresses && isSampler (e.current) && wanted == e.current; ++n)
             {
@@ -1035,7 +1243,7 @@ namespace effects
                 {
                     e.x += (settings.x - e.x) * e.smoothing;
                     e.y += (settings.y - e.y) * e.smoothing;
-                    if (! isSampler (e.current))
+                    if (! isSampler (e.current) && ! isScratch (e.current))
                         e.control (e.current);
                 }
                 const auto target = active ? 1.0f : 0.0f;
@@ -1043,7 +1251,9 @@ namespace effects
 
                 const auto inL = left[i], inR = right[i];
                 float outL = inL, outR = inR;
-                if (isSampler (e.current))
+                if (isScratch (e.current))
+                    e.scratch (e.current, settings, beatsPerSample, i, active, inL, inR, outL, outR);
+                else if (isSampler (e.current))
                     e.sampler (e.current, e.gate, active, inL, inR, outL, outR);
                 else
                     e.runEffect (e.current, e.gate, inL, inR, outL, outR);
