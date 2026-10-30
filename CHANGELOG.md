@@ -2,6 +2,18 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.58.0
+
+- **HAVOK's scratching: more stabs, and the factory rigs on them.** STAB, the distorted chord, scratches best: its hard front edge is what the crossfader cuts bite on.
+  - **Four new sounds** in the scratch programs' SOUND list (added at the end, so your saved rigs keep theirs):
+    - **STAB (DROP D):** a D power chord, as in drop-D tuning.
+    - **STAB (LOW B):** a B power chord, tuned right down like a 7-string or a low-tuned guitar.
+    - **STAB (SHORT):** shorter, brighter and punchier.
+    - **GRIT (LOW NOTE):** one low D and its octave, driven harder.
+  - All eight sounds are matched in level, so switching sound doesn't jump the volume.
+  - **The nu-metal factory rigs now scratch stabs:** **B11 Nu-Metal Turntable** has CHIRP on STAB (CHORD), and B12, now **Stab Transformer** (it was Laser Transformer), has TRANSFORMER on STAB (DROP D). **B13 Stab Scribble** stays on STAB (CHORD). Projects and favourites saved with Laser Transformer find it under its new name.
+  - Like the first four sounds, these are our own synthesized sounds, not samples from real records.
+
 ## 0.57.0
 
 - **HAVOK: nu-metal DJ scratching.** Eight new programs after the KP1's 60, our own (the original has no scratch programs), for the aggressive turntable sound of late-90s and early-2000s nu-metal.
