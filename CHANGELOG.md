@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.58.2
+
+- **The screens' shadows look as they did before 0.58.1.** 0.58.1's CPU fix keeps each screen's soft drop shadow as a saved picture instead of working it out every time. In a few places that saved picture came out fainter, so the thin dark line under the screen's metal frame was up to a fifth lighter: under the AMP screen, and under the small LEVEL readouts. There were two causes:
+  - **It was saved at double size and shrunk to fit**, which softened its edge. It's now made exactly the way the drawing toolkit (JUCE) makes a shadow, so it comes out the same.
+  - **The drawing toolkit draws a saved picture at the strength of the last colour used.** The faceplate draws its half-transparent INPUT meter just before the AMP screen, so the shadow came out faded. It's now always drawn at full strength.
+- **Checked pixel by pixel against 0.58.0:** every block's panel (all 14), in all three finishes, matches to within 2 parts in 255, rounding you can't see. 0.58.1 differed by up to 55. The only larger differences are the TAP light blinking and the MOD waves moving, which differ between two pictures of the same version too.
+- **Still light on the CPU:** with the window open and idle it measures 4.8% of a core, the same as 0.58.1.
+
 ## 0.58.1
 
 **Much lighter on the CPU with the window open.** The plugin's sound processing was never the problem (with every effect off it takes well under 1% of a core); the window was. It redrew far more than it needed to, many times a second, even while nothing changed.
