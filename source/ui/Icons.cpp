@@ -347,6 +347,20 @@ namespace Icons
                 break;
             }
 
+            case Type::havok:
+            {
+                // A touch pad: the square, its centre lines, and a finger's spot with a trail.
+                p.addRoundedRectangle (0.08f, 0.08f, 0.84f, 0.84f, 0.08f);
+                p.startNewSubPath (0.5f, 0.16f);
+                p.lineTo (0.5f, 0.84f);
+                p.startNewSubPath (0.16f, 0.5f);
+                p.lineTo (0.84f, 0.5f);
+                p.addEllipse (0.6f, 0.22f, 0.16f, 0.16f);
+                p.startNewSubPath (0.24f, 0.74f);
+                p.quadraticTo (0.36f, 0.4f, 0.6f, 0.34f);
+                break;
+            }
+
             case Type::flame:
                 // The mockup's "All Rigs" icon.
                 p.startNewSubPath (0.5f, 0.05f);

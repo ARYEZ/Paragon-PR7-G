@@ -1,7 +1,9 @@
 #include "PluginProcessor.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "PluginEditor.h"
+#include "rigs/FactoryRigs.h"
 
 namespace
 {
@@ -102,9 +104,11 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     presence.prepare (sampleRate, preparedBlockSize);
     graphicEq.prepare (sampleRate, preparedBlockSize);
     modulation.prepare (sampleRate, preparedBlockSize);
+    modulation2.prepare (sampleRate, preparedBlockSize);
     delay.prepare (sampleRate, preparedBlockSize);
     reverb.prepare (sampleRate, preparedBlockSize);
     loFi.prepare (sampleRate, preparedBlockSize);
+    havok.prepare (sampleRate, preparedBlockSize);
     glitch.prepare (sampleRate, preparedBlockSize);
     pitchBlock.prepare (sampleRate, preparedBlockSize);
     talkBox.prepare (sampleRate, preparedBlockSize);
@@ -171,6 +175,18 @@ void ParagonX1AudioProcessor::readMidiExpression (const juce::MidiBuffer& midi) 
         const auto message = metadata.getMessage();
         if (message.isControllerOfType (expressionCc.load()))
             pendingMidiExpression = (float) message.getControllerValue() / 127.0f;
+        // HAVOK's pad, on the controllers the original pad sends.
+        if (message.isController())
+        {
+            const auto value = (float) message.getControllerValue() / 127.0f;
+            switch (message.getControllerNumber())
+            {
+                case havokXCc:     pendingMidiPad[0] = value; break;
+                case havokYCc:     pendingMidiPad[1] = value; break;
+                case havokTouchCc: pendingMidiPad[2] = value >= 0.5f ? 1.0f : 0.0f; break;
+                default: break;
+            }
+        }
     }
 }
 
@@ -206,6 +222,26 @@ void ParagonX1AudioProcessor::syncMidiExpressionToParameter()
     // Only clear it if no newer MIDI value arrived meanwhile; that one is
     // picked up on the next tick.
     pendingMidiExpression.compare_exchange_strong (midi, -1.0f);
+}
+
+void ParagonX1AudioProcessor::syncMidiPadToParameters()
+{
+    // Copied into the parameters from the message thread, as the pedal is,
+    // so the DAW records and the pad shows what the MIDI pad played.
+    const char* ids[] = { ParamIDs::havokX, ParamIDs::havokY, ParamIDs::havokTouch };
+    for (size_t i = 0; i < pendingMidiPad.size(); ++i)
+    {
+        auto value = pendingMidiPad[i].load();
+        if (value < 0.0f)
+            continue;
+        if (auto* parameter = parameters.getParameter (ids[i]))
+        {
+            parameter->beginChangeGesture();
+            parameter->setValueNotifyingHost (parameter->convertTo0to1 (value));
+            parameter->endChangeGesture();
+        }
+        pendingMidiPad[i].compare_exchange_strong (value, -1.0f);
+    }
 }
 
 void ParagonX1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
@@ -251,6 +287,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     inputGain.setTargetValue (juce::Decibels::decibelsToGain (inputGainDb->load()));
     inputGain.applyGain (mono, numSamples);
     inputMeter.pushSamples (mono, numSamples);
+    faceplateMeter.pushSamples (mono, numSamples);
 
     // PITCH: TUNING, OCTAVER and FREEZE, before anything else shapes the guitar.
     pitchBlock.process (monoBlock, { param (ParamIDs::pitchTune), isOn (ParamIDs::octOn), param (ParamIDs::octSubTwo),
@@ -295,43 +332,65 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
         glitch.process (monoBlock, glitchSettings, getTempoBpm(), songBeats);
 
     drive.process (monoBlock, { isOn (ParamIDs::driveOn), (effects::Drive::Model) (int) param (ParamIDs::driveModel),
-                                param (ParamIDs::driveGain), param (ParamIDs::driveTone), param (ParamIDs::driveLevel) });
+                                param (ParamIDs::driveGain), param (ParamIDs::driveTone), param (ParamIDs::driveLevel),
+                                (int) param (ParamIDs::driveAttack), param (ParamIDs::driveGate),
+                                param (ParamIDs::driveHigh), param (ParamIDs::driveLow), param (ParamIDs::driveMiddle), param (ParamIDs::driveMidFreq) });
 
     // MORPH FX: the pedal blends the time effects in, from dry at the heel
     // to each effect's own MIX setting at the toe. (The effects smooth their
     // mix, so sweeping the pedal doesn't click.)
     const auto morph = expressionTarget == ExpressionTargets::morph ? pedal : 1.0f;
 
-    // Types with no dry/wet mix (tremolo, vibrato, auto-pan...) morph their depth instead.
-    const auto modType = (effects::Modulation::Type) (int) param (ParamIDs::modType);
-    const auto morphsDepth = ! effects::Modulation::usesMix (modType);
+    // MOD and MOD 2: the same block twice, one after the other, each with
+    // its own controls and position.
+    const auto modSettingsFor = [&] (const ParamIDs::ModIds& ids)
+    {
+        // Types with no dry/wet mix (tremolo, vibrato, auto-pan...) morph their depth instead.
+        const auto type = (effects::Modulation::Type) (int) param (ids.type);
+        const auto morphsDepth = ! effects::Modulation::usesMix (type);
 
-    // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
-    auto modRate = param (ParamIDs::modRate);
-    if (const auto sync = (int) param (ParamIDs::modSync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
-        modRate = juce::jlimit (0.02f, 20.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);
+        // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
+        auto rate = param (ids.rate);
+        if (const auto sync = (int) param (ids.sync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
+            rate = juce::jlimit (0.02f, 40.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);   // 1/32 at 300 BPM
 
-    const auto modPre = (int) param (ParamIDs::modPosition) == (int) effects::Modulation::Position::pre;
-    const effects::Modulation::Settings modSettings { isOn (ParamIDs::modOn), modType, modRate,
-                                                      param (ParamIDs::modDepth) * (morphsDepth ? morph : 1.0f),
-                                                      param (ParamIDs::modMix) * (morphsDepth ? 1.0f : morph),
-                                                      param (ParamIDs::modEq),
-                                                      param (ParamIDs::modStereo) > 0.5f && ! modPre,
-                                                      param (ParamIDs::modManual), param (ParamIDs::modRes) };
+        const auto pre = (int) param (ids.position) == (int) effects::Modulation::Position::pre;
+        effects::Modulation::Settings settings { isOn (ids.on), type, rate,
+                                                 param (ids.depth) * (morphsDepth ? morph : 1.0f),
+                                                 param (ids.mix) * (morphsDepth ? 1.0f : morph),
+                                                 param (ids.eq),
+                                                 param (ids.stereo) > 0.5f && ! pre,
+                                                 param (ids.manual), param (ids.res),
+                                                 param (ids.hadron) > 0.5f, param (ids.wave) };
+        // CYCLONE: its own controls. MORPH FX fades it in over the dry sound;
+        // the pedal on CYCLONE SPEED sets the rotors' speed.
+        settings.cyclone = { param (ids.cycFast) > 0.5f, param (ids.cycStop) > 0.5f,
+                             param (ids.cycFastSpeed), param (ids.cycSlowSpeed), param (ids.cycAccel),
+                             param (ids.cycBalance), param (ids.cycDrive), param (ids.cycLow), param (ids.cycHigh),
+                             (effects::Cyclone::Mode) (int) param (ids.cycMode), param (ids.cycLevel),
+                             expressionTarget == ExpressionTargets::cycloneSpeed ? pedal : -1.0f, morph };
+        return std::pair { settings, pre };
+    };
+    const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);
+    const auto [mod2Settings, mod2Pre] = modSettingsFor (ParamIDs::mod2Ids);
 
     // MOD in PRE: after the drive, into the amp, as a pedal on a board. The
     // block is stereo, so it runs on the mono guitar copied to both sides,
     // and the two sides are folded back to one for the (mono) amp.
-    if (modPre)
+    const auto processPre = [&] (effects::Modulation& block, const effects::Modulation::Settings& settings)
     {
         for (int channel = 0; channel < modPreScratch.getNumChannels(); ++channel)
             modPreScratch.copyFrom (channel, 0, mono, numSamples);
-        modulation.process (juce::dsp::AudioBlock<float> (modPreScratch).getSubBlock (0, (size_t) numSamples), modSettings);
+        block.process (juce::dsp::AudioBlock<float> (modPreScratch).getSubBlock (0, (size_t) numSamples), settings);
         const auto* left = modPreScratch.getReadPointer (0);
         const auto* right = modPreScratch.getReadPointer (1);
         for (int i = 0; i < numSamples; ++i)
             mono[i] = 0.5f * (left[i] + right[i]);
-    }
+    };
+    if (modPre)
+        processPre (modulation, modSettings);
+    if (mod2Pre)
+        processPre (modulation2, mod2Settings);
 
     amp.process (mono, numSamples, ampOn->load() > 0.5f, ampNormalise->load() > 0.5f);
     cab.process (mono, numSamples, cabOn->load() > 0.5f);
@@ -362,6 +421,8 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
 
     if (! modPre)
         modulation.process (stereoBlock, modSettings);
+    if (! mod2Pre)
+        modulation2.process (stereoBlock, mod2Settings);
     delay.process (stereoBlock, { isOn (ParamIDs::delayOn), param (ParamIDs::delayTime), (int) param (ParamIDs::delaySync),
                                   param (ParamIDs::delayFeedback), param (ParamIDs::delayTone), param (ParamIDs::delayMix) * morph,
                                   isOn (ParamIDs::delayPingPong), (effects::Delay::Type) (int) param (ParamIDs::delayType),
@@ -377,6 +438,19 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     loFi.process (stereoBlock, { isOn (ParamIDs::lofiOn), (effects::LoFi::Type) (int) param (ParamIDs::lofiType),
                                  param (ParamIDs::lofiAmount), param (ParamIDs::lofiNoise),
                                  param (ParamIDs::lofiMix) * loFiPedal, param (ParamIDs::lofiLevel) });
+
+    // HAVOK last, so the pad works on everything: the effect while you touch
+    // the pad (or HOLD keeps it). A MIDI pad's latest move is used straight
+    // away, before the timer copies it into the parameters.
+    const auto padValue = [this] (size_t index, const char* id)
+    {
+        const auto midi = pendingMidiPad[index].load();
+        return midi >= 0.0f ? midi : param (id);
+    };
+    havok.process (stereoBlock, { isOn (ParamIDs::havokOn), (int) param (ParamIDs::havokProgram),
+                                  padValue (0, ParamIDs::havokX), padValue (1, ParamIDs::havokY),
+                                  padValue (2, ParamIDs::havokTouch) > 0.5f, isOn (ParamIDs::havokHold),
+                                  (int) param (ParamIDs::havokScratchSound), getTempoBpm(), songBeats });
 
     // The master OUTPUT knob plus the rig's own RIG LEVEL, and the
     // expression pedal when it's a VOLUME pedal. Squaring the position gives
@@ -455,10 +529,13 @@ void ParagonX1AudioProcessor::loadAmpModel (const juce::File& file)
     loading.loading = true;
     setStatus (ampStatus, loading);
 
-    loader.addJob ([this, file]
+    loader.addJob ([this, requested = file]
     {
         auto status = getAmpStatus();
         status.loading = false;
+
+        // Moved since the rig was saved? Look in the NAM amps folder by name.
+        const auto file = LibraryFolders::locate (LibraryFolders::Kind::amps, requested);
 
         if (! file.existsAsFile())
         {
@@ -508,15 +585,19 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
     loading.loading = true;
     setStatus (cabStatus, loading);
 
-    loader.addJob ([this, file]
+    loader.addJob ([this, requested = file]
     {
         auto status = getCabStatus();
         status.loading = false;
+
+        // Moved since the rig was saved? Look in the cab IRs folder by name.
+        const auto file = LibraryFolders::locate (LibraryFolders::Kind::cabs, requested);
 
         if (! file.existsAsFile())
         {
             status.file = file;   // keep the path, as for the amp
             status.detail = {};
+            status.responseDb.clear();
             status.error = "Can't find " + file.getFullPathName();
             setStatus (cabStatus, status);
             return;
@@ -532,6 +613,7 @@ void ParagonX1AudioProcessor::loadCabinetIR (const juce::File& file)
             status.file = file;
             status.error = {};
             status.detail = juce::String (juce::roundToInt (result.lengthSeconds * 1000.0)) + " ms IR";
+            status.responseDb = result.responseDb;
         }
 
         setStatus (cabStatus, status);
@@ -569,6 +651,7 @@ void ParagonX1AudioProcessor::timerCallback()
         setLatencySamples (latency);
 
     syncMidiExpressionToParameter();
+    syncMidiPadToParameters();
     recordCheckpointIfReady();
 }
 
@@ -879,8 +962,28 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
         parameter.setProperty ("value", value, nullptr);
         state.appendChild (parameter, nullptr);
     };
-    addIfMissing (ParamIDs::driveModel, (int) effects::Drive::Model::classic);    // before the drive had a MODEL
+    addIfMissing (ParamIDs::driveModel, (int) effects::Drive::Model::rabid);      // before the drive had a MODEL (then the original overdrive)
     addIfMissing (ParamIDs::reverbType, (int) effects::Reverb::Type::classic);    // before the reverb had a TYPE
+
+    // Saved with the original rotary speaker: Cyclone, set as close to it as it goes.
+    for (const auto* ids : { &ParamIDs::modIds, &ParamIDs::mod2Ids })
+    {
+        std::map<juce::String, float> saved;
+        for (const auto* id : { ids->type, ids->rate, ids->depth, ids->mix, ids->cycFast })
+            if (const auto parameter = state.getChildWithProperty ("id", id); parameter.isValid())
+                saved[id] = (float) parameter.getProperty ("value");
+        const auto before = saved.size();
+        Rig::convertOldRotary (saved, *ids);
+        if (saved.size() == before)
+            continue;
+        for (const auto* id : { ids->cycFast, ids->cycFastSpeed, ids->cycSlowSpeed, ids->cycLow, ids->cycHigh, ids->cycMode })
+        {
+            juce::ValueTree parameter ("PARAM");
+            parameter.setProperty ("id", id, nullptr);
+            parameter.setProperty ("value", saved[id], nullptr);
+            state.appendChild (parameter, nullptr);
+        }
+    }
     parameters.replaceState (state);
 
     const auto restore = [] (const juce::var& path, auto load, auto clear)
@@ -897,9 +1000,12 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
     // Restoring the project changed parameters and files, which marked the
     // rig as modified; put back what was saved instead.
     const auto rigFile = state[rigFileKey].toString();
-    currentRig = { state.getProperty (rigNameKey, "Untitled").toString(),
+    // A factory rig saved under a name it has since lost finds its new one.
+    const auto savedFactoryName = state[rigFactoryKey].toString();
+    const auto savedName = state.getProperty (rigNameKey, "Untitled").toString();
+    currentRig = { savedName == savedFactoryName ? currentFactoryName (savedName) : savedName,
                    rigFile.isNotEmpty() ? juce::File (rigFile) : juce::File(),
-                   state[rigFactoryKey].toString() };
+                   currentFactoryName (savedFactoryName) };
     rigModified = (bool) state.getProperty (rigModifiedKey, false);
     tappedBpm = (double) state.getProperty (tappedBpmKey, 0.0);
     setExpressionCc ((int) state.getProperty (expressionCcKey, 11));

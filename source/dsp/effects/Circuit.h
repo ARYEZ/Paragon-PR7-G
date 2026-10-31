@@ -37,7 +37,7 @@ namespace effects
     class Circuit
     {
     public:
-        static constexpr int maxNodes = 16, maxResistors = 24, maxCapacitors = 8, maxOpAmps = 4;
+        static constexpr int maxNodes = 16, maxResistors = 24, maxCapacitors = 12, maxOpAmps = 4;
 
         int node() noexcept { return numNodes++; }   // returns the new node's number
         int resistor (int a, int b, double ohms) noexcept { resistors[(size_t) numResistors] = { a, b, ohms }; return numResistors++; }
@@ -129,6 +129,18 @@ namespace effects
             for (int j = 0; j < numCapacitors; ++j)
                 stateToOutput[(size_t) j] = voltage (outputNode, j);
             inputToOutput = voltage (outputNode, numCapacitors);
+        }
+
+        // The output is feedthrough() * input + pending(): what the next
+        // process() will give, split so a nonlinear part around the circuit
+        // can solve for its input first (e.g. an op-amp driving it).
+        double feedthrough() const noexcept { return inputToOutput; }
+        double pending() const noexcept
+        {
+            auto out = 0.0;
+            for (int k = 0; k < numCapacitors; ++k)
+                out += stateToOutput[(size_t) k] * state[(size_t) k];
+            return out;
         }
 
         double process (double in) noexcept

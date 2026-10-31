@@ -1,5 +1,7 @@
 #include "MainView.h"
 
+#include "LibraryFolders.h"
+#include "ui/RackView.h"
 #include "Parameters.h"
 #include "ui/Logo.h"
 #include "dsp/effects/Modulation.h"
@@ -123,22 +125,27 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                processorToShow.getParameters(), ParamIDs::cabOn),
       expressionPedal (processorToShow),
       tunerReader (processorToShow),
-      selectedRig (processorToShow),
+      faceplate (processorToShow),
       expressionPanel (processorToShow.getParameters()),
       eqPanel (processorToShow.getParameters()),
+      havokPanel (processorToShow),
+      // Each block in the red to pink to orange of the PR7 family's chains, by
+      // its place in the chain: red first, orange last.
       signalChain (processorToShow.getParameters(), {
-          { "PITCH", Icons::Type::pitch, ParagonColours::pitch, juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn },
-          { "COMP / GATE", Icons::Type::comp, ParagonColours::comp, ParamIDs::compOn },
-          { "FILTER / PITCH", Icons::Type::filterPitch, ParagonColours::filterPitch, ParamIDs::fpOn },
-          { "OD / DIST", Icons::Type::drive, ParagonColours::drive, ParamIDs::driveOn },
-          { "NAMP", Icons::Type::amp, ParagonColours::amp, ParamIDs::ampOn },
-          { "CABINET IR", Icons::Type::cabinet, ParagonColours::cab, ParamIDs::cabOn },
-          { "EQ", Icons::Type::eq, ParagonColours::eq, ParamIDs::eqOn },
-          { "GLITCH", Icons::Type::glitch, ParagonColours::glitch, ParamIDs::glitchOn },
-          { "MOD", Icons::Type::modulation, ParagonColours::modulation, ParamIDs::modOn },   // MODULATION: short, to fit twelve blocks
-          { "DELAY", Icons::Type::delay, ParagonColours::delay, ParamIDs::delayOn },
-          { "REVERB", Icons::Type::reverb, ParagonColours::reverb, ParamIDs::reverbOn },
-          { "LO-FI", Icons::Type::loFi, ParagonColours::loFi, ParamIDs::lofiOn } }),
+          { "PITCH", Icons::Type::pitch, ParagonColours::chainColour (0, numBlocks), juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn },
+          { "COMP / GATE", Icons::Type::comp, ParagonColours::chainColour (1, numBlocks), ParamIDs::compOn },
+          { "FILTER / PITCH", Icons::Type::filterPitch, ParagonColours::chainColour (2, numBlocks), ParamIDs::fpOn },
+          { "OD / DIST", Icons::Type::drive, ParagonColours::chainColour (3, numBlocks), ParamIDs::driveOn },
+          { "NAMP", Icons::Type::amp, ParagonColours::chainColour (4, numBlocks), ParamIDs::ampOn },
+          { "CABINET IR", Icons::Type::cabinet, ParagonColours::chainColour (5, numBlocks), ParamIDs::cabOn },
+          { "EQ", Icons::Type::eq, ParagonColours::chainColour (6, numBlocks), ParamIDs::eqOn },
+          { "GLITCH", Icons::Type::glitch, ParagonColours::chainColour (7, numBlocks), ParamIDs::glitchOn },
+          { "MOD", Icons::Type::modulation, ParagonColours::chainColour (8, numBlocks), ParamIDs::modOn },   // MODULATION: short, to fit the blocks
+          { "MOD 2", Icons::Type::modulation, ParagonColours::chainColour (9, numBlocks), ParamIDs::mod2On },
+          { "DELAY", Icons::Type::delay, ParagonColours::chainColour (10, numBlocks), ParamIDs::delayOn },
+          { "REVERB", Icons::Type::reverb, ParagonColours::chainColour (11, numBlocks), ParamIDs::reverbOn },
+          { "LO-FI", Icons::Type::loFi, ParagonColours::chainColour (12, numBlocks), ParamIDs::lofiOn },
+          { "HAVOK", Icons::Type::havok, ParagonColours::chainColour (13, numBlocks), ParamIDs::havokOn } }),
       rigBrowser (processorToShow),
       settingsPage (processorToShow)
 {
@@ -234,6 +241,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     ampSlot.onLoad = [this] (const juce::File& file) { audioProcessor.loadAmpModel (file); };
     ampSlot.onClear = [this] { audioProcessor.clearAmpModel(); };
     ampSlot.onTitleClicked = [this] { selectBlock (ampBlock); };
+    ampSlot.libraryFolder = [] { return LibraryFolders::get (LibraryFolders::Kind::amps); };
+    cabSlot.libraryFolder = [] { return LibraryFolders::get (LibraryFolders::Kind::cabs); };
     cabSlot.onLoad = [this] (const juce::File& file) { audioProcessor.loadCabinetIR (file); };
     cabSlot.onClear = [this] { audioProcessor.clearCabinetIR(); };
     cabSlot.onTitleClicked = [this] { selectBlock (cabBlock); };
@@ -263,13 +272,53 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     footswitches[1] = std::make_unique<Footswitch> (2, "OD / DISTORTION", state, juce::StringArray { ParamIDs::driveOn });
     footswitches[1]->describe = [this]
     {
-        const auto screamer = juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::screamer;
-        return juce::String (screamer ? "Screamer" : "Classic") + "  Drive " + valueText (ParamIDs::driveGain);
+        const auto& names = effects::Drive::modelNames;
+        const auto model = juce::jlimit (0, names.size() - 1, juce::roundToInt (rawValue (ParamIDs::driveModel)));
+        return names[model] + "  Drive " + valueText (ParamIDs::driveGain);
     };
     footswitches[2] = std::make_unique<Footswitch> (3, "MODULATION", state, juce::StringArray { ParamIDs::modOn });
-    footswitches[2]->describe = [this]
+    const auto isCyclone = [this] (const ParamIDs::ModIds& ids)
     {
+        return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::rotary;
+    };
+    // Cyclone's rotors: STOP, FAST or SLOW (PEDAL while the expression pedal sets the speed).
+    const auto rotorState = [this] (const ParamIDs::ModIds& ids)
+    {
+        if (juce::roundToInt (rawValue (ParamIDs::expressionTarget)) == ExpressionTargets::cycloneSpeed)
+            return juce::String ("PEDAL");
+        return juce::String (rawValue (ids.cycStop) > 0.5f ? "STOP" : rawValue (ids.cycFast) > 0.5f ? "FAST" : "SLOW");
+    };
+    footswitches[2]->describe = [this, isCyclone, rotorState]
+    {
+        // Both MOD blocks' types when MOD 2 is on too ("Vortex + Flanger").
+        if (rawValue (ParamIDs::mod2On) > 0.5f)
+            return valueText (ParamIDs::modType) + " + " + valueText (ParamIDs::mod2Type)
+                 + (isCyclone (ParamIDs::mod2Ids) ? "  " + rotorState (ParamIDs::mod2Ids) : juce::String());
+        if (isCyclone (ParamIDs::modIds))
+            return valueText (ParamIDs::modType) + "  " + rotorState (ParamIDs::modIds) + "  (hold: slow / fast)";
         return valueText (ParamIDs::modType) + "  " + valueText (rawValue (ParamIDs::modSync) > 0.5f ? ParamIDs::modSync : ParamIDs::modRate);
+    };
+    // Holding footswitch 3 switches Cyclone between SLOW and FAST, as the
+    // pedal's own SLOW / FAST switch (on MOD, and MOD 2 when it's on); a tap
+    // still switches the block on and off.
+    footswitches[2]->onHold = [this, isCyclone]
+    {
+        std::vector<const ParamIDs::ModIds*> rotary;
+        if (isCyclone (ParamIDs::modIds))
+            rotary.push_back (&ParamIDs::modIds);
+        if (isCyclone (ParamIDs::mod2Ids) && rawValue (ParamIDs::mod2On) > 0.5f)
+            rotary.push_back (&ParamIDs::mod2Ids);
+        if (rotary.empty())
+            return false;
+        const auto fast = rawValue (rotary.front()->cycFast) < 0.5f;   // the first one's opposite, for both
+        for (const auto* ids : rotary)
+            if (auto* parameter = audioProcessor.getParameters().getParameter (ids->cycFast))
+            {
+                parameter->beginChangeGesture();
+                parameter->setValueNotifyingHost (fast ? 1.0f : 0.0f);
+                parameter->endChangeGesture();
+            }
+        return true;
     };
     footswitches[3] = std::make_unique<Footswitch> (4, "REVERB / DELAY", state, juce::StringArray { ParamIDs::delayOn, ParamIDs::reverbOn });
     footswitches[3]->describe = [this]
@@ -291,7 +340,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                       &undoLabel, &redoLabel, &bypassLabel, &tunerLabel, &muteLabel, &tapLabel, &holdLabel,
                       &rigLevelKnob, &presenceKnob, &rigLevelLabel, &presenceLabel,
                       &ampSlot, &cabSlot, &rigSlot, &expressionPedal,
-                      &rigNavigator, &selectedRig, &expressionPanel };
+                      &faceplate, &expressionPanel };
     for (auto& footswitch : footswitches)
         processorPage.push_back (footswitch.get());
     for (auto* component : processorPage)
@@ -334,29 +383,69 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                               { ParamIDs::fpInterval, "INTERVAL", fpIs (effects::FilterPitch::Type::pitchShifter) },
                               { ParamIDs::fpXpProgram, "PROGRAM", fpIs (effects::FilterPitch::Type::whammyWah) },
                               { ParamIDs::fpMix, "MIX" } } } });
+    // Skyline adds its pedal's ATTACK and GATE; Abyss has its own EQ in place of TONE.
+    const auto isSkyline = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::skyline; };
+    const auto isAbyss = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::abyss; };
     panels[driveBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
-        { "OVERDRIVE", { { ParamIDs::driveOn, "ON" }, { ParamIDs::driveModel, "MODEL" }, { ParamIDs::driveGain, "DRIVE" }, { ParamIDs::driveTone, "TONE" },
+        { "OVERDRIVE", { { ParamIDs::driveOn, "ON" }, { ParamIDs::driveModel, "MODEL" }, { ParamIDs::driveGain, "DRIVE" },
+                         // Halo has no tone control, as the original has none.
+                         { ParamIDs::driveTone, "TONE", [this, isAbyss] {
+                             return ! isAbyss() && juce::roundToInt (rawValue (ParamIDs::driveModel)) != (int) effects::Drive::Model::halo; }, true },
+                         { ParamIDs::driveHigh, "HIGH", isAbyss, true }, { ParamIDs::driveLow, "LOW", isAbyss, true },
+                         { ParamIDs::driveMiddle, "MIDDLE", isAbyss, true }, { ParamIDs::driveMidFreq, "MID FREQ", isAbyss, true },
+                         { ParamIDs::driveAttack, "ATTACK", isSkyline, true }, { ParamIDs::driveGate, "GATE", isSkyline, true },
                          { ParamIDs::driveLevel, "LEVEL" } } } });
     panels[ampBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "AMP (NAM)", { { ParamIDs::ampOn, "ON" }, { ParamIDs::ampNormalise, "NORMALISE" }, { ParamIDs::presence, "PRESENCE" },
                          { ParamIDs::rigLevel, "RIG LEVEL" } } } });
     panels[cabBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "CABINET (IR)", { { ParamIDs::cabOn, "ON" }, { ParamIDs::presence, "PRESENCE" } } } });
-    // AEON (the flanger) adds its pedal's MANUAL and RES.
-    const auto isAeon = [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::flanger; };
-    panels[modBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
-        { "MODULATION", { { ParamIDs::modOn, "ON" }, { ParamIDs::modType, "TYPE" }, { ParamIDs::modPosition, "POSITION" }, { ParamIDs::modSync, "SYNC" },
-                          { ParamIDs::modManual, "MANUAL", isAeon, true },
-                          { ParamIDs::modRate, "RATE", [this] { return rawValue (ParamIDs::modSync) < 0.5f; } },
-                          { ParamIDs::modDepth, "DEPTH" },
-                          { ParamIDs::modRes, "RES", isAeon, true },
-                          { ParamIDs::modMix, "MIX", [this] {
-                              return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ParamIDs::modType))); } },
-                          // The Vortex's own controls: its EQ, and mono or stereo outputs.
-                          { ParamIDs::modEq, "EQ", [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::chorus; }, true },
-                          // STEREO needs two speakers after it, so only in POST (in PRE a single amp follows).
-                          { ParamIDs::modStereo, "STEREO", [this] { return juce::roundToInt (rawValue (ParamIDs::modType)) == (int) effects::Modulation::Type::chorus
-                                                                           && rawValue (ParamIDs::modPosition) < 0.5f; }, true } } } });
+    // MOD and MOD 2: the same panel for each block's own controls.
+    const auto modPanel = [this, &state] (const juce::String& title, const ParamIDs::ModIds& ids)
+    {
+        const auto isVortex = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::chorus; };
+        // AEON (the flanger) adds its pedal's MANUAL and RES.
+        const auto isAeon = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::flanger; };
+        // Hadron (the phaser) has SCRIPT / BLOCK, and only SPEED (RATE): no DEPTH.
+        const auto isHadron = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::phaser; };
+        // Razor (the tremolo) adds the pedal's WAVE knob.
+        const auto isRazor = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::tremolo; };
+        // CYCLONE (the rotary speaker) has its own speeds instead of RATE,
+        // SYNC and DEPTH, and its tone controls on a second page.
+        const auto isCyclone = [this, ids] { return juce::roundToInt (rawValue (ids.type)) == (int) effects::Modulation::Type::rotary; };
+        const auto notCyclone = [isCyclone] { return ! isCyclone(); };
+        auto panel = std::make_unique<EffectPanel> (state, std::vector<Group> {
+            { title, { { ids.on, "ON" }, { ids.type, "TYPE" }, { ids.position, "POSITION" },
+                       { ids.sync, "SYNC", notCyclone, true },
+                       { ids.manual, "MANUAL", isAeon, true },
+                       { ids.hadron, "CIRCUIT", isHadron, true },
+                       { ids.rate, "RATE", [this, ids, isCyclone] { return ! isCyclone() && rawValue (ids.sync) < 0.5f; } },
+                       { ids.depth, "DEPTH", [isHadron, isCyclone] { return ! isHadron() && ! isCyclone(); } },
+                       { ids.wave, "WAVE", isRazor, true },
+                       { ids.res, "RES", isAeon, true },
+                       { ids.mix, "MIX", [this, ids] {
+                           return effects::Modulation::usesMix ((effects::Modulation::Type) juce::roundToInt (rawValue (ids.type))); } },
+                       // The Vortex's own controls: its EQ, and mono or stereo outputs.
+                       { ids.eq, "EQ", isVortex, true },
+                       // STEREO needs two speakers after it, so only in POST (in PRE a single amp follows).
+                       { ids.stereo, "STEREO", [this, ids, isVortex] { return isVortex() && rawValue (ids.position) < 0.5f; }, true },
+                       // CYCLONE's rotors.
+                       { ids.cycFast, "FAST", isCyclone, true },
+                       { ids.cycStop, "STOP", isCyclone, true },
+                       { ids.cycFastSpeed, "FAST SPEED", isCyclone, true },
+                       { ids.cycSlowSpeed, "SLOW SPEED", isCyclone, true },
+                       { ids.cycAccel, "ACCEL", isCyclone, true } } },
+            { title, { { ids.cycBalance, "BALANCE", isCyclone, true },
+                       { ids.cycDrive, "DRIVE", isCyclone, true },
+                       { ids.cycLow, "MIX/DIST LO", isCyclone, true },
+                       { ids.cycHigh, "MIX/DIST HI", isCyclone, true },
+                       { ids.cycMode, "MODE", isCyclone, true },
+                       { ids.cycLevel, "LEVEL", isCyclone, true } }, 1 } });
+        panel->setPages ({ "ROTORS", "TONE" });
+        return panel;
+    };
+    panels[modBlock] = modPanel ("MODULATION", ParamIDs::modIds);
+    panels[mod2Block] = modPanel ("MODULATION 2", ParamIDs::mod2Ids);
     panels[delayBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "DELAY", { { ParamIDs::delayOn, "ON" }, { ParamIDs::delayType, "TYPE" }, { ParamIDs::delaySync, "SYNC" },
                      { ParamIDs::delayTime, "TIME", [this] { return rawValue (ParamIDs::delaySync) < 0.5f; } },
@@ -379,38 +468,46 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     panels[loFiBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "LO-FI", { { ParamIDs::lofiOn, "ON" }, { ParamIDs::lofiType, "TYPE" }, { ParamIDs::lofiAmount, "AMOUNT" },
                      { ParamIDs::lofiNoise, "NOISE" }, { ParamIDs::lofiMix, "MIX" }, { ParamIDs::lofiLevel, "LEVEL" } } } });
-    const std::pair<Icons::Type, juce::Colour> headers[] = {
-        { Icons::Type::pitch, ParagonColours::pitch }, { Icons::Type::comp, ParagonColours::comp }, { Icons::Type::filterPitch, ParagonColours::filterPitch },
-        { Icons::Type::drive, ParagonColours::drive },
-        { Icons::Type::amp, ParagonColours::amp }, { Icons::Type::cabinet, ParagonColours::cab },
-        { Icons::Type::eq, ParagonColours::eq }, { Icons::Type::glitch, ParagonColours::glitch },
-        { Icons::Type::modulation, ParagonColours::modulation }, { Icons::Type::delay, ParagonColours::delay },
-        { Icons::Type::reverb, ParagonColours::reverb }, { Icons::Type::loFi, ParagonColours::loFi } };
-    const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "DELAY", "REVERB", "LO-FI" };
+    // Each panel's header and accents in its block's colour in the chain.
+    const Icons::Type headers[] = { Icons::Type::pitch, Icons::Type::comp, Icons::Type::filterPitch, Icons::Type::drive,
+                                    Icons::Type::amp, Icons::Type::cabinet, Icons::Type::eq, Icons::Type::glitch,
+                                    Icons::Type::modulation, Icons::Type::modulation, Icons::Type::delay,
+                                    Icons::Type::reverb, Icons::Type::loFi, Icons::Type::havok };
+    const char* titles[] = { "PITCH", "COMP / GATE", "FILTER / PITCH", "OD / DISTORTION", "AMP (NAM)", "CABINET (IR)", "GRAPHIC EQ", "GLITCH", "MODULATION", "MODULATION 2", "DELAY", "REVERB", "LO-FI", "HAVOK" };
+    static_assert (std::size (headers) == numBlocks && std::size (titles) == numBlocks);
     for (size_t i = 0; i < panels.size(); ++i)
     {
         if (panels[i] == nullptr)
             continue;
-        panels[i]->setHeader (headers[i].first, headers[i].second, titles[i]);
+        panels[i]->setHeader (headers[i], ParagonColours::chainColour ((int) i, numBlocks), titles[i]);
         addChildComponent (*panels[i]);
     }
+    eqPanel.setAccent (ParagonColours::chainColour (eqBlock, numBlocks));
     addChildComponent (eqPanel);
+    addChildComponent (havokPanel);
 
     closePanel.setTooltip ("Back to the graphic EQ");
     closePanel.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff151217));
     closePanel.onClick = [this] { selectBlock (eqBlock); };
     addChildComponent (closePanel);
 
-    rigNavigator.onShow = [this] (int filter, int bank)
-    {
-        rigBrowser.showFilter (filter, bank);
-        showPage (Page::presets);
-    };
-    selectedRig.onSave = [this] { saveRig(); };
-    selectedRig.onSaveAs = [this] { rigBrowser.promptSaveAs(); };
 
-    signalChain.onSelect = [this] (int block) { selectBlock (block); };
+    // Clicking a block in the chain means "edit this": on the PROCESSOR page
+    // it brings a hidden rack back. (Stomping a footswitch doesn't.)
+    signalChain.onSelect = [this] (int block)
+    {
+        if (page == Page::processor)
+            RackView::setShown (true);
+        selectBlock (block);
+    };
     addAndMakeVisible (signalChain);
+
+    rackButton.setComponentID ("rackButton");
+    rackButton.setTooltip ("Hide the rack to keep the window small; click a block in the signal chain to bring it back");
+    rackButton.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff151217));
+    rackButton.onClick = [this] { RackView::setShown (! RackView::isShown()); };
+    processorPage.push_back (&rackButton);
+    addAndMakeVisible (rackButton);
     addChildComponent (rigBrowser);
     addChildComponent (settingsPage);
 
@@ -421,6 +518,8 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     changeListenerCallback (nullptr);
     Finish::changes().addChangeListener (this);
     applyFinish();
+    RackView::changes().addChangeListener (this);
+    applyRackView();
 
     // The modified marker, tempo and undo state can change from the audio
     // thread or the host, so poll them. 30 Hz for the TAP light's flash.
@@ -432,6 +531,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
 
 MainView::~MainView()
 {
+    RackView::changes().removeChangeListener (this);
     Finish::changes().removeChangeListener (this);
     audioProcessor.statusBroadcaster.removeChangeListener (this);
     audioProcessor.rigBroadcaster.removeChangeListener (this);
@@ -451,14 +551,59 @@ void MainView::selectBlock (int block)
 {
     // The selected block's knobs fill the middle of the dock; the graphic EQ is the default.
     selectedBlock = block;
-    const auto onProcessorPage = page == Page::processor;
+    const auto rackVisible = page == Page::processor && RackView::isShown();
+    faceplate.setVisible (rackVisible);
+    expressionPanel.setVisible (rackVisible);
     for (size_t i = 0; i < panels.size(); ++i)
         if (panels[i] != nullptr)
-            panels[i]->setVisible ((int) i == block && onProcessorPage);
-    eqPanel.setVisible (block == eqBlock && onProcessorPage);
-    closePanel.setVisible (block != eqBlock && onProcessorPage);
-    if (block != eqBlock)
-        closePanel.toFront (false);
+            panels[i]->setVisible ((int) i == block && rackVisible);
+    eqPanel.setVisible (block == eqBlock && rackVisible);
+    havokPanel.setVisible (block == havokBlock && rackVisible);
+    closePanel.setVisible (block != eqBlock && rackVisible);
+    layoutDock();
+
+    // The FACEPLATE: the block as hardware (its own for OD / DIST and NAMP
+    // so far; for the rest, a unit with its name and TYPE).
+    struct About { const char* title; Icons::Type icon; juce::String onIds; const char* typeId; };
+    const About about[] = {
+        { "PITCH", Icons::Type::pitch, juce::String (ParamIDs::octOn) + "," + ParamIDs::freezeOn, "" },
+        { "COMP / GATE", Icons::Type::comp, ParamIDs::compOn, ParamIDs::compType },
+        { "FILTER / PITCH", Icons::Type::filterPitch, ParamIDs::fpOn, ParamIDs::fpType },
+        { "OD / DIST", Icons::Type::drive, ParamIDs::driveOn, ParamIDs::driveModel },
+        { "NAMP", Icons::Type::amp, ParamIDs::ampOn, "" },
+        { "CABINET IR", Icons::Type::cabinet, ParamIDs::cabOn, "" },
+        { "GRAPHIC EQ", Icons::Type::eq, ParamIDs::eqOn, "" },
+        { "GLITCH", Icons::Type::glitch, ParamIDs::glitchOn, ParamIDs::glitchMode },
+        { "MODULATION", Icons::Type::modulation, ParamIDs::modOn, ParamIDs::modType },
+        { "MODULATION 2", Icons::Type::modulation, ParamIDs::mod2On, ParamIDs::mod2Type },
+        { "DELAY", Icons::Type::delay, ParamIDs::delayOn, ParamIDs::delayType },
+        { "REVERB", Icons::Type::reverb, ParamIDs::reverbOn, ParamIDs::reverbType },
+        { "LO-FI", Icons::Type::loFi, ParamIDs::lofiOn, ParamIDs::lofiType },
+        { "HAVOK", Icons::Type::havok, ParamIDs::havokOn, ParamIDs::havokProgram } };
+    static_assert (std::size (about) == numBlocks);
+    const auto& shown = about[(size_t) juce::jlimit (0, numBlocks - 1, block)];
+    const auto unit = [block]
+    {
+        switch (block)
+        {
+            case pitchBlock:  return Faceplate::Unit::pitch;
+            case compBlock:   return Faceplate::Unit::dynamics;
+            case driveBlock:  return Faceplate::Unit::drive;
+            case ampBlock:    return Faceplate::Unit::amp;
+            case cabBlock:    return Faceplate::Unit::cabinet;
+            case delayBlock:  return Faceplate::Unit::delay;
+            case reverbBlock: return Faceplate::Unit::reverb;
+            case modBlock:    return Faceplate::Unit::modulation;
+            case mod2Block:   return Faceplate::Unit::modulation2;
+            case filterPitchBlock: return Faceplate::Unit::filterPitch;
+            case glitchBlock: return Faceplate::Unit::glitch;
+            case eqBlock:     return Faceplate::Unit::eq;
+            case loFiBlock:   return Faceplate::Unit::loFi;
+            case havokBlock:  return Faceplate::Unit::havok;
+            default:          return Faceplate::Unit::other;
+        }
+    }();
+    faceplate.setBlock (unit, shown.title, shown.icon, ParagonColours::chainColour (block, numBlocks), shown.onIds, shown.typeId);
 
     const int footswitchBlocks[] = { compBlock, driveBlock, modBlock, delayBlock };
     for (size_t i = 0; i < footswitches.size(); ++i)
@@ -494,7 +639,6 @@ void MainView::refreshRig()
     display.setContents ({ entry != nullptr ? entry->rig.number : 0, rig.name,
                            entry != nullptr ? Rig::bankName (entry->rig.bank) : juce::String(), modified, bypassed, tunerState });
     rigSlot.setRig (entry != nullptr ? entry->rig.getSlotName() : juce::String(), rig.name, modified);
-    selectedRig.refresh();
 }
 
 void MainView::timerCallback()
@@ -593,6 +737,48 @@ void MainView::saveRig()
     refreshRig();
 }
 
+void MainView::layoutDock()
+{
+    // The rack, as on the PR7-V: one wide unit across the dock, the "brain"
+    // to go with the floorboard. The selected block's display on the left
+    // (the faceplate), its real controls in the middle, EXPRESSION ASSIGN at
+    // the right end.
+    faceplate.setBounds (mock (12, 568, 1662, 822));
+    faceplate.setRackDisplayWidth (mockF (0, 0, 380, 0).getWidth(), mockF (0, 0, 270, 0).getWidth());
+    expressionPanel.setRack (true);
+    expressionPanel.setBounds (faceplate.getSideArea() + faceplate.getPosition());
+    expressionPanel.toFront (false);
+
+    const auto controls = faceplate.getControlArea() + faceplate.getPosition();
+    for (auto& panel : panels)
+        if (panel != nullptr)
+        {
+            panel->setRack (true);
+            panel->setBounds (controls);
+            if (panel->isVisible())
+                panel->toFront (false);
+        }
+
+    // The GRAPHIC EQ has its own rack layout, on the face at full size (the
+    // display shows its curve).
+    eqPanel.setRack (true);
+    eqPanel.setBounds (controls);
+    if (eqPanel.isVisible())
+        eqPanel.toFront (false);
+
+    // HAVOK: the touch pad in the display and its keys on the face.
+    havokPanel.setAreas (faceplate.getDisplayArea() + faceplate.getPosition(), controls);
+    if (havokPanel.isVisible())
+        havokPanel.toFront (false);
+
+    // GRAPHIC EQ (back to the default block): one of the unit's keys, top
+    // right over the controls' row of keys.
+    closePanel.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
+    closePanel.setBounds (controls.getRight() - 108, controls.getY(), 108, 24);
+    if (closePanel.isVisible())
+        closePanel.toFront (false);
+}
+
 void MainView::applyFinish()
 {
     for (auto* label : { &rigLevelLabel, &presenceLabel })
@@ -605,7 +791,21 @@ void MainView::applyFinish()
     holdLabel.setColour (juce::Label::textColourId, Finish::printedRed());
     pedal.refinish();
     expressionPedal.refinish();
+    expressionPanel.refinish();
     repaint();
+}
+
+void MainView::applyRackView()
+{
+    const auto shown = RackView::isShown();
+    rackButton.setButtonText (shown ? "HIDE RACK" : "SHOW RACK");
+    selectBlock (selectedBlock);   // shows or hides the rack's parts
+    if (getHeight() != heightFor (shown))
+    {
+        setSize (width, heightFor (shown));   // lays it out again
+        if (onHeightChanged)
+            onHeightChanged();
+    }
 }
 
 void MainView::changeListenerCallback (juce::ChangeBroadcaster* source)
@@ -613,6 +813,11 @@ void MainView::changeListenerCallback (juce::ChangeBroadcaster* source)
     if (source == &Finish::changes())
     {
         applyFinish();
+        return;
+    }
+    if (source == &RackView::changes())
+    {
+        applyRackView();
         return;
     }
 
@@ -750,22 +955,18 @@ void MainView::resized()
     // for the toe to rise into.
     expressionPedal.setBounds (mock (1342, 46, 1553, 562));
 
-    // Dock
-    rigNavigator.setBounds (mock (12, 568, 246, 822));
-    selectedRig.setBounds (mock (256, 568, 652, 822));
-    const auto summaryArea = mock (662, 568, 1334, 822);
-    for (auto& panel : panels)
-        if (panel != nullptr)
-            panel->setBounds (summaryArea);
-    eqPanel.setBounds (summaryArea);
-    closePanel.setBounds (summaryArea.withSizeKeepingCentre (0, 0).withX (summaryArea.getRight() - 130).withY (summaryArea.getY() + 10)
-                              .withSize (118, 24));
-    expressionPanel.setBounds (mock (1344, 568, 1662, 822));
+    // The dock: the rack (see layoutDock).
+    layoutDock();
 
-    signalChain.setBounds (mock (12, 832, 1662, 930));
+    // With the rack hidden, the chain moves up into its place.
+    const auto rackGap = RackView::isShown() ? 0 : rackHeight;
+    signalChain.setBounds (mock (12, 832, 1662, 930).translated (0, -rackGap));
+    // HIDE RACK / SHOW RACK: top right of the chain's strip, level with its title.
+    rackButton.setBounds (signalChain.getRight() - 16 - 96, signalChain.getY() + 5, 96, 18);
+    rackButton.toFront (false);
 
     // Other pages cover the pedal and the dock.
-    const auto pageArea = mock (126, 72, 1548, 822);   // between the INPUT and OUTPUT strips
+    const auto pageArea = mock (126, 72, 1548, 822).withTrimmedBottom (rackGap);   // between the INPUT and OUTPUT strips
     rigBrowser.setBounds (pageArea);
     settingsPage.setBounds (pageArea);
 }

@@ -30,9 +30,13 @@ namespace effects
     public:
         // Note lengths, in beats (quarter notes), for tempo sync.
         // Index 0 is "Off": use the time in milliseconds instead.
-        static constexpr float syncBeats[] = { 0.0f, 4.0f, 2.0f, 1.0f, 1.5f, 2.0f / 3.0f, 0.5f, 0.75f, 1.0f / 3.0f, 0.25f };
+        // Saved by number: only append. (1/16 dotted, 1/16 triplet and 1/32
+        // added in PR7-G 0.40.1, for fast synced tremolo.)
+        static constexpr float syncBeats[] = { 0.0f, 4.0f, 2.0f, 1.0f, 1.5f, 2.0f / 3.0f, 0.5f, 0.75f, 1.0f / 3.0f, 0.25f,
+                                               0.375f, 1.0f / 6.0f, 0.125f };
         static inline const juce::StringArray syncNames { "Off", "1/1", "1/2", "1/4", "1/4 dotted", "1/4 triplet",
-                                                          "1/8", "1/8 dotted", "1/8 triplet", "1/16" };
+                                                          "1/8", "1/8 dotted", "1/8 triplet", "1/16",
+                                                          "1/16 dotted", "1/16 triplet", "1/32" };
 
         static constexpr float maxDelaySeconds = 2.5f;
 

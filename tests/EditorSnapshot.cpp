@@ -3,7 +3,9 @@
 #include "Parameters.h"
 #include "PluginEditor.h"
 #include "PluginProcessor.h"
+#include "ui/EffectPanel.h"
 #include "ui/Finish.h"
+#include "ui/RackView.h"
 
 namespace
 {
@@ -121,6 +123,23 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
         if (auto* p = processor.getParameters().getParameter (setting.upToFirstOccurrenceOf ("=", false, false)))
             p->setValueNotifyingHost (p->convertTo0to1 (setting.fromFirstOccurrenceOf ("=", false, false).getFloatValue()));
 
+    // PARAGON_SNAPSHOT_RACK=hidden: the rack hidden (HIDE RACK), the window shorter.
+    RackView::setShown (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK", {}) != "hidden", false);
+
+    // PARAGON_SNAPSHOT_RUN=seconds: run the audio that long first (silence),
+    // so things that move with the sound, like Cyclone's rotors, are going.
+    if (const auto run = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RUN", {}).getDoubleValue(); run > 0.0)
+    {
+        processor.prepareToPlay (48000.0, 480);
+        juce::AudioBuffer<float> block (2, 480);
+        juce::MidiBuffer midi;
+        for (int i = 0; i < juce::roundToInt (run * 100.0); ++i)
+        {
+            block.clear();
+            processor.processBlock (block, midi);
+        }
+    }
+
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
     if (showTuner)
         for (int i = 0; i < 12; ++i)   // let the editor's timers run: the tuner reads a few times
@@ -134,13 +153,42 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     if (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_PAGE", {}) == "settings")
         if (auto* tab = dynamic_cast<juce::Button*> (findById (*editor, "settingsTab")))
             tab->onClick();
-    // PARAGON_SNAPSHOT_BLOCK=n opens block n's knobs (0 = pitch, 1 = comp ... 7 = glitch ... 11 = lo-fi) in place of the graphic EQ.
+    // PARAGON_SNAPSHOT_BLOCK=n opens block n's knobs (0 = pitch, 1 = comp ... 7 = glitch, 8 = mod, 9 = mod 2 ... 12 = lo-fi, 13 = HAVOK) in place of the graphic EQ.
     if (const auto block = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_BLOCK", {}); block.isNotEmpty())
         if (auto* chain = findType<SignalChain> (*editor))
             chain->onSelect (block.getIntValue());
+    // PARAGON_SNAPSHOT_RACK_PAGE=n: the open block's page n (MOD's 1 is Cyclone's TONE).
+    if (const auto page = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK_PAGE", {}); page.isNotEmpty())
+    {
+        std::vector<EffectPanel*> panels;
+        std::function<void (juce::Component&)> collect = [&] (juce::Component& c)
+        {
+            for (auto* child : c.getChildren())
+            {
+                if (auto* panel = dynamic_cast<EffectPanel*> (child); panel != nullptr && panel->isVisible())
+                    panels.push_back (panel);
+                collect (*child);
+            }
+        };
+        collect (*editor);
+        for (auto* panel : panels)
+            panel->showPage (page.getIntValue());
+    }
     if (const auto width = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_WIDTH", {}).getIntValue(); width > 0)
-        editor->setSize (width, width * 9 / 16);
+        editor->setSize (width, width * editor->getHeight() / editor->getWidth());
     editor->resized();
+    // The FACEPLATE's meters settle as they would over a second of the timer;
+    // PARAGON_SNAPSHOT_INPUT=0.3 plays a guitar at that peak into them.
+    if (auto* faceplate = findType<Faceplate> (*editor))
+    {
+        const auto input = (float) juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_INPUT", "0").getDoubleValue();
+        for (int tick = 0; tick < 30; ++tick)
+        {
+            const float peak[] = { input };
+            processor.getFaceplateMeter().pushSamples (peak, 1);
+            faceplate->updateMeters();
+        }
+    }
     const auto image = editor->createComponentSnapshot (editor->getLocalBounds());
 
     juce::File file (juce::File::getCurrentWorkingDirectory().getChildFile (path));

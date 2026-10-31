@@ -2,6 +2,361 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.58.1
+
+**Much lighter on the CPU with the window open.** The plugin's sound processing was never the problem (with every effect off it takes well under 1% of a core); the window was. It redrew far more than it needed to, many times a second, even while nothing changed.
+
+- **The rack unit at the bottom** (the faceplate showing the selected block) redrew itself completely 30 times a second, including its glowing edges, which are blurs and slow to draw. It now redraws only when something it shows changes: a setting (the whole unit), or a meter or a moving display (only the display, beside the knobs). Its chassis is kept as a picture for those display updates.
+- **The HAVOK panel** redrew itself, and everything behind it, 30 times a second. It now redraws only when the pad, the program or the recorder changes.
+- **The LED screens' shadows** are worked out once per size instead of every time a screen is drawn.
+- Measured here with the window open and nothing happening (software drawing on Linux, which is slower than Windows, so expect lower numbers on your machine): **from about 91% of a core to about 5%**; with HAVOK open, from 49% to 5%. With DELAY, MOD or GLITCH open *and switched on*, their display still moves (the running light, the wave, the steps), about 17% here (it was over 91%).
+- The sound is unchanged, and the window looks the same: the full unit is drawn exactly as before (checked pixel by pixel against 0.58.0); a display updated on its own differs from it by at most 1 step in 255.
+- New tests: the faceplate draws nothing while idle, only its display for meters and animations, and all of it for a setting change; and a display redrawn on its own matches the whole unit drawn at once. Two hidden benchmarks measure the CPU of the sound processing (`[cpu]`) and of the open window (`[uicpu]`).
+
+## 0.58.0
+
+- **HAVOK's scratching: more stabs, and the factory rigs on them.** STAB, the distorted chord, scratches best: its hard front edge is what the crossfader cuts bite on.
+  - **Four new sounds** in the scratch programs' SOUND list (added at the end, so your saved rigs keep theirs):
+    - **STAB (DROP D):** a D power chord, as in drop-D tuning.
+    - **STAB (LOW B):** a B power chord, tuned right down like a 7-string or a low-tuned guitar.
+    - **STAB (SHORT):** shorter, brighter and punchier.
+    - **GRIT (LOW NOTE):** one low D and its octave, driven harder.
+  - All eight sounds are matched in level, so switching sound doesn't jump the volume.
+  - **The nu-metal factory rigs now scratch stabs:** **B11 Nu-Metal Turntable** has CHIRP on STAB (CHORD), and B12, now **Stab Transformer** (it was Laser Transformer), has TRANSFORMER on STAB (DROP D). **B13 Stab Scribble** stays on STAB (CHORD). Projects and favourites saved with Laser Transformer find it under its new name.
+  - Like the first four sounds, these are our own synthesized sounds, not samples from real records.
+
+## 0.57.0
+
+- **HAVOK: nu-metal DJ scratching.** Eight new programs after the KP1's 60, our own (the original has no scratch programs), for the aggressive turntable sound of late-90s and early-2000s nu-metal.
+  - **61 to 67, scratch patterns in time with the song:** BABY (back and forth), CHIRP (cut in the middle of each stroke), TRANSFORMER (fast crossfader chops), FLARE (the fader clicked shut mid-stroke), TEAR (out in one move, back in two), CRAB (quick finger taps on the fader) and SCRIBBLE (tense, tiny, fast wiggles). Touch the pad, or send MIDI CC 92 from a footswitch, and the DJ joins in.
+    - **X:** how fast, one back-and-forth every 1/2, 1/4, 1/8, 1/16 or 1/32 note at your DAW's (or the tapped) tempo. While the DAW plays, the moves land on the song's grid. The display shows the rate.
+    - **Y:** how loud the scratching is.
+  - **68 SCRATCH MANUAL, played by hand:** the record follows your hand across the pad, with a platter's little lag (modelled on the "Vinyl Break" scratch in Korg's KC KAOSS PAD manual). Your hand grabs the record where it is, as a hand on a real record does. Y is the crossfader: low on the pad cuts the sound.
+  - **SOUND, what's on the record:** AHH (a shouted vocal "ah"), LASER (a tone, the classic sound to scratch), NOISE (a breathy burst) and STAB (a distorted power chord). These are our own synthesized sounds, matched in level. They aren't samples from real records, which are other people's recordings.
+  - Your playing passes underneath, untouched; the scratching sits on top.
+  - **Three factory rigs** with a scooped, gated metal distortion (Abyss) and the scratching ready on HAVOK: **Nu-Metal Turntable** (B11, CHIRP on the vocal), **Laser Transformer** (B12) and **Stab Scribble** (B13). Their PROGRAM MAP keys hold the other moves.
+  - **Our design throughout:** the patterns, the sounds, the stroke length and the lag. They're our versions of the classic scratch moves, not copies of any DJ's playing.
+- HAVOK's program list is now 68 long. Programs 1 to 60 are unchanged, so saved rigs and projects keep theirs.
+
+## 0.56.0
+
+- **HAVOK: a new X/Y touch pad effect, the last block in the chain.** It's our own design, inspired by the original Korg Kaoss Pad (the KP1). Play it by clicking and dragging on the pad in the rack's display: the effect sounds while you touch the pad, and stops when you let go.
+  - **Taken from the KP1's manual:**
+    - All 60 programs, with their names, what X (left to right) and Y (bottom to top) control on each, and the manual's playing hint ("Rub slowly", "Tap with snare drum"...). They're filters, wahs, distortions, phasers, flangers, pitch shift, tremolo, delays and tape echoes, reverbs and gate reverbs, ring modulators, 3D pan, vibrato and step effects, and the sample/play programs 51 to 60.
+    - **HOLD:** the effect stays where you last touched, as if your finger were still on the pad.
+    - **The display:** the program number, or, while you touch the pad, where you're touching as 1.1 (bottom left) to 9.9 (top right), 5.5 in the centre. With HOLD on, it shows the held position.
+    - **PROGRAM MAP keys 1 to 6:** press one for its program; hold it for two seconds to store the program you're on there. Stored with HOLD on, it keeps the held position too.
+    - **Sample/play (51 to 60):** press REC to record a phrase (up to 6 seconds), press it again to stop, then touch the pad to play it back. Depending on the program, X sets the loop length, plays it forwards or backwards like a scratch, or stretches it without changing the pitch. Programs 54 to 56 start recording by themselves when sound comes in (AUTO REC); 57 and 58 keep your playing under the phrase. Changing program erases the phrase, as on the original.
+    - **When you let go**, filters, distortion and modulation go straight back to the dry sound. Delays and reverbs stop taking in sound but ring out, so tapping the pad on one note sends only that note into the echo.
+  - **Ranges from Korg's KC KAOSS PAD plugin manual:** the filter sweeps from about 6 Hz to 21.7 kHz, the flanger's delay up to 50 ms, the ring modulator up to 12 kHz, pitch shift ±24 semitones (two octaves each way), the REVERB program's time from 0.2 to 10 seconds, and the LFOs up to 32 Hz.
+  - **Our guesses**, as neither manual says: how every program actually sounds (filter slopes, drive curves, the fixed delay times, reverb sizes, LFO shapes), the level balance between programs, the longest phrase the sampler records, the AUTO REC threshold, and how SPECIAL ECHO (we play the repeats backwards) and STEP MODULATION (random pitch steps) work.
+  - **MIDI:** a MIDI X/Y pad or a hardware Kaoss Pad plays HAVOK on the controllers the original sends: CC 12 for X, CC 13 for Y, CC 92 for touch. Your DAW can also record X, Y and Touch as automation.
+  - **In rigs:** the program, HOLD, the pad's position and the PROGRAM MAP keys are saved with each rig. Touch isn't, because it's where your finger is.
+
+## 0.55.0
+
+- **CYCLONE: a new rotary speaker, replacing MODULATION's old Rotary type.** It's our own design, inspired by the Neo Instruments Ventilator II, which simulates a model 122 rotary speaker cabinet. MOD and MOD 2 both have it.
+  - **Taken from the pedal's manual:**
+    - The rotor speeds: FAST SPEED and SLOW SPEED set both rotors, the bass drum turning a little slower than the treble horn. The defaults are an average 122's: fast horn 6.8 Hz and drum 6.5 Hz, slow horn 0.8 Hz and drum 0.76 Hz.
+    - How long they take to change speed (ACCELERATION). At its default the horn takes about 1 s to speed up and 1.6 s to slow down, and the heavy drum about 5.5 s either way.
+    - The 800 Hz split between horn and drum, and the stereo pair of mics on the horn with one mic on the drum.
+    - What every control does: SLOW / FAST, STOP (the rotors brake to a stop facing forward), BALANCE, DRIVE (the cabinet's valve amp, level-matched), MIX / DIST LO and HI (the first half mixes each rotor in, the second half moves its mics back for less wobble), MODE (GIT 1 neutral, GIT 2 brighter, KEY the 122's speakers) and LEVEL.
+  - **Our guesses**, as the manual doesn't say: the drive's curve, how strongly the sound swings as the rotors turn, the horn and drum sizes for the pitch wobble, the speaker and GIT 2 curves, BALANCE's range, and the curve of the expression pedal's speed sweep.
+  - **On the rack:** a ROTORS page (FAST, STOP, FAST SPEED, SLOW SPEED, ACCEL) and a TONE page. The display shows both rotors turning, with their real speeds.
+  - **Playing it live:**
+    - **Hold footswitch 3** to switch between SLOW and FAST; a tap still turns MOD on and off.
+    - **CYCLONE SPEED** on the expression pedal sets the speed, from SLOW SPEED at the heel to FAST SPEED at the toe, with the rotors catching up as a real cabinet's do.
+  - **Your saved rigs and projects** that used the old Rotary come in as Cyclone, set as close as it goes: its speed becomes SLOW or FAST at that speed, and its MIX and DEPTH set the MIX / DIST knobs. It won't sound identical. The factory rigs Rotary Spin, Soaring Fuzz Solo and Slow Rotary Clean are set up for it.
+- A block's controls now show for the TYPE you've picked the moment its panel opens, not a moment later.
+
+## 0.54.0
+
+- **GRAPHIC EQ: the fader lights now light up like the PR7's other keys.** While the EQ is on, the light on each fader's cap (all nine bands and LEVEL) is the same bright neon bar as the lit ON key, with its white-hot core and glow. Before, it was a thin pink line that looked the same whether the EQ was on or off.
+  - While the EQ is off they show the dim red of an unlit key, so the faders also tell you at a glance whether the EQ is working.
+  - They follow ON however it changes: a click, the stomp, a rig or the DAW's automation.
+  - In every finish (Pearl White, White + Neon, Pearl Black) the caps stay black, so the dim light stays visible on them too.
+
+## 0.53.1
+
+- **SHOW RACK no longer makes the window too big.** In Cubase, showing the rack made the whole plugin about 12% bigger, running it off the right and bottom of the screen.
+  - The cause: the plugin asked Cubase for the taller size while still giving it the rack-hidden window's limits and shape. Cubase checks every new size against those, so it "corrected" the size to a bigger one.
+  - Now the new shape and limits go in first, then the size, so the window is exactly the width it was, only taller.
+- **The window stays on the screen.** The DAW keeps the window's top left corner where it is, so the window grows downwards when the rack opens. If the full-width window wouldn't fit below where it is, it's made narrower, just enough to fit. Hiding the rack again goes back to your width.
+  - To get the rack at full size, drag the window up and widen it from its corner.
+
+## 0.53.0
+
+- **HIDE RACK:** a button at the top right of the SIGNAL CHAIN strip hides the rack when you're not editing an effect, for a smaller, cleaner window.
+  - The SIGNAL CHAIN moves up under the floor unit and the window gets shorter by the rack's height. It keeps its width, so the floor unit stays the same size.
+  - **SHOW RACK** (the same button) brings it back, and so does clicking a block in the SIGNAL CHAIN, which opens the rack on that block. Footswitches don't open it.
+  - It's remembered on this computer, like the finish: every PR7-G you open afterwards starts with the rack shown or hidden, the way you left it.
+  - The PRESETS and SETTINGS pages fit the shorter window too.
+
+## 0.52.0
+
+- **THE RACK, stage 2: the GRAPHIC EQ rebuilt for the rack, at full size** (as on PR7-V). In 0.51.0 it sat in a screen on the rack at about four-fifths size; now it's on the unit's face like every other block, and nothing on the rack is scaled down.
+  - **The nine faders:** evenly spaced, as on a hardware graphic EQ, with LEVEL a little apart. Each value is on a small screen above its fader and each frequency is stamped under it, in the finish's ink.
+  - **A printed red dB scale** and a 0 dB line across the faders.
+  - **The keys:** ON is the unit's key with a light stripe, FLAT is a key, and PRESETS is on a screen.
+  - **The display shows the EQ's curve** across its whole width.
+  - The faders are the real ones (same settings, automation and undo).
+
+## 0.51.0
+
+- **THE RACK, stage 1 of 2** (as on PR7-V): the faceplate, the block's controls and EXPRESSION ASSIGN are now **one wide rack unit** under the floorboard, the "brain" for the floorboard processor.
+  - **Left: the block's display.** Only its screens and meters, since the real knobs are right beside it:
+    - Classic's needle fills the display;
+    - Daybreak's gain reduction and the drive's INPUT level are big LED bars with their dB reading;
+    - the delay's repeats, the reverb's shape and the modulation's wave each have their TIME, DECAY or RATE readout beside them;
+    - PITCH's voices are LED columns, with TUNING beside them.
+  - **Middle: the block's real controls, at full size.** They're the same controls as before (same settings, automation and undo), drawn as the unit's own parts:
+    - its big knobs, each value on a small screen;
+    - lists on screens;
+    - switches as small keys with a light stripe;
+    - names stamped in the finish's ink.
+
+    Every block fits in one row, so there are no pages. A control that doesn't apply (another TYPE's, TIME while synced) leaves the face rather than greying out.
+  - **Right end: EXPRESSION ASSIGN**, behind its own printed red line.
+  - **GRAPHIC EQ** is one of the unit's keys, top right.
+  - **The GRAPHIC EQ sits in a screen on the rack for now**, a little smaller (about four-fifths). Stage 2 rebuilds it for the rack at full size, with its curve as the display.
+  - In all three finishes.
+
+## 0.50.0
+
+- **Halo replaces Face Fuzz:** a fuzz modelled on the germanium Fuzz Face of 1966-68 (the round fuzz pedal of early Hendrix and Gilmour), with **its whole circuit solved as it is**, part for part from the published schematic. It takes Face Fuzz's place in the MODEL list, so rigs and projects that used Face Fuzz now get Halo.
+  - **What changed:** Face Fuzz was a generic fuzz (a gain stage and a lopsided clipper). Halo is the real two-transistor circuit: the 100k that both biases the transistors and feeds back, the 1k FUZZ pot with 22 uF on its wiper, the 2.2 uF input and the split 470 + 8.2k output load. Nothing in it is a clipper: the fuzz comes from the transistors themselves.
+  - **The guitar is part of the circuit.** The original's input is very low impedance, so it loads your guitar; a 6k pickup's resistance is modelled in front of it.
+  - **The transistors:** germanium, the AC128 kind, with a gain of 100 (the originals used hand-picked parts of about 80 to 120), germanium's leakage, and their limited speed.
+  - **What we measured:**
+    - At rest it sits exactly where the circuit's analysis says: 0.61 V, 0.41 V and 5.4 V at the three points that matter.
+    - FUZZ adds about 23 dB of gain for a quiet note.
+    - Played hard it's saturated, so FUZZ barely changes its level, as on the pedal.
+    - It clips unevenly: a strong 2nd harmonic.
+    - It **cleans up as you pick softer**: a light touch is almost clean (harmonics 50 dB down); a hard one is full fuzz.
+    - Its input thins the lowest bass a little.
+  - **Controls:** DRIVE is its FUZZ. The original has only FUZZ and VOLUME, so **there's no TONE**: it's hidden for Halo, and LEVEL stands in for VOLUME. LEVEL 0 dB matches your guitar at FUZZ noon.
+  - **Its faceplate** reads HALO / GERMANIUM FUZZ, with FUZZ and LEVEL.
+  - **The two factory rigs that use it** (Slow Rotary Clean, with Halo waiting on footswitch 2, and Fuzz Echo Solo) keep their settings. Halo sits at the same level Face Fuzz did (within about 3 dB), so they weren't rebalanced. They now sound like the real circuit; they lose Face Fuzz's TONE, which the original never had.
+  - **What isn't modelled:**
+    - the pickup's inductance;
+    - temperature (real germanium drifts with it);
+    - a tired battery;
+    - your guitar's volume knob raising the source resistance. Its volume is already in the recording, so Halo cleans up with how hard you play, not with that knob's position.
+  - It solves the circuit 8 times per sample's worth of audio, so it costs about as much CPU as the other circuit-modelled drives.
+
+## 0.49.0
+
+- **Our own names, in place of trademarks, artists and song titles.** The faceplates show effect names in big letters, so these needed to be ours. **Only the names changed: every effect sounds exactly as before, and your rigs and projects load as they did.**
+  - **Effects:**
+    - Whammy-Wah (FILTER / PITCH) is now **Quasar**;
+    - Uni-Vibe (MODULATION) is now **Nebula**;
+    - Dimension Chorus (MODULATION) is now **Prism**.
+  - **Expression pedal:** PITCH / WHAMMY is now **PITCH BEND**, and WHAMMY-WAH is now **QUASAR**.
+  - **Quasar's programs:** 02 Classic Wah, 03 Classic Wah 2, 07 Wah Auto Sens and 10 Wah Auto Attack (were "Cry ...").
+  - **Factory rigs:**
+
+    | Was | Now |
+    |---|---|
+    | Leslie Spin | Rotary Spin |
+    | Dimension Clean | Prism Clean |
+    | Machine Gun Vibe | Nebula Lead |
+    | Whammy Lead | Quasar Lead |
+    | XP Wah Crunch | Quasar Wah Crunch |
+    | Brownface Trem | Vintage Amp Trem |
+    | Killing Solo (RATM) | Octave Squeal Solo |
+    | Bulls Scratch (RATM) | Wah Scratch Chop |
+    | Numb Solo (Floyd) | Soaring Fuzz Solo |
+    | Us and Them (Floyd) | Slow Rotary Clean |
+    | Run Like Hell (Floyd) | Galloping Delay |
+    | Money Solo (Floyd) | Fuzz Echo Solo |
+    | Jambi Talk Box (Tool) | Heavy Talk Box |
+    | Show Me the Way (Frampton) | Warm Talk Box |
+
+  - **Nothing breaks:** a project saved with one of these rigs loaded shows its new name and still knows which rig it is, and factory rigs you'd starred stay starred.
+
+## 0.48.0
+
+- **FACEPLATE stage 3: every block now has its own faceplate**, built from the same PR7 parts, in every finish.
+  - **MOD and MOD 2:**
+    - Each is named for its TYPE, with what kind of effect it is (VORTEX / CHORUS, AEON / FLANGER, HADRON / PHASER...), and whether it sits PRE or POST.
+    - Its wobble is drawn at RATE and DEPTH, with a dot riding it. **Razor shows its real shape**: from triangle to square as you turn WAVE.
+    - RATE shows in digits, or as the note value while synced.
+    - Its knobs are the ones its TYPE has: the Vortex's DEPTH, MIX and EQ; AEON's MANUAL, DEPTH and RES; Razor's DEPTH and WAVE; Hadron's SCRIPT / BLOCK on a key.
+  - **FILTER / PITCH:**
+    - For Auto-Wah and Talk Box, the filter's peak, sharper as you turn up RESONANCE.
+    - For Pitch Shifter, the interval (+1 OCT...); for Whammy-Wah, the program.
+    - Its knobs (SENS, RES, MIX).
+  - **GLITCH:** named for its MODE (SEQUENCE, KILLSWITCH...). A 16-step pattern, busier as DENSITY goes up, with a light stepping at LENGTH. LENGTH in digits or as a note value; DENSITY and MIX.
+  - **GRAPHIC EQ:** the EQ's real response curve, exactly as its own panel works it out, and LEVEL.
+  - **LO-FI:** named for its TYPE (CASSETTE, BITCRUSHER...). A wave showing what AMOUNT does (squashed, or stair-stepped for the bitcrusher) and NOISE adds; AMOUNT, NOISE and MIX.
+  - **What's a drawing rather than a measurement:**
+    - the filter peak's shape;
+    - the glitch pattern (the real one is random, so the screen shows how busy it is, not the actual steps);
+    - the lo-fi wave.
+
+    The EQ curve and Razor's shape come from the effects' own code. The moving lights keep time with the RATE or LENGTH setting, not with the audio.
+
+## 0.47.0
+
+- **FACEPLATE stage 2:** five more blocks get their own faceplates, built from the same PR7 parts as stage 1, in every finish.
+  - **CABINET IR:** the IR's name and length, and its **frequency response**: a curve from 40 Hz to 20 kHz showing what the cab does to your tone (where it's full, where it scoops, where the top end rolls off). It's worked out from the IR file itself when it loads, so it's the real response of your IR, smoothed a little so the cab's many fine ripples don't hide its shape. With no IR loaded, the line is flat.
+  - **PITCH:** the OCTAVER's four voices (2 DOWN, 1 DOWN, DRY, 1 UP) and FREEZE's level as faders, like a small mixer; TUNING on a screen; OCTAVER and FREEZE on keys, lit while they're on.
+  - **COMP / GATE** follows its TYPE:
+    - **Classic:** a gain-reduction needle that moves with the compressor as you play, plus THRESHOLD, RATIO, LEVEL and the GATE on small screens;
+    - **Daybreak:** COMP, DETAIL, MIX and LEVEL knobs, INTENSITY on a key, the GATE, and the gain reduction in LED bars.
+  - **DELAY:** named for its TYPE (TAPE ECHO, ANALOG DELAY...). The repeats are laid out in time, each one as loud as FEEDBACK leaves it, with a light running along them at the delay time. TIME shows in seven-segment digits, or as the note value (1/4...) while synced. FEEDBACK and MIX knobs.
+  - **REVERB:** named for its TYPE (HALL, SPRING...). Its shape: the PRE-DELAY gap, then the tail as long as it takes to die away (Spring with its ripple, Reverse swelling up). DECAY in seconds; SIZE and MIX knobs.
+  - **What's a drawing rather than a measurement:**
+    - The reverb's shape is drawn from its decay time; it isn't the real tail.
+    - The delay's light keeps time with the delay setting, not with the audio itself.
+    - The cab curve and the compressor's needle are real.
+  - Stage 3 (MOD, MOD 2, FILTER / PITCH, GLITCH, EQ, LO-FI) is next.
+
+## 0.46.0
+
+- **The FACEPLATE, in place of RIG BROWSER and SELECTED RIG** (the two panels at the bottom left). It shows the block you've selected in the signal chain as a hardware unit, built from the PR7's own parts (its chassis, LCD screens, knobs, keys and lettering) in your current finish. This is stage 1 of 3:
+  - **OD / DIST:** the pedal's model name on a badge, and what kind of pedal it is (OVERDRIVE, FUZZ, METAL DISTORTION...). Its knobs follow the model: DRIVE, TONE and LEVEL for most; Abyss shows its HIGH, LOW, MIDDLE and MID FREQ; Skyline shows its eight ATTACK keys (the chosen one lit) and GATE. An INPUT meter along the bottom shows your guitar's level going in.
+  - **NAMP:** the loaded amp model's name and details on an LCD screen (or LOADING... / NO MODEL LOADED), with RIG LEVEL, PRESENCE and NORMALISE, and the same INPUT meter.
+  - **Every other block** shows a plain unit with its name and on light for now. CABINET IR, PITCH, COMP / GATE, DELAY and REVERB get their own faceplates in stage 2; the rest in stage 3.
+  - **Nothing is lost:** saving is still on the header's SAVE button, the pedal's SAVE / SAVE AS and the PRESETS page, and the rig browser is the PRESETS page.
+  - The faceplate is a display: you still turn the knobs in the middle panel.
+
+## 0.45.0
+
+- **Abyss, a new distortion:** modelled on the Boss MT-2 Metal Zone, from the circuit diagram in Boss's own service manual (1991), so every part value is real. It's the last MODEL in OD / DISTORTION.
+  - **The gain:** a first stage whose transistor branch builds a hump of gain around 800 Hz, then DIST (up to about 250 times more), then two silicon diodes and another shaping stage. It's heavily saturated even at DIST 0, as a real MT-2 is. With a flat EQ and a quiet signal, 800 Hz gets about 33 dB more gain than 50 Hz.
+  - **Its own EQ, shown in place of TONE:**
+    - **LOW:** about 38 dB of range at 100 Hz;
+    - **HIGH:** about 34 dB at 6.4 kHz;
+    - **MIDDLE:** about 23 dB at 400 Hz;
+    - **MID FREQ:** moves MIDDLE from the low mids up into the low kHz.
+
+    LOW and MIDDLE match the reference circuit model's figures. HIGH comes out wider than its 23 dB, but a hand calculation from the HIGH stage's parts agrees with ours (about 35 dB). The difference isn't confirmed.
+  - **DRIVE is its DIST.** LEVEL 0 dB matches your guitar at DIST noon. Like the pedal, its level barely moves across DIST.
+  - **What's simplified:** the MT-2's three transistor branches are treated as perfect followers, which is what they do in this circuit, and each op-amp swings about 3 V either way. The stages that clip run at 8x the rate; the EQ runs at the normal rate.
+  - **What's a guess:** the direction of the EQ pots (taken from the reference model), and MID FREQ's direction, clockwise going higher.
+
+## 0.44.0
+
+- **Chimera, a new overdrive:** modelled on the Klon Centaur, the "transparent" overdrive, from a clean redraw of its schematic, cross-checked with ElectroSmash's analysis. It's the last MODEL in OD / DISTORTION.
+  - **Three paths, mixed:**
+    - **the drive:** an op-amp gain stage into two germanium diodes, which clip softly from about 0.35 V;
+    - **a clean feed of your guitar:** GAIN's second half turns it down as the drive goes up, which is why it keeps your guitar's own sound under the drive;
+    - **a low feed for the bass.**
+
+    After the mix come the active TREBLE stage and a clean bleed straight to the output.
+  - **DRIVE is its GAIN** (a dual audio-taper pot, both halves turning together). **TONE is its TREBLE**, about 24 dB of range at 8 kHz, as its parts give.
+  - **What we measured:**
+    - a mid hump at full GAIN: a quiet 1 kHz gets about 19 dB more gain than 100 Hz;
+    - distortion that's clean at GAIN 0, about 1% at noon and about 20% fully up, all odd harmonics.
+  - **Level:** LEVEL 0 dB matches your guitar at GAIN noon. Like the real pedal it's louder at low GAIN (about +9 dB): the Klon's famous clean boost. It's a little louder fully up too (about +3 dB).
+  - **What's a guess:**
+    - the GAIN pot's value (100k, from clone parts lists);
+    - the germanium diodes' exact curve;
+    - VOLUME, which is held at noon, with LEVEL after it;
+    - the gain stage's limit of about 7.5 V either way.
+- The circuit helper can now hold 12 capacitors (it held 8), for the Klon's feed network.
+
+## 0.43.2
+
+- **The edit panels match their blocks:** each block's panel (its header icon and the bars above its controls) now uses that block's colour in the SIGNAL CHAIN, from red at PITCH to orange at LO-FI. The GRAPHIC EQ's faders and response curve take the EQ block's hot pink. The knob rings and buttons keep the plugin's orange.
+
+## 0.43.1
+
+- **The SIGNAL CHAIN now matches the PR7-E:** every block is coloured by its place in the chain, along the PR7 family's red, hot pink and orange gradient (red at PITCH, hot pink in the middle, orange at LO-FI), instead of each block having its own colour. Switched-off blocks show their colour dimmed, as before.
+
+## 0.43.0
+
+- **Rabid replaces Classic:** a distortion modelled on the ProCo RAT 2, from its published build schematic (the RAT 2 parts list, cross-checked against other builders' layouts). Rigs and projects that used Classic, and projects from before the MODEL menu, now get Rabid.
+  - **The op-amp is the sound.** The RAT's LM308 is a slow chip, and that's modelled:
+    - **It runs out of speed at high gain.** At full DISTORTION it amplifies a quiet 500 Hz about 4 times more than a quiet 4 kHz, rolling the fizz off the top, as the real pedal does. Our figures match the reference circuit model's (47 dB at 4 kHz).
+    - **It can only swing so fast** (0.3 V per microsecond), so hard-driven edges are sloped rather than razor-sharp, which takes the buzz off.
+    - **It runs out of room** at about 3 V either way.
+  - **DISTORTION** (DRIVE) is the pedal's 100k pot in the op-amp's feedback, against its two legs to ground (560 ohms with 4.7 uF, and 47 ohms with 2.2 uF). Those legs make it bassier at low settings and push the mids as it goes up.
+  - **Two silicon diodes** after the op-amp, through 1k and 4.7 uF, clip both halves of the wave alike.
+  - **FILTER** (TONE) is the pedal's 1.5k plus 100k pot into 3.3 nF, from wide open to about 475 Hz. **It's turned round to match the other models: TONE up is brighter.** On a real RAT, FILTER up is darker.
+  - **LEVEL 0 dB** matches your guitar at DISTORTION and TONE noon.
+  - **What's a guess:** the op-amp's exact speed and swing (the chips vary), and its output stage is treated as perfect.
+
+## 0.42.0
+
+- **Skyline, a new drive:** inspired by the Horizon Devices Precision Drive, the modern metal "tightener" in front of a high-gain amp. It's the last MODEL in OD / DISTORTION.
+  - **At heart it's a Tube Screamer.** It's built on Banshee's circuit model. With ATTACK on 7 and GATE off, it is exactly Banshee.
+  - **ATTACK**, an 8-way switch: the capacitor that decides how much bass reaches the clipping. Builders tracing the pedal found eight, from 470 nF down to 33 nF. Against the circuit's 4.7k, that cuts the bass from about 70 Hz (position 1: full, low-mid punch) to about 1 kHz (position 8: very tight, all pick attack). A Tube Screamer is fixed at position 7.
+  - **GATE**: a noise gate on the pedal that listens to your guitar, not the drive, so the drive's own hiss can't hold it open. Fully down it's off; turning it up raises the threshold and closes it faster and harder.
+  - **TONE** is the pedal's BRIGHT knob.
+  - **What's a guess:** the gate's exact behaviour (its circuit hasn't been published), and any gain or output difference from a Tube Screamer. Horizon says its VOLUME at 6 equals a Tube Screamer at 10; use LEVEL for more.
+- Banshee's bass cut is now worked out from its parts (4.7k and 47 nF: 720.5 Hz) instead of a rounded 720 Hz. You won't hear the difference.
+
+## 0.41.0
+
+- **Cosmonaut replaces Muff Fuzz:** a fuzz modelled stage by stage on the mid-'90s green Russian Big Muff (the "Green Russian" / Civil War), using the part values traced from a real unit. The thick, bassy wall of fuzz of stoner, doom and sludge.
+  - **Four transistor stages, as on the pedal:** an input stage, SUSTAIN, two clipping stages, the tone stack and an output stage. Each stage uses the pedal's real resistors and capacitors and is worked out sample by sample.
+  - **The fat bottom end:** in the clipping stages, the diodes sit behind a small 0.047 uF capacitor, so they clip the bass much less than the mids and highs. A low E comes out about 4 dB cleaner than a note two octaves up, and much louder. The US Big Muffs use a 1 uF there and clip everything alike.
+  - **Massive sustain:** picking ten times harder makes the mids barely 1 dB louder.
+  - **The tone stack:** the pedal's own (3.9 nF and 22k for treble, 20k and 10 nF for bass, a 100k TONE pot). It always scoops the mids, most at noon.
+  - **SUSTAIN raises the level, as on the pedal:** at LEVEL 0 dB it matches your guitar at noon, about 1 dB quieter at 2 and about 5 dB louder at 9.
+  - **What's a guess:** each transistor is treated as an amplifier of about 31 times (its 12k and 390 ohm resistors) that swings up to 4 V; the real transistors' gain varies, as it does between real pedals.
+  - **Your rigs:** rigs and projects that used Muff Fuzz now get Cosmonaut. Expect a thicker, bassier and slightly louder fuzz. The factory "Numb Solo (Floyd)" rig's LEVEL is lowered to match.
+
+## 0.40.1
+
+- **Faster SYNC settings:** 1/16 dotted, 1/16 triplet and **1/32**, for MOD, MOD 2 and DELAY. They're at the bottom of the SYNC list, so saved rigs keep their settings. Synced modulation can now run up to 40 cycles a second (it stopped at 20), so 1/32 keeps up at fast tempos.
+
+## 0.40.0
+
+- **Choose where your NAM amps and cab IRs live:** a new **AMP & CAB FOLDERS** section on the SETTINGS page, with a CHOOSE button for each (and an x to forget it).
+  - **The AMP and CABINET browsers open there**, instead of in Documents. If the loaded file is in a folder inside it, the browser opens on that folder.
+  - **Rigs find files that have moved.** If a rig or project points at a model or IR that isn't where it was saved (a new computer, or you've reorganised), PR7-G looks in your folder, and every folder inside it, for a file with the same name, and loads that. Save the rig again to keep the new location.
+  - **Saved on this computer**, like the finish, so every PR7-G in every project uses them.
+
+## 0.39.0
+
+- **Razor replaces the generic tremolo:** modelled on the Boss TR-2, the standard tremolo pedal since 1997. Its three knobs are RATE, DEPTH and a new **WAVE** knob (shown only for Razor).
+  - **WAVE** shapes the pulse, as on the pedal: fully down, a smooth triangle (the classic amp-style throb); at noon, a trapezoid that holds full and low volume for most of each cycle; fully up, almost a square: the hard, machine-gun on-off chop.
+  - **How:** like the pedal's circuit, WAVE turns up the gain of the oscillator's last stage, so its triangle clips flat into a trapezoid and then nearly a square. A capacitor rounds the corners off, so even the hardest chop doesn't click.
+  - **DEPTH** sets how far the volume dips. The guitar is at full volume only at the top of each pulse, so like the pedal, Razor sounds a little quieter when it's on.
+  - **RATE:** the pedal's spec is one pulse every 90 to 900 ms (about 1.1 to 11 per second). The RATE knob keeps its wider range, and SYNC still locks it to the tempo.
+  - **What's a guess:** how far WAVE fully up pushes into clipping, and how much the capacitor rounds the corners. Both are set from how the pedal is described: nearly on and off fully up, but no clicks.
+  - **Your rigs:** rigs and projects that used the Tremolo now get Razor, with WAVE down (a triangle). That's close to the old tremolo's smooth sine pulse, a touch more pointed.
+
+## 0.38.0
+
+- **Hadron replaces the generic phaser:** modelled on the MXR Phase 90, the phaser behind so many hard-rock and metal leads, built from its circuit's real parts.
+  - **Four phase stages**, each a 47 nF capacitor and a JFET transistor (with 24k across it). The LFO's voltage sets how much the transistors conduct, which sweeps each stage's turn from about 330 Hz to 3 kHz.
+  - **The guitar and the stages are mixed half and half**, which cuts two deep, moving notches (about 140 Hz to 1.2 kHz, and 790 Hz to 7.2 kHz). That's the swoosh.
+  - **The LFO is a lopsided triangle:** it sweeps up for about two thirds of each cycle and back down in one third, as the pedal's does.
+  - **The pedal's one knob:** SPEED is the RATE knob. DEPTH and MIX are greyed out, because the pedal has neither.
+  - **A new CIRCUIT switch, SCRIPT or BLOCK**, as on today's pedals:
+    - **SCRIPT**, the original '70s circuit: smooth and vintage.
+    - **BLOCK** adds the later feedback resistor (R28, 24k): a midrange hump that moves with the sweep (about 2.7 dB up, the bass and treble about 1.5 dB down), and notches set closer together, for a stronger, more vocal sound.
+  - **What's a guess:** where exactly R28 connects isn't published in detail. It's placed where it can work (the second stage's op-amp input), which gives exactly the hump and extra level the BLOCK circuit is known for.
+  - **Your rigs:** rigs and projects that used the Phaser now get Hadron, on SCRIPT. Its DEPTH and MIX settings no longer change anything.
+- Component values and the JFET model are from Giampiccolo et al., "Wave Digital Model of the MXR Phase 90" (Politecnico di Milano).
+
+## 0.37.0
+
+- **Carbonite, a new chorus:** modelled on the Boss CE-2, the late-'70s compact chorus behind countless '80s clean tones. Pick it in MOD or MOD 2's TYPE list (at the bottom, so your saved rigs keep their types).
+  - **Warmer and darker than Vortex:** the filters either side of its delay chip stop at about 6.6 kHz, against Vortex's 9 kHz, and a low cut at about 48 Hz keeps the chorus off the deep bass.
+  - **A tighter, faster sweep:** the delay sits at about 3.4 ms and sweeps about 2.2 to 4.5 ms at full DEPTH, from a real pedal's measured clock. The swing is lopsided, further one way than the other, as the pedal's clock is.
+  - **The pedal's two knobs:** RATE and DEPTH. MIX is greyed out, because the pedal always mixes dry and wet 50/50. Mono, like the pedal: each side gets the same treatment.
+  - **What's a guess:** how hard a loud signal can drive the chip before it rounds off, and the LFO's exact speed range (RATE uses the block's usual range). Real CE-2s also differ from each other by tens of percent; this follows one measured pedal.
+
+## 0.36.1
+
+- **The Screamer drive is now called Banshee.** Only the name has changed: it sounds the same, and rigs and projects that used it get Banshee.
+- Footswitch 2's readout now names every drive model. Before, it said "Classic" for Muff Fuzz and Face Fuzz as well.
+
+## 0.36.0
+
+- One build with both AEON (0.35.0) and MOD 2.
+- **MOD 2: run two modulation effects at once**, a chorus and a flanger for example.
+  - MOD 2 is a second, complete MOD block straight after MOD, with its own TYPE, POSITION, SYNC, RATE, DEPTH, MIX, and AEON's MANUAL and RES, and Vortex's EQ and STEREO.
+  - Click its new tile in the SIGNAL CHAIN (after MOD) to open its controls.
+  - It's off by default, set to AEON, so existing rigs and projects sound exactly as before. It's saved with each rig.
+  - Footswitch 3 still switches MOD. With MOD 2 on as well, its readout shows both types, e.g. "Vortex + AEON".
+- **The SIGNAL CHAIN's names read in full again.** The block icons are a little smaller, so all thirteen names fit, including "FILTER / PITCH" and "CABINET IR".
+
 ## 0.35.0
 
 - **Everything in one build:** AEON, plus Vortex, MOD PRE and the cleaner face (no screws, no MIN light) from 0.33.0 to 0.34.1.

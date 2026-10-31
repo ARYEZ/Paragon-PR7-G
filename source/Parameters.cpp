@@ -7,6 +7,7 @@
 #include "dsp/effects/LoFi.h"
 #include "dsp/effects/Glitch.h"
 #include "dsp/effects/GraphicEq.h"
+#include "dsp/effects/Havok.h"
 #include "dsp/effects/Modulation.h"
 #include "dsp/effects/Reverb.h"
 
@@ -240,12 +241,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::freezeRelease, "Freeze Release", skewed (50.0f, 8000.0f, 1500.0f, 1.0f), 1500.0f, v24, asTime));
 
     constexpr int v25 = 25;
-    layout.add (makeFloat (ParamIDs::modEq, "Mod EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v25, [] (float value, int)
+    // As the pedal's knob reads: LO to HI, flat at noon.
+    const ToText asVortexEq = [] (float value, int)
     {
-        // As the pedal's knob reads: LO to HI, flat at noon.
         const auto db = value * effects::Modulation::vortexEqRangeDb;
         return std::abs (db) < 0.05f ? juce::String ("Flat") : (db > 0.0f ? "+" : "") + juce::String (db, 1) + " dB";
-    }));
+    };
+    layout.add (makeFloat (ParamIDs::modEq, "Mod EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v25, asVortexEq));
     layout.add (makeSwitch (ParamIDs::modStereo, "Mod Stereo", v25, false));   // off: mono; on: the pedal's two outputs
 
     constexpr int v26 = 26;
@@ -256,5 +258,87 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     constexpr int v27 = 27;
     layout.add (makeFloat (ParamIDs::modManual, "AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v27, asKnob));
     layout.add (makeFloat (ParamIDs::modRes, "AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v27, asKnob));
+
+    // Added in PR7-G 0.36.0. MOD 2: the same controls as MOD (a flanger by default, to pair with MOD's chorus).
+    constexpr int v28 = 28;
+    layout.add (makeSwitch (ParamIDs::mod2On, "Mod 2 On", v28, false));
+    layout.add (makeChoice (ParamIDs::mod2Type, "Mod 2 Type", v28, effects::Modulation::typeNames, (int) effects::Modulation::Type::flanger));
+    layout.add (makeFloat (ParamIDs::mod2Rate, "Mod 2 Rate", skewed (0.05f, 10.0f, 1.0f, 0.01f), 0.3f, v28, asHz));
+    layout.add (makeFloat (ParamIDs::mod2Depth, "Mod 2 Depth", { 0.0f, 1.0f, 0.01f }, 0.45f, v28, asPercent));
+    layout.add (makeFloat (ParamIDs::mod2Mix, "Mod 2 Mix", { 0.0f, 1.0f, 0.01f }, 0.5f, v28, asPercent));
+    layout.add (makeChoice (ParamIDs::mod2Sync, "Mod 2 Sync", v28, effects::Delay::syncNames, 0));
+    layout.add (makeFloat (ParamIDs::mod2Eq, "Mod 2 EQ", { -1.0f, 1.0f, 0.01f }, 0.0f, v28, asVortexEq));
+    layout.add (makeSwitch (ParamIDs::mod2Stereo, "Mod 2 Stereo", v28, false));
+    layout.add (makeChoice (ParamIDs::mod2Position, "Mod 2 Position", v28, effects::Modulation::positionNames, 0));
+    layout.add (makeFloat (ParamIDs::mod2Manual, "Mod 2 AEON Manual", { 0.0f, 10.0f, 0.1f }, 5.0f, v28, asKnob));
+    layout.add (makeFloat (ParamIDs::mod2Res, "Mod 2 AEON Res", { 0.0f, 10.0f, 0.1f }, 5.0f, v28, asKnob));
+
+    // Added in PR7-G 0.38.0: Hadron's (the phaser's) SCRIPT / BLOCK circuit.
+    constexpr int v29 = 29;
+    layout.add (makeChoice (ParamIDs::modHadron, "Hadron Circuit", v29, effects::Modulation::hadronCircuitNames, 0));
+    layout.add (makeChoice (ParamIDs::mod2Hadron, "Mod 2 Hadron Circuit", v29, effects::Modulation::hadronCircuitNames, 0));
+
+    // Added in PR7-G 0.39.0: Razor's (the tremolo's) WAVE, 0 (triangle) to 10 (square).
+    constexpr int v30 = 30;
+    layout.add (makeFloat (ParamIDs::modWave, "Razor Wave", { 0.0f, 10.0f, 0.1f }, 0.0f, v30, asKnob));
+    layout.add (makeFloat (ParamIDs::mod2Wave, "Mod 2 Razor Wave", { 0.0f, 10.0f, 0.1f }, 0.0f, v30, asKnob));
+
+    // Added in PR7-G 0.42.0: Skyline's ATTACK (8 positions, 7 is the TS808's) and GATE.
+    constexpr int v31 = 31;
+    layout.add (makeChoice (ParamIDs::driveAttack, "Skyline Attack", v31, effects::Drive::skylineAttackNames, effects::Drive::skylineTubeScreamerAttack));
+    layout.add (makeFloat (ParamIDs::driveGate, "Skyline Gate", { 0.0f, 10.0f, 0.1f }, 0.0f, v31, asKnob));
+
+    // Added in PR7-G 0.45.0: Abyss's (the Metal Zone's) EQ.
+    constexpr int v32 = 32;
+    layout.add (makeFloat (ParamIDs::driveHigh, "Abyss High", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    layout.add (makeFloat (ParamIDs::driveLow, "Abyss Low", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    layout.add (makeFloat (ParamIDs::driveMiddle, "Abyss Middle", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    layout.add (makeFloat (ParamIDs::driveMidFreq, "Abyss Mid Freq", { 0.0f, 10.0f, 0.1f }, 5.0f, v32, asKnob));
+    // Added in PR7-G 0.55.0: CYCLONE, the rotary speaker (inspired by the Neo
+    // Ventilator II), on MOD and MOD 2. Its defaults are the manual's
+    // starting points: the speeds of an average 122, ACCELERATION at 1
+    // o'clock, the MIX / DIST knobs at 2 o'clock, GIT 2 for guitar.
+    constexpr int v33 = 33;
+    using effects::Cyclone;
+    for (const auto* ids : { &ParamIDs::modIds, &ParamIDs::mod2Ids })
+    {
+        const juce::String prefix = ids == &ParamIDs::modIds ? "Cyclone " : "Mod 2 Cyclone ";
+        layout.add (makeSwitch (ids->cycFast, prefix + "Fast", v33, false));
+        layout.add (makeSwitch (ids->cycStop, prefix + "Stop", v33, false));
+        layout.add (makeFloat (ids->cycFastSpeed, prefix + "Fast Speed", skewed (Cyclone::fastMinHz, Cyclone::fastMaxHz, Cyclone::fastDefaultHz, 0.01f),
+                               Cyclone::fastDefaultHz, v33, asHz));
+        layout.add (makeFloat (ids->cycSlowSpeed, prefix + "Slow Speed", skewed (Cyclone::slowMinHz, Cyclone::slowMaxHz, Cyclone::slowDefaultHz, 0.01f),
+                               Cyclone::slowDefaultHz, v33, asHz));
+        layout.add (makeFloat (ids->cycAccel, prefix + "Acceleration", { 0.0f, 10.0f, 0.1f }, 6.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycBalance, prefix + "Balance", { 0.0f, 10.0f, 0.1f }, 5.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycDrive, prefix + "Drive", { 0.0f, 10.0f, 0.1f }, 0.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycLow, prefix + "Mix / Dist Lo", { 0.0f, 10.0f, 0.1f }, 7.0f, v33, asKnob));
+        layout.add (makeFloat (ids->cycHigh, prefix + "Mix / Dist Hi", { 0.0f, 10.0f, 0.1f }, 7.0f, v33, asKnob));
+        layout.add (makeChoice (ids->cycMode, prefix + "Mode", v33, Cyclone::modeNames, (int) Cyclone::Mode::guitar2));
+        layout.add (makeFloat (ids->cycLevel, prefix + "Level", { 0.0f, 10.0f, 0.1f }, 5.0f, v33, asKnob));
+    }
+    // Added in PR7-G 0.56.0: HAVOK, the X/Y touch pad. The pad starts in the
+    // middle (the display's 5.5); the PROGRAM MAP keys start on six of the
+    // programs (our pick: a filter, a flanger, the tape echo, the hall, the
+    // ring modulator and the first sampler).
+    constexpr int v34 = 34;
+    const auto havokPrograms = effects::Havok::programNames();
+    layout.add (makeSwitch (ParamIDs::havokOn, "Havok On", v34, false));
+    layout.add (makeChoice (ParamIDs::havokProgram, "Havok Program", v34, havokPrograms, 0));
+    layout.add (makeFloat (ParamIDs::havokX, "Havok X", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+    layout.add (makeFloat (ParamIDs::havokY, "Havok Y", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+    layout.add (makeSwitch (ParamIDs::havokTouch, "Havok Touch", v34, false));
+    layout.add (makeSwitch (ParamIDs::havokHold, "Havok Hold", v34, false));
+    const int mapDefaults[ParamIDs::havokMapKeys] = { 0, 15, 20, 30, 41, 50 };
+    for (int key = 1; key <= ParamIDs::havokMapKeys; ++key)
+    {
+        const auto name = "Havok Map " + juce::String (key) + " ";
+        layout.add (makeChoice (ParamIDs::havokMap (key, "Program").toRawUTF8(), name + "Program", v34, havokPrograms, mapDefaults[key - 1]));
+        layout.add (makeSwitch (ParamIDs::havokMap (key, "Hold").toRawUTF8(), name + "Hold", v34, false));
+        layout.add (makeFloat (ParamIDs::havokMap (key, "X").toRawUTF8(), name + "X", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+        layout.add (makeFloat (ParamIDs::havokMap (key, "Y").toRawUTF8(), name + "Y", { 0.0f, 1.0f, 0.001f }, 0.5f, v34, asPercent));
+    }
+    // Added in PR7-G 0.57.0: the scratch programs' sound (the vocal "ahh" to start).
+    layout.add (makeChoice (ParamIDs::havokScratchSound, "Havok Scratch Sound", 35, effects::Havok::scratchSoundNames, 0));
     return layout;
 }

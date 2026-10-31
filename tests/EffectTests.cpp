@@ -387,7 +387,7 @@ TEST_CASE ("GLITCH: each mode chops, repeats or smears the guitar as it says", "
     }
 }
 
-TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face clips unevenly and cleans up", "[effects][drive]")
+TEST_CASE ("Fuzzes: Cosmonaut sustains with odd harmonics and scoops the mids; Halo clips unevenly and cleans up", "[effects][drive]")
 {
     const auto play = [] (effects::Drive::Model model, float amplitude, float drive = 5.0f, float tone = 5.0f, double hz = 220.0)
     {
@@ -401,37 +401,58 @@ TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face c
         return output;
     };
 
-    SECTION ("At LEVEL 0 dB both sit near the guitar's own level, at any FUZZ / SUSTAIN")
+    SECTION ("At LEVEL 0 dB both sit near the guitar's own level; Cosmonaut gets louder with SUSTAIN, as the pedal does")
     {
-        for (const auto model : { effects::Drive::Model::muff, effects::Drive::Model::face })
-            for (const auto drive : { 2.0f, 5.0f, 9.0f })
-            {
-                INFO ("model " << (int) model << ", drive " << drive);
-                CHECK (std::abs (dB (rms (play (model, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
-            }
+        for (const auto drive : { 2.0f, 5.0f, 9.0f })
+        {
+            INFO ("Halo, FUZZ " << drive);
+            CHECK (std::abs (dB (rms (play (effects::Drive::Model::halo, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f)))) < 3.0f);
+        }
+        const auto cosmonautDb = [&] (float drive) { return dB (rms (play (effects::Drive::Model::muff, 0.3f, drive), 0.3) / (0.3f / std::sqrt (2.0f))); };
+        CHECK_THAT (cosmonautDb (5.0f), WithinAbs (0.0, 1.5));
+        CHECK (cosmonautDb (9.0f) > cosmonautDb (2.0f));
+        CHECK (cosmonautDb (9.0f) - cosmonautDb (2.0f) < 8.0f);
     }
 
-    SECTION ("Muff clips both halves alike (odd harmonics); Face clips one harder (a strong 2nd)")
+    SECTION ("Cosmonaut: the bass is clipped far less than the mids (the 0.047 uF in series with its diodes)")
+    {
+        // The share of the output that is harmonics: a low E against a note two octaves up.
+        const auto distortion = [&] (double hz)
+        {
+            const auto output = play (effects::Drive::Model::muff, 0.2f, 7.0f, 5.0f, hz);
+            const auto fundamental = levelAt (output, hz, 0.3);
+            return dB ((levelAt (output, 3.0 * hz, 0.3) + levelAt (output, 5.0 * hz, 0.3)) / fundamental);
+        };
+        CHECK (distortion (82.4) < distortion (330.0) - 3.0f);
+    }
+
+    SECTION ("Cosmonaut compresses: ten times the picking strength is far less than ten times louder")
+    {
+        const auto level = [&] (float amplitude) { return rms (play (effects::Drive::Model::muff, amplitude, 7.0f, 5.0f, 1000.0), 0.3); };
+        CHECK (dB (level (0.3f) / level (0.03f)) < 8.0f);
+    }
+
+    SECTION ("Cosmonaut clips both halves alike (odd harmonics); Halo clips one harder (a strong 2nd)")
     {
         const auto secondToThird = [&] (effects::Drive::Model model)
         {
             const auto output = play (model, 0.3f, 7.0f, 7.0f);
             return dB (levelAt (output, 440.0, 0.3) / levelAt (output, 660.0, 0.3));
         };
-        CHECK (secondToThird (effects::Drive::Model::face) > secondToThird (effects::Drive::Model::muff) + 10.0f);
+        CHECK (secondToThird (effects::Drive::Model::halo) > secondToThird (effects::Drive::Model::muff) + 10.0f);
     }
 
-    SECTION ("Face cleans up as the guitar's volume comes down")
+    SECTION ("Halo cleans up as the guitar's volume comes down")
     {
         const auto harmonics = [&] (float amplitude)
         {
-            const auto output = play (effects::Drive::Model::face, amplitude, 5.0f);
+            const auto output = play (effects::Drive::Model::halo, amplitude, 5.0f);
             return dB ((levelAt (output, 440.0, 0.3) + levelAt (output, 660.0, 0.3)) / levelAt (output, 220.0, 0.3));
         };
         CHECK (harmonics (0.3f) > harmonics (0.01f) + 10.0f);
     }
 
-    SECTION ("Muff's TONE scoops the mids at noon")
+    SECTION ("Cosmonaut's TONE scoops the mids at noon")
     {
         // A quiet 1 kHz tone (still fuzzed), against 250 Hz, through the tone stack.
         const auto midsAgainstLows = [&] (float tone)
@@ -441,6 +462,69 @@ TEST_CASE ("Fuzzes: Muff sustains with odd harmonics and scoops the mids; Face c
             return dB (rms (mids, 0.3) / rms (lows, 0.3));
         };
         CHECK (midsAgainstLows (5.0f) < midsAgainstLows (10.0f) - 3.0f);
+    }
+}
+
+TEST_CASE ("Halo: the germanium fuzz circuit, its working point, FUZZ and clean-up", "[effects][drive]")
+{
+    SECTION ("At rest it sits where the circuit's analysis says")
+    {
+        // Q1's collector is one germanium junction (about 0.2 V) above Q2's
+        // emitter, and Q2's collector sits mid-supply with room to swing.
+        effects::Halo halo;
+        halo.prepare (384000.0);
+        CHECK_THAT (halo.q1CollectorVolts() - halo.q2EmitterVolts(), WithinAbs (0.2, 0.05));
+        CHECK_THAT (halo.q2EmitterVolts(), WithinAbs (0.41, 0.05));
+        CHECK (halo.q2CollectorVolts() > 4.0);
+        CHECK (halo.q2CollectorVolts() < 6.5);
+    }
+
+    const auto play = [] (float amplitude, float fuzz, float tone = 5.0f, double hz = 220.0)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::halo);
+        rig.set (ParamIDs::driveGain, fuzz);
+        rig.set (ParamIDs::driveTone, tone);
+        const auto output = rig.runMono (sine (hz, amplitude, 1.0));
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto gainDb = [&] (float amplitude, float fuzz) { return dB (rms (play (amplitude, fuzz), 0.3) / (amplitude / std::sqrt (2.0f))); };
+
+    SECTION ("FUZZ takes the emitter resistance out of Q2: over 20 dB more gain for a quiet note")
+    {
+        CHECK (gainDb (0.002f, 10.0f) - gainDb (0.002f, 0.0f) > 20.0f);
+        CHECK (gainDb (0.002f, 5.0f) > gainDb (0.002f, 0.0f) + 3.0f);
+    }
+
+    SECTION ("Played hard it's saturated: FUZZ hardly changes the level, and harder playing barely gets louder")
+    {
+        CHECK (std::abs (gainDb (0.3f, 10.0f) - gainDb (0.3f, 0.0f)) < 2.0f);
+        const auto level = [&] (float amplitude) { return dB (rms (play (amplitude, 5.0f), 0.3)); };
+        CHECK (level (1.0f) - level (0.1f) < 6.0f);
+    }
+
+    SECTION ("It cleans up: a light touch is almost clean, a hard one is fuzz")
+    {
+        const auto harmonics = [&] (float amplitude)
+        {
+            const auto output = play (amplitude, 5.0f);
+            return dB ((levelAt (output, 440.0, 0.3) + levelAt (output, 660.0, 0.3)) / levelAt (output, 220.0, 0.3));
+        };
+        CHECK (harmonics (0.01f) < -40.0f);
+        CHECK (harmonics (0.3f) > -10.0f);
+    }
+
+    SECTION ("The original has no tone control: TONE changes nothing")
+    {
+        const auto dark = play (0.3f, 5.0f, 0.0f), bright = play (0.3f, 5.0f, 10.0f);
+        CHECK (maxAbsDifference (dark, bright, 0) < 1.0e-6f);
+    }
+
+    SECTION ("Its 2.2 uF input into the low input impedance thins the lowest bass")
+    {
+        CHECK (gainDb (0.002f, 5.0f) - dB (rms (play (0.002f, 5.0f, 5.0f, 50.0), 0.3) / (0.002f / std::sqrt (2.0f))) > 2.0f);
     }
 }
 
@@ -458,41 +542,238 @@ TEST_CASE ("Noise gate silences signal below its threshold", "[effects][comp]")
     CHECK_THAT (dB (rms (rig.runMono (note), 0.5) / rms (note, 0.5)), WithinAbs (0.0, 0.5));
 }
 
-TEST_CASE ("Overdrive adds harmonics, and oversampling keeps aliasing down", "[effects][drive]")
+TEST_CASE ("Rabid: the RAT 2's op-amp gain, symmetric diodes and FILTER", "[effects][drive]")
 {
     EffectRig rig;
     rig.set (ParamIDs::driveOn, 1.0f);
-    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::classic);
-    rig.set (ParamIDs::driveTone, 10.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::rabid);
 
-    SECTION ("Harmonics: odd from clipping, even from the asymmetry")
+    SECTION ("Two diodes clip both halves alike: odd harmonics, little even")
     {
         rig.set (ParamIDs::driveGain, 7.0f);
-        const auto output = rig.runMono (sine (1000.0, 0.3f, 0.5));
+        rig.set (ParamIDs::driveTone, 10.0f);
+        const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
         REQUIRE (allFinite (output));
-        const auto fundamental = levelAt (output, 1000.0);
-        CHECK (dB (levelAt (output, 3000.0) / fundamental) > -30.0f);
-        CHECK (dB (levelAt (output, 2000.0) / fundamental) > -40.0f);
+        const auto fundamental = levelAt (output, 220.0);
+        CHECK (dB (levelAt (output, 660.0) / fundamental) > -20.0f);
+        CHECK (dB (levelAt (output, 440.0) / fundamental) < -35.0f);
     }
 
-    SECTION ("Aliasing")
+    SECTION ("Aliasing stays down at full DISTORTION")
     {
-        // A 5 kHz note at full drive makes harmonics at 15, 25, 35 kHz...
-        // Without oversampling, 35 kHz folds back to 13 kHz (48 - 35), a
-        // frequency that isn't musically related to the note.
         rig.set (ParamIDs::driveGain, 10.0f);
+        rig.set (ParamIDs::driveTone, 10.0f);
         const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
         CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
     }
 
-    SECTION ("Drive 0 at level 0 dB is close to unity; level adds gain")
+    SECTION ("TONE down (the FILTER turned up) darkens it")
     {
-        rig.set (ParamIDs::driveGain, 0.0f);
-        const auto input = sine (1000.0, 0.1f, 0.5);
-        CHECK_THAT (dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2)), WithinAbs (0.0, 1.0));
+        const auto trebleShare = [&] (float tone)
+        {
+            rig.set (ParamIDs::driveGain, 6.0f);
+            rig.set (ParamIDs::driveTone, tone);
+            const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
+            // The 13th and 15th harmonics: odd, as symmetric clipping makes (the even ones are all but absent).
+            return dB ((levelAt (output, 2860.0) + levelAt (output, 3300.0)) / levelAt (output, 220.0));
+        };
+        CHECK (trebleShare (0.0f) < trebleShare (10.0f) - 10.0f);   // about 15 dB measured
+    }
 
-        rig.set (ParamIDs::driveLevel, 6.0f);
-        CHECK_THAT (dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2)), WithinAbs (6.0, 1.0));
+    SECTION ("At noon, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+
+    SECTION ("At full DISTORTION the op-amp runs out of bandwidth: a quiet 4 kHz gets far less gain than 500 Hz")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        rig.set (ParamIDs::driveTone, 10.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.0003f, 0.5);   // quiet enough not to clip
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CHECK (dB (gainAt (4000.0)) < dB (gainAt (500.0)) - 6.0f);
+    }
+}
+
+TEST_CASE ("Abyss: the MT-2's gain hump, diodes and EQ", "[effects][drive]")
+{
+    struct Knobs { float dist = 5.0f, high = 5.0f, low = 5.0f, middle = 5.0f, midFreq = 5.0f; };
+    const auto play = [] (const std::vector<float>& input, Knobs k)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::abyss);
+        rig.set (ParamIDs::driveGain, k.dist);
+        rig.set (ParamIDs::driveHigh, k.high);
+        rig.set (ParamIDs::driveLow, k.low);
+        rig.set (ParamIDs::driveMiddle, k.middle);
+        rig.set (ParamIDs::driveMidFreq, k.midFreq);
+        const auto output = rig.runMono (input);
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto smallGain = [&] (double hz, Knobs k)
+    {
+        k.dist = 0.0f;
+        const auto input = sine (hz, 0.0002f, 0.6);
+        return dB (rms (play (input, k), 0.3) / rms (input, 0.3));
+    };
+    const auto note = sine (220.0, 0.2f, 0.6);
+    const auto levelDb = [&] (float dist) { Knobs k; k.dist = dist; return dB (rms (play (note, k), 0.3) / rms (note, 0.3)); };
+    Knobs hi1, hi0, lo1, lo0, mid1, mid0;
+    hi1.high = 10.0f; hi0.high = 0.0f; lo1.low = 10.0f; lo0.low = 0.0f; mid1.middle = 10.0f; mid0.middle = 0.0f;
+    Knobs m1lo = mid1, m1hi = mid1;
+    m1lo.midFreq = 0.0f;
+    m1hi.midFreq = 10.0f;
+
+    SECTION ("Heavily saturated even at DIST 0, as the pedal is; LEVEL 0 dB matches the guitar at noon")
+    {
+        CHECK_THAT (levelDb (5.0f), WithinAbs (0.0, 1.0));
+        CHECK (std::abs (levelDb (10.0f) - levelDb (0.0f)) < 4.0f);
+        const auto output = play (note, {});
+        CHECK (dB (levelAt (output, 660.0, 0.3) / levelAt (output, 220.0, 0.3)) > -20.0f);   // strong odd harmonics
+        CHECK (dB (levelAt (output, 440.0, 0.3) / levelAt (output, 220.0, 0.3)) < -40.0f);   // and little even: symmetric diodes and rails
+    }
+
+    SECTION ("The gain hump: with a flat EQ, a quiet 800 Hz gets far more gain than 50 Hz or 12 kHz")
+    {
+        const auto mids = smallGain (800.0, {});
+        CHECK (mids > smallGain (50.0, {}) + 25.0f);
+        CHECK (mids > smallGain (12000.0, {}) + 40.0f);
+    }
+
+    SECTION ("The EQ's ranges from its parts: LOW about 38 dB at 100 Hz and MIDDLE about 23 dB at 400 Hz, end to end")
+    {
+        CHECK_THAT (smallGain (100.0, lo1) - smallGain (100.0, lo0), WithinAbs (38.0, 2.0));
+        CHECK_THAT (smallGain (400.0, mid1) - smallGain (400.0, mid0), WithinAbs (23.0, 2.0));
+        CHECK (smallGain (6400.0, hi1) - smallGain (6400.0, hi0) > 20.0f);   // about 34 dB here
+    }
+
+    SECTION ("MID FREQ moves the MIDDLE boost up from the low mids")
+    {
+        const auto lowMidsOverUpper = [&] (Knobs k) { return smallGain (300.0, k) - smallGain (2000.0, k); };
+        CHECK (lowMidsOverUpper (m1lo) > lowMidsOverUpper (m1hi) + 10.0f);
+    }
+}
+
+TEST_CASE ("Chimera: the Klon's clean blend, germanium clipping, mid hump and TREBLE", "[effects][drive]")
+{
+    const auto play = [] (const std::vector<float>& input, float gain, float treble = 5.0f)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::chimera);
+        rig.set (ParamIDs::driveGain, gain);
+        rig.set (ParamIDs::driveTone, treble);
+        const auto output = rig.runMono (input);
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto note = sine (220.0, 0.2f, 0.6);
+    const auto levelDb = [&] (float gain) { return dB (rms (play (note, gain), 0.3) / rms (note, 0.3)); };
+    const auto thirdDb = [&] (float gain)
+    {
+        const auto output = play (note, gain);
+        return dB (levelAt (output, 660.0, 0.3) / levelAt (output, 220.0, 0.3));
+    };
+    const auto secondDb = [&] (float gain)
+    {
+        const auto output = play (note, gain);
+        return dB (levelAt (output, 440.0, 0.3) / levelAt (output, 220.0, 0.3));
+    };
+    const auto smallGain = [&] (double hz, float gain, float treble)
+    {
+        const auto input = sine (hz, 0.001f, 0.6);
+        return dB (rms (play (input, gain, treble), 0.3) / rms (input, 0.3));
+    };
+
+    SECTION ("At GAIN noon, near the guitar's level; louder at both ends, as GAIN's second gang trades clean level for drive")
+    {
+        CHECK_THAT (levelDb (5.0f), WithinAbs (0.0, 1.0));
+        CHECK (levelDb (0.0f) > levelDb (5.0f) + 4.0f);   // the Klon's famous clean boost at low GAIN
+        CHECK (levelDb (10.0f) > levelDb (5.0f));
+    }
+
+    SECTION ("Germanium diodes clip both halves alike: odd harmonics that grow with GAIN, no even ones")
+    {
+        CHECK (thirdDb (0.0f) < -80.0f);
+        CHECK (thirdDb (5.0f) > thirdDb (0.0f) + 40.0f);
+        CHECK (thirdDb (10.0f) > thirdDb (5.0f) + 15.0f);
+        CHECK (secondDb (10.0f) < -60.0f);
+    }
+
+    SECTION ("The mid hump: at full GAIN a quiet 1 kHz gets far more gain than 100 Hz or 10 kHz")
+    {
+        const auto mids = smallGain (1000.0, 10.0f, 5.0f);
+        CHECK (mids > smallGain (100.0, 10.0f, 5.0f) + 12.0f);
+        CHECK (mids > smallGain (10000.0, 10.0f, 5.0f) + 20.0f);
+    }
+
+    SECTION ("TREBLE spans about 24 dB at 8 kHz, as its parts give ((10k + 4.7k) / 1.8k against 4.7k / 11.8k)")
+    {
+        CHECK_THAT (smallGain (8000.0, 2.0f, 10.0f) - smallGain (8000.0, 2.0f, 0.0f), WithinAbs (24.0, 2.0));
+    }
+}
+
+TEST_CASE ("Skyline: a Tube Screamer whose ATTACK sets the bass into the clipping, with a gate", "[effects][drive]")
+{
+    const auto play = [] (float model, const std::vector<float>& input, float attack, float gate = 0.0f, float drive = 6.0f)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::driveOn, 1.0f);
+        rig.set (ParamIDs::driveModel, model);
+        rig.set (ParamIDs::driveGain, drive);
+        rig.set (ParamIDs::driveAttack, attack);
+        rig.set (ParamIDs::driveGate, gate);
+        const auto output = rig.runMono (input);
+        REQUIRE (allFinite (output));
+        return output;
+    };
+    const auto skyline = (float) effects::Drive::Model::skyline, banshee = (float) effects::Drive::Model::screamer;
+
+    SECTION ("ATTACK's eight capacitors against the 4.7k cut the bass from about 70 Hz to about 1 kHz")
+    {
+        CHECK_THAT (effects::Drive::skylineAttackHz (0), WithinAbs (72.0, 1.0));     // 470 nF
+        CHECK_THAT (effects::Drive::skylineAttackHz (6), WithinAbs (720.0, 5.0));    // 47 nF, the TS808
+        CHECK_THAT (effects::Drive::skylineAttackHz (7), WithinAbs (1026.0, 5.0));   // 33 nF
+    }
+
+    SECTION ("On ATTACK 7 with the gate off it is exactly the Tube Screamer (Banshee)")
+    {
+        const auto input = sine (196.0, 0.3f, 0.5);
+        CHECK (maxAbsDifference (play (skyline, input, (float) effects::Drive::skylineTubeScreamerAttack),
+                                 play (banshee, input, 0.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("ATTACK 1 lets far more of a low E into the clipping than ATTACK 8")
+    {
+        const auto lowE = sine (82.4, 0.3f, 0.6);
+        const auto harmonics = [&] (float attack)
+        {
+            const auto output = play (skyline, lowE, attack);
+            return dB ((levelAt (output, 3.0 * 82.4, 0.3) + levelAt (output, 5.0 * 82.4, 0.3)) / levelAt (output, 82.4, 0.3));
+        };
+        CHECK (harmonics (0.0f) > harmonics (7.0f) + 6.0f);
+    }
+
+    SECTION ("GATE silences quiet hiss but lets playing through")
+    {
+        juce::Random random (3);
+        std::vector<float> hiss ((size_t) (0.6 * sampleRate));
+        for (auto& sample : hiss)
+            sample = 0.0003f * (random.nextFloat() * 2.0f - 1.0f);   // about -75 dB
+        const auto open = play (skyline, hiss, 6.0f, 0.0f), gated = play (skyline, hiss, 6.0f, 8.0f);
+        CHECK (dB (rms (gated, 0.3) / rms (open, 0.3)) < -20.0f);
+
+        const auto note = sine (196.0, 0.2f, 0.6);
+        CHECK_THAT (dB (rms (play (skyline, note, 6.0f, 8.0f), 0.3) / rms (play (skyline, note, 6.0f, 0.0f), 0.3)), WithinAbs (0.0, 0.5));
     }
 }
 
@@ -605,6 +886,51 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (dB (rms (quieter[0], 0.2) / rms (output[0], 0.2)) < -10.0f);
     }
 
+    SECTION ("MOD 2 runs a second effect after MOD: a chorus and a flanger together")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
+        rig.set (ParamIDs::modMix, 0.7f);
+        const auto chorusOnly = rig.run (input);
+
+        rig.set (ParamIDs::modOn, 0.0f);
+        rig.set (ParamIDs::mod2On, 1.0f);
+        rig.set (ParamIDs::mod2Type, (float) effects::Modulation::Type::flanger);
+        const auto flangerOnly = rig.run (input);
+
+        rig.set (ParamIDs::modOn, 1.0f);
+        const auto both = rig.run (input);
+        REQUIRE (allFinite (both[0]));
+        // Both together sound like neither alone.
+        CHECK (rms (minus (both[0], chorusOnly[0]), 0.3) > 0.1f * rms (both[0], 0.3));
+        CHECK (rms (minus (both[0], flangerOnly[0]), 0.3) > 0.1f * rms (both[0], 0.3));
+
+        // MOD 2 has its own controls: MOD's don't change it. (Two fresh
+        // plugins, so both sweeps start at the same point.)
+        const auto mod2FlangerWith = [&] (float modRate)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::mod2On, 1.0f);
+            fresh.set (ParamIDs::mod2Type, (float) effects::Modulation::Type::flanger);
+            fresh.set (ParamIDs::modRate, modRate);
+            return fresh.run (input)[0];
+        };
+        CHECK (maxAbsDifference (mod2FlangerWith (0.8f), mod2FlangerWith (5.0f)) < 1.0e-6f);
+
+        // MOD 2's AEON has its own MANUAL and RES: they change its sound, MOD's don't.
+        const auto mod2AeonWith = [&] (const char* id, float value)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::mod2On, 1.0f);
+            fresh.set (ParamIDs::mod2Type, (float) effects::Modulation::Type::flanger);
+            fresh.set (id, value);
+            return fresh.run (input)[0];
+        };
+        const auto aeon = mod2AeonWith (ParamIDs::mod2Manual, 5.0f);
+        CHECK (rms (minus (mod2AeonWith (ParamIDs::mod2Manual, 1.0f), aeon), 0.3) > 0.05f * rms (aeon, 0.3));
+        CHECK (rms (minus (mod2AeonWith (ParamIDs::mod2Res, 10.0f), mod2AeonWith (ParamIDs::mod2Res, 0.0f)), 0.3) > 0.05f * rms (aeon, 0.3));
+        CHECK (maxAbsDifference (mod2AeonWith (ParamIDs::modManual, 1.0f), aeon) < 1.0e-6f);
+    }
+
     SECTION ("MOD in PRE is mono, as one amp follows it: STEREO only applies in POST")
     {
         rig.set (ParamIDs::modType, (float) effects::Modulation::Type::chorus);
@@ -681,7 +1007,223 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (thirdHarmonic (0.9f) > -35.0f);
     }
 
-    SECTION ("Tremolo pulses the volume at the rate setting")
+    SECTION ("Carbonite: the guitar plus the chorus at full level, mono, and MIX does nothing (the pedal's is fixed 50/50)")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modMix, 0.0f);
+        const auto output = rig.run (input);
+        REQUIRE (allFinite (output[0]));
+        CHECK (maxAbsDifference (output[0], output[1]) < 1.0e-6f);
+        CHECK (rms (minus (output[0], input), 0.2) > 0.5f * rms (input, 0.2));   // the chorus is there, near the guitar's level
+        // (Fresh plugins, so both sweeps start at the same point.)
+        const auto withMix = [&] (float mixValue)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+            fresh.set (ParamIDs::modMix, mixValue);
+            return fresh.run (input)[0];
+        };
+        CHECK (maxAbsDifference (withMix (0.0f), withMix (1.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("Carbonite: the delay sits at 3.4 ms and sweeps 2.2 to 4.5 ms at full DEPTH, from a real pedal's clock")
+    {
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (0.0f, 0.7f), WithinAbs (3.41, 0.01));
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (1.0f, -1.0f), WithinAbs (4.53, 0.05));
+        CHECK_THAT (effects::Modulation::carboniteDelayMs (1.0f, 1.0f), WithinAbs (2.20, 0.05));
+
+        // With DEPTH down, an impulse's echo arrives 3.4 ms later.
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        std::vector<float> click ((size_t) (0.1 * sampleRate), 0.0f);
+        click[(size_t) (0.05 * sampleRate)] = 0.5f;
+        const auto output = rig.run (click)[0];
+        const auto echo = minus (output, click);
+        const auto peak = std::distance (echo.begin(), std::max_element (echo.begin(), echo.end(),
+                                                                        [] (float a, float b) { return std::abs (a) < std::abs (b); }));
+        const auto delayMs = 1000.0 * (double) (peak - (long) (0.05 * sampleRate)) / sampleRate;
+        CHECK_THAT (delayMs, WithinAbs (3.41 + 0.1, 0.25));   // (plus the filters' own small delay)
+    }
+
+    SECTION ("Carbonite is darker than Vortex: its filters stop at 6.6 kHz, not 9 kHz")
+    {
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto chorusTreble = [&] (effects::Modulation::Type type)
+        {
+            rig.set (ParamIDs::modType, (float) type);
+            rig.set (ParamIDs::modStereo, 1.0f);   // Vortex: its chorus alone on the left
+            rig.set (ParamIDs::modMix, 1.0f);
+            const auto chorusOf = [&] (double hz)
+            {
+                const auto tone = sine (hz, 0.1f, 0.5);
+                const auto out = rig.run (tone)[0];
+                return type == effects::Modulation::Type::carbonite ? rms (minus (out, tone), 0.2) : rms (out, 0.2);
+            };
+            return dB (chorusOf (10000.0) / chorusOf (1000.0));
+        };
+        const auto carbonite = chorusTreble (effects::Modulation::Type::carbonite);
+        const auto vortex = chorusTreble (effects::Modulation::Type::chorus);
+        CHECK (carbonite < -18.0f);
+        CHECK (carbonite < vortex - 8.0f);
+    }
+
+    SECTION ("Carbonite: DEPTH bends the pitch")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modRate, 1.0f);
+        const auto tone = sine (1000.0, 0.3f, 2.0);
+        const auto chorusWith = [&] (float depthValue)
+        {
+            rig.set (ParamIDs::modDepth, depthValue);
+            return minus (rig.run (tone)[0], tone);
+        };
+        const auto still = chorusWith (0.0f), swept = chorusWith (1.0f);
+        CHECK (levelAt (swept, 1000.0, 0.3) < 0.8f * levelAt (still, 1000.0, 0.3));
+    }
+
+    SECTION ("Hadron: each stage's turn sweeps about 330 Hz to 3 kHz, in step with the LFO's voltage")
+    {
+        CHECK_THAT (effects::Modulation::hadronStageHz (effects::Modulation::hadronLfoLowVolts), WithinAbs (330.0, 15.0));
+        CHECK_THAT (effects::Modulation::hadronStageHz (effects::Modulation::hadronLfoHighVolts), WithinAbs (3000.0, 50.0));
+    }
+
+    SECTION ("Hadron: the guitar plus the phase stages half and half cuts deep moving notches; MIX and DEPTH do nothing")
+    {
+        // White noise in: MIX and DEPTH change nothing.
+        juce::Random random (7);
+        std::vector<float> noise ((size_t) sampleRate);
+        for (auto& sample : noise)
+            sample = 0.2f * (random.nextFloat() * 2.0f - 1.0f);
+        const auto withSettings = [&] (float mixValue, float depthValue, float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modMix, mixValue);
+            fresh.set (ParamIDs::modDepth, depthValue);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return fresh.run (noise)[0];
+        };
+        const auto script = withSettings (0.5f, 0.5f, 0.0f);
+        REQUIRE (allFinite (script));
+        CHECK (maxAbsDifference (script, withSettings (1.0f, 0.0f, 0.0f)) < 1.0e-6f);
+
+        // A sine at a stage's 45-degree point (four stages: 180 degrees) is
+        // cancelled: with the LFO held low, a 137 Hz tone almost vanishes.
+        EffectRig slow;
+        slow.set (ParamIDs::modOn, 1.0f);
+        slow.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+        slow.set (ParamIDs::modRate, 0.05f);   // so slow it barely moves in the test
+        // (Aimed at where the LFO is halfway through the measurement, 0.225 s
+        // in: 0.05 Hz, rising for 65% of the cycle.)
+        const auto lfoVolts = effects::Modulation::hadronLfoLowVolts
+                            + (effects::Modulation::hadronLfoHighVolts - effects::Modulation::hadronLfoLowVolts) * (0.225f * 0.05f / 0.65f);
+        const auto notchHz = 0.4142 * effects::Modulation::hadronStageHz (lfoVolts);
+        const auto low = slow.run (sine (notchHz, 0.3f, 0.3))[0];
+        CHECK (dB (rms (low, 0.15) / 0.3f * std::sqrt (2.0f)) < -20.0f);
+    }
+
+    SECTION ("Hadron: BLOCK's feedback makes the sweep stronger, and stays stable")
+    {
+        juce::Random random (11);
+        std::vector<float> noise ((size_t) (2.0 * sampleRate));
+        for (auto& sample : noise)
+            sample = 0.2f * (random.nextFloat() * 2.0f - 1.0f);
+        const auto run = [&] (float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return fresh.run (noise)[0];
+        };
+        const auto script = run (0.0f), block = run (1.0f);
+        REQUIRE (allFinite (block));
+        CHECK (rms (minus (block, script), 0.2) > 0.1f * rms (script, 0.2));
+        CHECK (rms (block, 0.2) < 2.0f * rms (noise, 0.2));   // nothing runs away
+
+        // The mid hump: at the stages' turn, between the two notches, BLOCK
+        // is about 2.7 dB up where SCRIPT is flat.
+        const auto lfoVolts = effects::Modulation::hadronLfoLowVolts
+                            + (effects::Modulation::hadronLfoHighVolts - effects::Modulation::hadronLfoLowVolts) * (0.225f * 0.05f / 0.65f);
+        const auto tone = sine (effects::Modulation::hadronStageHz (lfoVolts), 0.2f, 0.3);
+        const auto levelWith = [&] (float circuit)
+        {
+            EffectRig fresh;
+            fresh.set (ParamIDs::modOn, 1.0f);
+            fresh.set (ParamIDs::modType, (float) effects::Modulation::Type::phaser);
+            fresh.set (ParamIDs::modRate, 0.05f);
+            fresh.set (ParamIDs::modHadron, circuit);
+            return dB (rms (fresh.run (tone)[0], 0.15) / rms (tone, 0.15));
+        };
+        CHECK_THAT (levelWith (0.0f), WithinAbs (0.0, 0.5));
+        CHECK_THAT (levelWith (1.0f), WithinAbs (2.7, 0.7));
+    }
+
+    SECTION ("Razor's WAVE: a triangle, a trapezoid at noon, nearly a square fully up")
+    {
+        // The share of each cycle spent at (near) full volume or the deepest dip.
+        const auto flatShare = [] (float wave)
+        {
+            int flat = 0;
+            for (int i = 0; i < 1000; ++i)
+            {
+                const auto v = effects::Modulation::razorShape ((float) i / 1000.0f, wave);
+                flat += (v < 0.02f || v > 0.98f) ? 1 : 0;
+            }
+            return (float) flat / 1000.0f;
+        };
+        CHECK (flatShare (0.0f) < 0.05f);
+        CHECK_THAT (flatShare (5.0f), WithinAbs (0.82, 0.05));
+        CHECK (flatShare (10.0f) > 0.95f);
+    }
+
+    SECTION ("Razor: WAVE fully up chops on and off, without clicks")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::tremolo);
+        rig.set (ParamIDs::modRate, 4.0f);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modWave, 10.0f);
+        const auto output = rig.runMono (input);
+        // Mostly fully on or fully off: few 10 ms windows in between.
+        int between = 0, windows = 0;
+        for (double t = 0.2; t < 0.95; t += 0.01, ++windows)
+        {
+            const auto level = rms (output, t, t + 0.01) / rms (input, 0.2);
+            between += (level > 0.1f && level < 0.9f) ? 1 : 0;
+        }
+        CHECK ((float) between / (float) windows < 0.2f);
+        // The chop is rounded off (C4): no sample jumps by more than the
+        // input itself could.
+        float biggestStep = 0.0f;
+        for (size_t i = (size_t) (0.2 * sampleRate); i < output.size(); ++i)
+            biggestStep = std::max (biggestStep, std::abs (output[i] - output[i - 1]));
+        CHECK (biggestStep < 0.03f);
+    }
+
+    SECTION ("Razor only turns the volume up and down: every sample is the guitar's, scaled between 0 and 1")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::tremolo);
+        rig.set (ParamIDs::modRate, 16.0f);
+        rig.set (ParamIDs::modDepth, 1.0f);
+        rig.set (ParamIDs::modWave, 10.0f);
+        const auto note = sine (82.4, 0.3f, 1.0);   // low E
+        const auto output = rig.runMono (note);
+        int checked = 0;
+        for (size_t i = (size_t) (0.2 * sampleRate); i < output.size(); ++i)
+        {
+            if (std::abs (note[i]) < 0.05f)
+                continue;
+            const auto gain = output[i] / note[i];
+            REQUIRE (gain > -1.0e-4f);
+            REQUIRE (gain < 1.0f + 1.0e-4f);
+            ++checked;
+        }
+        CHECK (checked > 10000);
+    }
+
+    SECTION ("Razor pulses the volume at the rate setting, full DEPTH from silence to full")
     {
         rig.set (ParamIDs::modType, 3.0f);
         rig.set (ParamIDs::modRate, 4.0f);
@@ -908,7 +1450,7 @@ TEST_CASE ("Whammy-Wah: the expression pedal plays the XP-100's programs", "[eff
                 bright[i] += 0.1f * (float) std::sin (juce::MathConstants<double>::twoPi * 220.0 * harmonic * (double) i / sampleRate) / (float) harmonic;
         const auto brightness = [&] (float pedal)
         {
-            const auto output = play ("02 Original Cry Wah", pedal, bright);
+            const auto output = play ("02 Classic Wah", pedal, bright);
             return dB (levelAt (output, 220.0 * 9) / levelAt (output, 220.0 * 2));   // 2 kHz against 440 Hz
         };
         CHECK (brightness (1.0f) - brightness (0.0f) > 15.0f);
@@ -917,7 +1459,7 @@ TEST_CASE ("Whammy-Wah: the expression pedal plays the XP-100's programs", "[eff
         // further with the pedal at the toe.
         const auto autoBrightness = [&] (float pedal)
         {
-            const auto output = play ("07 Cry Auto Sens", pedal, bright);
+            const auto output = play ("07 Wah Auto Sens", pedal, bright);
             return dB (levelAt (output, 220.0 * 9) / levelAt (output, 220.0 * 2));
         };
         CHECK (autoBrightness (1.0f) - autoBrightness (0.0f) > 10.0f);
@@ -1066,7 +1608,7 @@ TEST_CASE ("The doubler adds a take on each side", "[effects][mod]")
     CHECK (rms (output[0], 0.2) < 2.0f * rms (input, 0.2));
 }
 
-TEST_CASE ("Projects saved before the drive MODEL keep the original overdrive", "[effects][drive]")
+TEST_CASE ("Projects saved before the drive MODEL load the first model (now Rabid)", "[effects][drive]")
 {
     EffectRig original;
     juce::MemoryBlock saved;
@@ -1090,7 +1632,7 @@ TEST_CASE ("Projects saved before the drive MODEL keep the original overdrive", 
         rig.processor.setStateInformation (state.getData(), (int) state.getSize());
         return juce::roundToInt (rig.processor.getParameters().getRawParameterValue (ParamIDs::driveModel)->load());
     };
-    CHECK (modelAfterLoading (older) == (int) effects::Drive::Model::classic);
+    CHECK (modelAfterLoading (older) == (int) effects::Drive::Model::rabid);
     CHECK (modelAfterLoading (saved) == (int) effects::Drive::Model::screamer);
 }
 
@@ -1937,3 +2479,5 @@ TEST_CASE ("AEON: the flanger follows the BF-2's circuit and specifications", "[
         CHECK (swing (envelope (0.3f, 5.0)) > swing (envelope (8.0f, 5.0)) + 2.0f);
     }
 }
+
+

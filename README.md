@@ -56,18 +56,22 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     Sequence and Interfere start their steps on the song's grid (every 1/16, every bar...), locked to the drums. POSITION puts it after the amp (POST,
     the default: exact chops) or before it (PRE: the chops hit the drive). The expression pedal's GLITCH setting fades it in.
   - **Filter / Pitch** (in the signal chain; no footswitch): an auto-wah (envelope filter), a pitch shifter
-    (two octaves down to two up, blended with the dry guitar for harmonies and octaves), or a **Whammy-Wah**: the
-    DigiTech XP-100's factory programs 01–28, numbered as on the pedal and played with the expression pedal (WHAMMY-WAH):
-    a volume pedal, five wahs, six auto-wahs (the pedal sets sensitivity or attack), eight whammy bends (heel: no shift,
+    (two octaves down to two up, blended with the dry guitar for harmonies and octaves), or **Quasar**: 28 programs
+    modelled on the DigiTech XP-100's, numbered as on that pedal and played with the expression pedal (QUASAR):
+    a volume pedal, five wahs, six auto-wahs (the pedal sets sensitivity or attack), eight pitch bends (heel: no shift,
     toe: the interval, as far as six octaves down) and eight harmonies (your note plus a voice the pedal moves between two intervals);
     or a **Talk Box**: the amp's sound, after the cab, shaped into vowels (oo to ee) by the expression pedal (TALK BOX),
     with RESONANCE and MIX.
-  - **2 OD / Distortion:** four models: **Screamer**, modelled on the Ibanez TS808 Tube Screamer's circuit;
-    **Classic**, Paragon's original overdrive; **Muff Fuzz**, following the Big Muff's two clipping stages and
-    mid-scooping tone stack (long, violin-like sustain); and **Face Fuzz**, following the silicon Fuzz Face's uneven
-    clipping (raspy and round, cleaning up with the guitar's volume). Drive, tone, level; 8x oversampled to avoid harsh aliasing.
-  - **3 Modulation:** eleven types: chorus, flanger, phaser, tremolo, Dimension chorus, Uni-Vibe, rotary
-    (Leslie), vibrato, harmonic tremolo, auto-pan and doubler. SYNC locks the rate to the tapped or DAW tempo.
+  - **2 OD / Distortion:** seven models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
+    **Rabid**, modelled on the ProCo RAT 2, slow op-amp and all; **Cosmonaut**, modelled stage by stage on the '90s green Russian
+    Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); **Halo**, modelled on the germanium Fuzz Face of
+    1966-68, its whole two-transistor circuit solved as it is (warm and round, cleaning up as you pick softer; FUZZ and LEVEL);
+    **Skyline**, inspired by the Horizon Devices
+    Precision Drive: the Tube Screamer circuit with an 8-way ATTACK switch for how much bass reaches the clipping, and a gate;
+    **Chimera**, modelled on the Klon Centaur: germanium clipping blended with a clean feed, the "transparent" overdrive;
+    and **Abyss**, modelled on the Boss MT-2 Metal Zone, with its own HIGH, LOW, MIDDLE and MID FREQ. Drive, tone, level; 8x oversampled to avoid harsh aliasing.
+  - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Prism (a wide stereo chorus), Nebula (a throbbing
+    phase vibrato), rotary speaker, vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and
     optional ping-pong; it comes in eight types: Digital (the original), Analog, Tape, Mod, Reverse,
@@ -95,13 +99,17 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
   real expression pedal (route your MIDI track to the plugin). Assign it on the small EXPRESSION screen beside it (click a line, or scroll; it also shows the
   pedal's position) or with EXPRESSION ASSIGN in the dock, to
   **VOLUME**, **WAH / FILTER** (a wah before the drive), **MORPH / FX** (fades modulation, delay and
-  reverb in from the heel), **PITCH / WHAMMY** (bends the pitch shifter from no shift at the heel to its
+  reverb in from the heel), **PITCH BEND** (bends the pitch shifter from no shift at the heel to its
   INTERVAL at the toe), **LO-FI** (fades the lo-fi effect in: full band at the heel, lo-fi at the toe) or
-  **WHAMMY-WAH** (plays the FILTER / PITCH block's Whammy-Wah). MIN and MAX set where the heel and toe land. The assignment and range
+  **QUASAR** (plays the FILTER / PITCH block's Quasar). MIN and MAX set where the heel and toe land. The assignment and range
   are saved with each rig.
-- **Bottom panels:** RIG BROWSER jumps to the PRESETS page filtered; SELECTED RIG files and saves the
-  current rig; the middle shows the graphic EQ, or the knobs of whichever block you pick (click a
-  signal-chain block or a footswitch name); **GRAPHIC EQ** goes back to the EQ.
+- **The rack** (under the floorboard): one wide PR7 unit, the "brain" for the floorboard. On the left,
+  the selected block's display (its screens and meters: the drive's input level, the NAM amp's model on
+  an LCD, the cab IR's frequency curve, the compressor's gain reduction, the delay's repeats, the reverb's
+  shape, the modulation's wave and more); in the middle, that block's real controls at full size (the
+  unit's big knobs with their values on small screens, lists on screens, switches as keys); at the right
+  end, EXPRESSION ASSIGN. Pick a block by clicking it in the signal chain or a footswitch's name;
+  **GRAPHIC EQ** goes back to the EQ.
 - **SETTINGS:** the tuner's reference pitch, mute while tuning, and the expression pedal's MIDI CC.
 - The paths of the loaded files are saved in your DAW project. If a file is missing when the project
   opens, the slot says so and keeps the path, so moving the file back fixes it.

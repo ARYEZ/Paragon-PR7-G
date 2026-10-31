@@ -54,7 +54,7 @@ namespace effects
         // Saved by number in rigs and projects: only ever add to the end.
         // (talkBox is processed after the amp by the TalkBox class; here it passes the guitar through.)
         enum class Type { autoWah, pitchShifter, whammyWah, talkBox };
-        static inline const juce::StringArray typeNames { "Auto-Wah", "Pitch Shifter", "Whammy-Wah", "Talk Box" };
+        static inline const juce::StringArray typeNames { "Auto-Wah", "Pitch Shifter", "Quasar", "Talk Box" };
 
         // The XP-100's factory programs 01 to 28, in its order (program n is
         // index n - 1), with what its pedal does in each. Saved by number:
@@ -65,15 +65,15 @@ namespace effects
         // publish theirs.
         static inline const std::array<XpProgram, 28> xpPrograms { {
             XpProgram::volume  ("01 Volume Pedal"),
-            XpProgram::wah     ("02 Original Cry Wah", 450.0f, 2200.0f, 5.0f),     // a Cry Baby's range
-            XpProgram::wah     ("03 Cry Wah 2", 350.0f, 2800.0f, 6.5f),           // wider and more vocal
+            XpProgram::wah     ("02 Classic Wah", 450.0f, 2200.0f, 5.0f),     // a Cry Baby's range
+            XpProgram::wah     ("03 Classic Wah 2", 350.0f, 2800.0f, 6.5f),           // wider and more vocal
             XpProgram::wah     ("04 Dark & Deep", 200.0f, 1200.0f, 6.0f),
             XpProgram::wah     ("05 Sweet Spot 1", 500.0f, 1300.0f, 7.0f),        // just the middle of the sweep, finely
             XpProgram::wah     ("06 Sweet Spot 2", 750.0f, 1900.0f, 7.0f),        // the same, higher up
-            XpProgram::autoWah ("07 Cry Auto Sens", 450.0f, 2200.0f, 5.0f, false, 0.004f, 0.2f, false),
+            XpProgram::autoWah ("07 Wah Auto Sens", 450.0f, 2200.0f, 5.0f, false, 0.004f, 0.2f, false),
             XpProgram::autoWah ("08 Env Filter Sens", 250.0f, 3000.0f, 4.0f, true, 0.01f, 0.15f, false),
             XpProgram::autoWah ("09 Brass Attack Sens", 300.0f, 4000.0f, 2.5f, true, 0.03f, 0.25f, false),
-            XpProgram::autoWah ("10 Cry Auto Attack", 450.0f, 2200.0f, 5.0f, false, 0.004f, 0.2f, true),
+            XpProgram::autoWah ("10 Wah Auto Attack", 450.0f, 2200.0f, 5.0f, false, 0.004f, 0.2f, true),
             XpProgram::autoWah ("11 Env Filter Attack", 250.0f, 3000.0f, 4.0f, true, 0.01f, 0.15f, true),
             XpProgram::autoWah ("12 Brass Attack Atk", 300.0f, 4000.0f, 2.5f, true, 0.03f, 0.25f, true),
             XpProgram::whammy  ("13 Up 1 Octave", 12.0f),

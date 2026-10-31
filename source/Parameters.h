@@ -74,6 +74,12 @@ namespace ParamIDs
     // Version 10: the drive's model (Tube Screamer or the original), and
     // the FILTER / PITCH block: auto-wah and pitch shifter.
     inline constexpr auto driveModel    = "driveModel";
+    inline constexpr auto driveAttack   = "driveAttack";   // Skyline's ATTACK (PR7-G 0.42.0)
+    inline constexpr auto driveGate     = "driveGate";     // Skyline's GATE
+    inline constexpr auto driveHigh     = "driveHigh";     // Abyss's EQ (PR7-G 0.45.0)
+    inline constexpr auto driveLow      = "driveLow";
+    inline constexpr auto driveMiddle   = "driveMiddle";
+    inline constexpr auto driveMidFreq  = "driveMidFreq";
     inline constexpr auto fpOn          = "fpOn";
     inline constexpr auto fpType        = "fpType";
     inline constexpr auto fpSensitivity = "fpSensitivity";   // auto-wah
@@ -134,6 +140,61 @@ namespace ParamIDs
     // pedal goes on a pedalboard, so the amp works on the modulated sound.
     inline constexpr auto modPosition = "modPosition";
 
+    // Version 27: MOD 2, a second modulation block straight after MOD, with
+    // the same controls (so two effects can run at once: a chorus and a
+    // flanger, say).
+    inline constexpr auto mod2On       = "mod2On";
+    inline constexpr auto mod2Type     = "mod2Type";
+    inline constexpr auto mod2Rate     = "mod2Rate";
+    inline constexpr auto mod2Depth    = "mod2Depth";
+    inline constexpr auto mod2Mix      = "mod2Mix";
+    inline constexpr auto mod2Sync     = "mod2Sync";
+    inline constexpr auto mod2Eq       = "mod2Eq";
+    inline constexpr auto mod2Stereo   = "mod2Stereo";
+    inline constexpr auto mod2Position = "mod2Position";
+    inline constexpr auto mod2Manual   = "mod2Manual";
+    inline constexpr auto mod2Res      = "mod2Res";
+    inline constexpr auto modHadron    = "modHadron";    // Hadron's SCRIPT / BLOCK circuit
+    inline constexpr auto mod2Hadron   = "mod2Hadron";
+    inline constexpr auto modWave      = "modWave";      // Razor's WAVE
+    inline constexpr auto mod2Wave     = "mod2Wave";
+
+    // Version 33: CYCLONE's controls (the rotary speaker, inspired by the
+    // Neo Ventilator II), on MOD and MOD 2.
+    inline constexpr auto modCycFast       = "modCycFast";        // SLOW / FAST: on is fast
+    inline constexpr auto modCycStop       = "modCycStop";        // STOP: the rotors brake to a stop, facing forward
+    inline constexpr auto modCycFastSpeed  = "modCycFastSpeed";   // FAST SPEED: the horn's, Hz
+    inline constexpr auto modCycSlowSpeed  = "modCycSlowSpeed";   // SLOW SPEED: the horn's, Hz
+    inline constexpr auto modCycAccel      = "modCycAccel";       // ACCELERATION, 0 to 10
+    inline constexpr auto modCycBalance    = "modCycBalance";     // BALANCE, 0 to 10, 5 even
+    inline constexpr auto modCycDrive      = "modCycDrive";       // DRIVE, 0 to 10
+    inline constexpr auto modCycLow        = "modCycLow";         // MIX / DIST LO, 0 to 10
+    inline constexpr auto modCycHigh       = "modCycHigh";        // MIX / DIST HI, 0 to 10
+    inline constexpr auto modCycMode       = "modCycMode";        // MODE: GIT 1, GIT 2, KEY
+    inline constexpr auto modCycLevel      = "modCycLevel";       // LEVEL, 0 to 10, 5 about the bypassed level
+    inline constexpr auto mod2CycFast      = "mod2CycFast";
+    inline constexpr auto mod2CycStop      = "mod2CycStop";
+    inline constexpr auto mod2CycFastSpeed = "mod2CycFastSpeed";
+    inline constexpr auto mod2CycSlowSpeed = "mod2CycSlowSpeed";
+    inline constexpr auto mod2CycAccel     = "mod2CycAccel";
+    inline constexpr auto mod2CycBalance   = "mod2CycBalance";
+    inline constexpr auto mod2CycDrive     = "mod2CycDrive";
+    inline constexpr auto mod2CycLow       = "mod2CycLow";
+    inline constexpr auto mod2CycHigh      = "mod2CycHigh";
+    inline constexpr auto mod2CycMode      = "mod2CycMode";
+    inline constexpr auto mod2CycLevel     = "mod2CycLevel";
+
+    // A MOD block's controls, so MOD and MOD 2 share their code.
+    struct ModIds
+    {
+        const char *on, *type, *rate, *depth, *mix, *sync, *eq, *stereo, *position, *manual, *res, *hadron, *wave;
+        const char *cycFast, *cycStop, *cycFastSpeed, *cycSlowSpeed, *cycAccel, *cycBalance, *cycDrive, *cycLow, *cycHigh, *cycMode, *cycLevel;
+    };
+    inline constexpr ModIds modIds { modOn, modType, modRate, modDepth, modMix, modSync, modEq, modStereo, modPosition, modManual, modRes, modHadron, modWave,
+                                    modCycFast, modCycStop, modCycFastSpeed, modCycSlowSpeed, modCycAccel, modCycBalance, modCycDrive, modCycLow, modCycHigh, modCycMode, modCycLevel };
+    inline constexpr ModIds mod2Ids { mod2On, mod2Type, mod2Rate, mod2Depth, mod2Mix, mod2Sync, mod2Eq, mod2Stereo, mod2Position, mod2Manual, mod2Res, mod2Hadron, mod2Wave,
+                                     mod2CycFast, mod2CycStop, mod2CycFastSpeed, mod2CycSlowSpeed, mod2CycAccel, mod2CycBalance, mod2CycDrive, mod2CycLow, mod2CycHigh, mod2CycMode, mod2CycLevel };
+
     // Version 24: the PITCH block (first in the chain).
     inline constexpr auto pitchTune      = "pitchTune";        // TUNING, semitones; 0 is standard (off)
     inline constexpr auto octOn          = "octOn";            // the OCTAVER
@@ -146,18 +207,36 @@ namespace ParamIDs
     inline constexpr auto freezeAttack   = "freezeAttack";     // ms
     inline constexpr auto freezeRelease  = "freezeRelease";    // ms
 
+    // Version 34: HAVOK, the X/Y touch pad effect (inspired by the original
+    // Korg Kaoss Pad), last in the chain. X, Y and TOUCH are the pad (TOUCH
+    // is where your finger is, like the expression pedal, so not in rigs);
+    // HOLD keeps the effect at the last position.
+    inline constexpr auto havokOn      = "havokOn";
+    inline constexpr auto havokProgram = "havokProgram";   // 1 to 60, the manual's programs
+    inline constexpr auto havokX       = "havokX";         // 0 to 1, left to right
+    inline constexpr auto havokY       = "havokY";         // 0 to 1, bottom to top
+    inline constexpr auto havokTouch   = "havokTouch";
+    inline constexpr auto havokHold    = "havokHold";
+    // The six PROGRAM MAP keys: each holds a program and, if it was stored
+    // with HOLD on, the held position. `part` is "Program", "Hold", "X" or "Y".
+    inline constexpr int havokMapKeys = 6;
+    inline juce::String havokMap (int key, const char* part) { return "havokMap" + juce::String (key) + part; }
+    // Version 35: what the scratch programs (61-68) scratch: one of our own sounds.
+    inline constexpr auto havokScratchSound = "havokScratchSound";
+
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real
     // pedal's is: it's where your foot is, not part of the sound. What the
     // pedal is assigned to, and its range, are saved with each rig.
-    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression };
+    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression, havokTouch };
 }
 
 namespace ExpressionTargets
 {
     // Saved by number: only ever add to the end.
-    enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox };
-    inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch / Whammy", "Lo-Fi", "Whammy-Wah", "Glitch", "Talk Box" };
+    enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox, cycloneSpeed };
+    inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch Bend", "Lo-Fi", "Quasar", "Glitch", "Talk Box",
+                                           "Cyclone Speed" };
 }
 
 namespace ParamRanges

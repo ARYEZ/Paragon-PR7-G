@@ -11,6 +11,8 @@ add_executable(ParagonX1Tests
     RealtimeSwapTests.cpp
     AmpCabTests.cpp
     EffectTests.cpp
+    CycloneTests.cpp
+    HavokTests.cpp
     RigTests.cpp
     UiTests.cpp
     TunerTests.cpp

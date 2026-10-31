@@ -210,6 +210,8 @@ void RigLibrary::loadFactoryFavourites()
 {
     factoryFavourites = juce::StringArray::fromLines (folder.getChildFile (factoryFavouritesFile).loadFileAsString());
     factoryFavourites.removeEmptyStrings();
+    for (auto& name : factoryFavourites)
+        name = currentFactoryName (name);   // favourited before a rename
 }
 
 void RigLibrary::saveFactoryFavourites() const

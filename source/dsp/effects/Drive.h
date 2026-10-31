@@ -1,10 +1,15 @@
 #pragma once
 
+#include "Abyss.h"
+#include "Chimera.h"
+#include "Cosmonaut.h"
+#include "Halo.h"
+#include "Rabid.h"
 #include "EffectUtils.h"
 
 namespace effects
 {
-    // Footswitch 2: an overdrive or fuzz pedal, before the amp, in four models.
+    // Footswitch 2: an overdrive, distortion or fuzz pedal, before the amp, in seven models.
     //
     // SCREAMER is modelled on the Ibanez TS808 Tube Screamer's circuit:
     //
@@ -20,39 +25,57 @@ namespace effects
     // as diodes in an op-amp's feedback loop do. Its tone control works
     // after a fixed treble cut at 723 Hz, from dark to slightly bright.
     //
-    // CLASSIC is Paragon's original overdrive:
-    //
-    //   low cut (tightens the bass) -> gain -> asymmetric soft clipping
-    //   (8x oversampled) -> tone (high cut) -> level
+    // RABID is modelled on the ProCo RAT 2, op-amp and all (see Rabid.h;
+    // PR7-G 0.43.0, replacing the original "Classic" overdrive). DRIVE is its
+    // DISTORTION; TONE is its FILTER turned around, so up is brighter, as on
+    // the other models.
     //
     // Clipping creates new high harmonics. Without oversampling, the ones
     // above half the sample rate fold back down as harsh, unmusical tones
-    // (aliasing). Running the clipper at 8x the rate keeps them out: at full
-    // drive a high note is close to a square wave, whose harmonics reach far
-    // enough that 4x still let audible fold-back through.
+    // (aliasing). The clipping runs at 8x the rate to keep them out.
     //
-    // MUFF FUZZ follows the Big Muff's circuit (David Gilmour's lead sound):
+    // COSMONAUT is modelled on the green Russian Big Muff, stage by stage
+    // from its circuit (see Cosmonaut.h; PR7-G 0.41.0, replacing the
+    // original "Muff Fuzz"). DRIVE is its SUSTAIN: two clipping stages give
+    // the long sustain, a small capacitor lets the bass through less
+    // clipped, and the passive tone stack always scoops the mids.
     //
-    //   x -> low cut -> [gain -> diode clip] -> [gain -> diode clip] -> tone stack -> level
+    // SKYLINE is inspired by the Horizon Devices Precision Drive, a modern
+    // metal take on the TS808 above (PR7-G 0.42.0). The same circuit, with:
     //
-    // Two clipping stages one after the other give its long, violin-like
-    // sustain (DRIVE is its SUSTAIN). Its tone stack blends a low-pass and a
-    // high-pass with one knob, so the middle of TONE scoops the mids.
+    //   - ATTACK: an 8-way switch choosing the capacitor in the clipping
+    //     stage's 4.7k leg (470 nF down to 33 nF, from builders' traces of
+    //     the pedal), so the bass reaching the diodes is cut from about 70 Hz
+    //     (full, low-mid punch) to about 1 kHz (tight, pick attack). The
+    //     TS808's 47 nF is position 7. TONE is its BRIGHT knob.
+    //   - GATE: a gate on the pedal's output, listening to the guitar.
     //
-    // FACE FUZZ follows the silicon Fuzz Face (Gilmour's earlier sound):
+    // CHIMERA is modelled on the Klon Centaur, the "transparent" overdrive
+    // (see Chimera.h; PR7-G 0.44.0). DRIVE is its GAIN, TONE its TREBLE.
     //
-    //   x -> pickup loading (a soft treble cut) -> gain -> asymmetric clip -> treble cut (TONE) -> level
+    // ABYSS is modelled on the Boss MT-2 Metal Zone (see Abyss.h; PR7-G
+    // 0.45.0). DRIVE is its DIST; its own HIGH, LOW, MIDDLE and MID FREQ
+    // replace TONE.
     //
-    // One high-gain stage that clips one half of the wave harder than the
-    // other: a raspy, round fuzz full of even harmonics, which cleans up
-    // when the guitar's volume comes down. The original has no tone knob:
-    // TONE here is a gentle treble cut.
+    // HALO is modelled on the germanium two-transistor fuzz of 1966-68, the
+    // whole circuit solved as it is (see Halo.h; PR7-G 0.50.0, replacing
+    // PR7-G's earlier, generic FACE FUZZ in the same place in the list).
+    // DRIVE is its FUZZ; it has no tone control, so TONE isn't used.
     class Drive
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { classic, screamer, muff, face };
-        static inline const juce::StringArray modelNames { "Classic", "Screamer (TS)", "Muff Fuzz", "Face Fuzz" };
+        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss" };
+
+        // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
+        // Saved by number: only append.
+        static constexpr float skylineAttackNanofarads[] = { 470.0f, 330.0f, 220.0f, 100.0f, 82.0f, 68.0f, 47.0f, 33.0f };
+        static inline const juce::StringArray skylineAttackNames { "1", "2", "3", "4", "5", "6", "7", "8" };
+        static constexpr int skylineTubeScreamerAttack = 6;   // 47 nF, the TS808's value
+
+        // Where Skyline's ATTACK cuts the bass into the diodes, in Hz (for tests).
+        static float skylineAttackHz (int attack) noexcept;
 
         struct Settings
         {
@@ -61,39 +84,43 @@ namespace effects
             float drive = 5.0f;      // 0 to 10
             float tone = 5.0f;       // 0 to 10
             float levelDb = 0.0f;
+            int attack = skylineTubeScreamerAttack;   // Skyline's ATTACK, 0 to 7
+            float gate = 0.0f;                        // Skyline's GATE, 0 (off) to 10 (fast and hard)
+            float high = 5.0f, low = 5.0f, middle = 5.0f, midFreq = 5.0f;   // Abyss's EQ, 0 to 10
         };
 
         Drive();
         void prepare (double sampleRate, int maxBlockSize);
         void process (juce::dsp::AudioBlock<float> monoBlock, const Settings& settings) noexcept;
 
-        // Exposed for tests: the waveshaper itself.
-        static float shape (float x) noexcept;
         static float diodeClip (float x) noexcept;
 
     private:
-        void processClassic (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processMuff (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
-        void processFace (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processAbyss (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processChimera (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processRabid (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
+        void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processHalo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
-        juce::dsp::IIR::Filter<float> lowCut, toneFilter;
-        juce::SmoothedValue<float> inputGain, outputGain;
-        float lastTone = -1.0f;
+        Rabid rabid;
+        Chimera chimera;
+        Abyss abyss;
 
         // Screamer: the clean guitar and the clipping path, oversampled together
         // so they stay exactly in step when they're added back together.
         juce::dsp::Oversampling<float> screamerOversampling;
         juce::AudioBuffer<float> screamerPaths;
         juce::dsp::IIR::Filter<float> screamerLowCut;
+        float screamerLowCutNow = 0.0f;
+        float gateEnvelope = 0.0f, gateGain = 1.0f;   // Skyline's gate
         float clipLowPassState = 0.0f, toneState = 0.0f, outputCouplingState = 0.0f;
         juce::SmoothedValue<float> screamerGain, screamerTone, screamerLevel;
-        // The fuzzes' one-pole filters: Muff (input cut, two stages' tops and
-        // the coupling between them, tone stack) and Face (pickup loading,
-        // the transistors' top, the output coupling, tone).
-        std::array<float, 8> fuzzStates {};
+        // The fuzzes' circuits.
+        Cosmonaut cosmonaut;
+        Halo halo;
         juce::SmoothedValue<float> fuzzGain, fuzzTone, fuzzLevel;
         Model lastModel = Model::screamer;
         BypassFade bypass;

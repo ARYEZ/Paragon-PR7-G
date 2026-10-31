@@ -12,6 +12,7 @@
 #include "dsp/effects/Drive.h"
 #include "dsp/effects/FilterPitch.h"
 #include "dsp/effects/GraphicEq.h"
+#include "dsp/effects/Havok.h"
 #include "dsp/effects/LoFi.h"
 #include "dsp/effects/Glitch.h"
 #include "dsp/effects/PitchBlock.h"
@@ -30,6 +31,7 @@ struct SlotStatus
     juce::String detail;    // e.g. "48 kHz, resampled" or the IR length
     juce::String error;     // why the last load failed; empty if it didn't
     bool loading = false;
+    std::vector<float> responseDb;   // the cabinet IR's frequency response (CabStage::responseDb); empty for the amp
 };
 
 // Which rig is loaded, for the header display and the Save button.
@@ -175,9 +177,22 @@ public:
 
     juce::AudioProcessorValueTreeState& getParameters() noexcept { return parameters; }
     LevelMeterSource& getInputMeter() noexcept { return inputMeter; }
+    // The same input level, for the FACEPLATE's meters (each reader takes the peaks it reads).
+    LevelMeterSource& getFaceplateMeter() noexcept { return faceplateMeter; }
+    // MOD (0) or MOD 2 (1), for the faceplate: where Cyclone's rotors are.
+    const effects::Modulation& getModulation (int block) const noexcept { return block == 0 ? modulation : modulation2; }
     // How hard the compressor is working (dB, 0 or less), for its meter.
     float getCompGainReductionDb() const noexcept { return compGate.getGainReductionDb(); }
     LevelMeterSource& getOutputMeter() noexcept { return outputMeter; }
+
+    // HAVOK, the touch pad: its REC switch and what its sampler is doing, for the panel.
+    effects::Havok& getHavok() noexcept { return havok; }
+
+    // The MIDI controllers that play HAVOK's pad, as the original sends them:
+    // CC 12 is X, CC 13 is Y, CC 92 is touch (64 and up: touching).
+    static constexpr int havokXCc = 12, havokYCc = 13, havokTouchCc = 92;
+    // Copies a MIDI pad's moves into the parameters now instead of on the next timer tick. For tests.
+    void flushMidiPad() { syncMidiPadToParameters(); }
 
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int numSamples);
@@ -238,10 +253,11 @@ private:
     effects::FilterPitch filterPitch;   // after the compressor, before the drive
     effects::Drive drive;
     effects::Presence presence;
-    effects::Modulation modulation;
+    effects::Modulation modulation, modulation2;   // MOD, then MOD 2
     effects::Delay delay;
     effects::Reverb reverb;
-    effects::LoFi loFi;   // last: after the reverb
+    effects::LoFi loFi;   // after the reverb
+    effects::Havok havok; // last: the touch pad, after LO-FI
     effects::Glitch glitch;
     effects::PitchBlock pitchBlock;
     effects::TalkBox talkBox;   // FILTER / PITCH's Talk Box type, after the cab   // first: TUNING, OCTAVER and FREEZE, before the wah   // after the EQ (POST), or after FILTER / PITCH (PRE)
@@ -266,6 +282,9 @@ private:
 
     // The last MIDI expression value not yet copied into the expression parameter (-1 = none).
     std::atomic<float> pendingMidiExpression { -1.0f };
+    // The same for HAVOK's pad from MIDI: X, Y and touch (-1 = none).
+    std::array<std::atomic<float>, 3> pendingMidiPad { -1.0f, -1.0f, -1.0f };
+    void syncMidiPadToParameters();
     std::atomic<int> expressionCc { 11 };
     std::atomic<double> tunerReferenceHz { 440.0 };
 
@@ -283,7 +302,7 @@ private:
     juce::CriticalSection statusLock;
     SlotStatus ampStatus, cabStatus;
 
-    LevelMeterSource inputMeter, outputMeter;
+    LevelMeterSource inputMeter, outputMeter, faceplateMeter;
 
     // Declared last so it is destroyed first: its jobs use the members above.
     juce::ThreadPool loader { juce::ThreadPoolOptions{}.withThreadName ("Paragon PR7-G loader").withNumberOfThreads (1) };

@@ -34,7 +34,12 @@ namespace
     constexpr float pedalWah = 2;      // the expression pedal's WAH / FILTER setting
     constexpr float glitchKillswitch = 4;
     constexpr int E = 4;               // bank E: rigs inspired by particular songs
-    constexpr float muffFuzz = 2, faceFuzz = 3;   // OD / DISTORTION's MODEL
+    constexpr float cosmonaut = 2, halo = 3, abyss = 6;   // OD / DISTORTION's MODEL
+    // HAVOK's scratch programs (61-68, indices 60-67) and sounds, and X for each speed.
+    constexpr float scratchBaby = 60, scratchChirp = 61, scratchTransformer = 62, scratchFlare = 63, scratchTear = 64,
+                    scratchCrab = 65, scratchScribble = 66, scratchManual = 67;
+    constexpr float soundStab = 3, soundDropD = 4;   // SOUND: the stabs scratch best
+    constexpr float rateEighth = 0.5f, rateSixteenth = 0.75f;
     constexpr float digitalDelay = 0;
     constexpr float xpCryWah = 1, xpUpOctave = 12, xpOctDownOctUp = 20, xpUp4thUp5th = 23;   // Whammy-Wah programs 02, 13, 21 and 24
     constexpr float pedalWhammyWah = 6;   // the expression pedal's WHAMMY-WAH setting
@@ -107,17 +112,18 @@ std::vector<Rig> makeFactoryRigs()
             { driveOn, 1 }, { driveGain, 3 },
             { modOn, 1 }, { modType, flanger }, { modRate, 0.2f }, { modDepth, 0.8f }, { modManual, 5 }, { modRes, 7 } }),
 
-        make ("Leslie Spin", D, 2, "Modulation,Clean", {
+        make ("Rotary Spin", D, 2, "Modulation,Clean", {
             { compOn, 1 }, { compThreshold, -20 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, rotary }, { modRate, 6.5f }, { modDepth, 0.7f }, { modMix, 0.85f },
+            // Cyclone on FAST, its mics a little back from the rotors.
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 1 }, { modCycLow, 6 }, { modCycHigh, 6 },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.2f } }),
 
-        make ("Machine Gun Vibe", D, 3, "Modulation,Drive,Lead", {
+        make ("Nebula Lead", D, 3, "Modulation,Drive,Lead", {
             { driveOn, 1 }, { driveGain, 6 }, { driveTone, 5 }, { driveLevel, 3 },
             { modOn, 1 }, { modType, uniVibe }, { modRate, 1.2f }, { modDepth, 0.75f }, { modMix, 0.5f },
             { reverbOn, 1 }, { reverbMix, 0.18f } }),
 
-        make ("Dimension Clean", D, 4, "Clean,Modulation", {
+        make ("Prism Clean", D, 4, "Clean,Modulation", {
             { compOn, 1 }, { compThreshold, -22 }, { compRatio, 3 }, { compLevel, 2 },
             { modOn, 1 }, { modType, dimension }, { modRate, 0.4f }, { modDepth, 0.5f }, { modMix, 0.5f },
             { delayOn, 1 }, { delayType, modDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
@@ -151,14 +157,14 @@ std::vector<Rig> makeFactoryRigs()
 
         // LO-FI: for intros and breakdowns. Assign the expression pedal to
         // LO-FI to sweep from the full band (heel) into the effect (toe).
-        make ("Whammy Lead", B, 7, "Lead,Pitch,Drive,Expression", {
+        make ("Quasar Lead", B, 7, "Lead,Pitch,Drive,Expression", {
             { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
             { expressionTarget, pedalWhammyWah },
             { driveOn, 1 }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 3 },
             { delayOn, 1 }, { delaySync, dottedEighth }, { delayFeedback, 0.25f }, { delayMix, 0.18f },
             { reverbOn, 1 }, { reverbMix, 0.2f } }),
 
-        make ("XP Wah Crunch", B, 8, "Wah,Drive,Expression", {
+        make ("Quasar Wah Crunch", B, 8, "Wah,Drive,Expression", {
             { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpCryWah }, { fpMix, 1 },
             { expressionTarget, pedalWhammyWah },
             { driveOn, 1 }, { driveGain, 4 }, { driveTone, 5 }, { driveLevel, 4 },
@@ -186,6 +192,36 @@ std::vector<Rig> makeFactoryRigs()
             { eqLevel, -0.5f },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.25f }, { reverbMix, 0.1f } }),
 
+        // Nu-metal turntable rigs: a scooped, gated metal distortion and
+        // HAVOK's scratch programs (ours, on our own sounds) in time with
+        // the song, all on the stabs (the owner's pick: their hard front
+        // edge is what the crossfader cuts bite on). Touch HAVOK's pad, or send MIDI CC 92 from a footswitch,
+        // to bring the scratching in; the PROGRAM MAP keys hold the other moves
+        // (1 BABY, 2 CHIRP, 3 TRANSFORMER, 4 FLARE, 5 TEAR, 6 MANUAL).
+        make ("Nu-Metal Turntable", B, 11, "High Gain,Scratch,Havok", {
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
+            { driveOn, 1 }, { driveModel, abyss }, { driveGain, 6 }, { driveLow, 7 }, { driveMiddle, 3 }, { driveHigh, 6 },
+            { eqOn, 1 }, { "eq63", -3 }, { "eq500", -2 }, { "eq1k", -1 }, { "eq4k", 2 },
+            { havokOn, 1 }, { havokProgram, scratchChirp }, { havokScratchSound, soundStab }, { havokX, rateSixteenth }, { havokY, 0.7f },
+            { "havokMap1Program", scratchBaby }, { "havokMap2Program", scratchChirp }, { "havokMap3Program", scratchTransformer },
+            { "havokMap4Program", scratchFlare }, { "havokMap5Program", scratchTear }, { "havokMap6Program", scratchManual } }),
+
+        // A drop-D stab cut up by the crossfader: the transformer's stutter.
+        make ("Stab Transformer", B, 12, "High Gain,Scratch,Havok", {
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
+            { driveOn, 1 }, { driveModel, abyss }, { driveGain, 5 }, { driveLow, 6 }, { driveMiddle, 4 }, { driveHigh, 6 },
+            { havokOn, 1 }, { havokProgram, scratchTransformer }, { havokScratchSound, soundDropD }, { havokX, rateEighth }, { havokY, 0.55f },
+            { "havokMap1Program", scratchTransformer }, { "havokMap2Program", scratchCrab }, { "havokMap3Program", scratchFlare },
+            { "havokMap4Program", scratchChirp }, { "havokMap5Program", scratchScribble }, { "havokMap6Program", scratchManual } }),
+
+        // A distorted chord stab scribbled and torn over a heavy rhythm.
+        make ("Stab Scribble", B, 13, "High Gain,Scratch,Havok", {
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -55 },
+            { driveOn, 1 }, { driveModel, abyss }, { driveGain, 6 }, { driveLow, 7 }, { driveMiddle, 3 }, { driveHigh, 5 },
+            { havokOn, 1 }, { havokProgram, scratchScribble }, { havokScratchSound, soundStab }, { havokX, rateEighth }, { havokY, 0.6f },
+            { "havokMap1Program", scratchScribble }, { "havokMap2Program", scratchTear }, { "havokMap3Program", scratchBaby },
+            { "havokMap4Program", scratchCrab }, { "havokMap5Program", scratchChirp }, { "havokMap6Program", scratchManual } }),
+
         // Tempo-locked stutters on a crunch, faded in with the pedal: rock
         // forward on a transition or the end of a riff.
         make ("Stutter Edit", C, 10, "Glitch,Drive,Expression", {
@@ -210,7 +246,7 @@ std::vector<Rig> makeFactoryRigs()
         // Rage Against the Machine, "Killing in the Name" solo: a Whammy an
         // octave up, rocked to the toe for the squeal, into a cranked crunch
         // with no reverb. (For a higher squeal, PROGRAM 14 Up 2 Octaves.)
-        make ("Killing Solo (RATM)", E, 1, "Song,Lead,Pitch,Expression", {
+        make ("Octave Squeal Solo", E, 1, "Song,Lead,Pitch,Expression", {
             { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
             { expressionTarget, pedalWhammyWah },
             { driveOn, 1 }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 6 },
@@ -220,7 +256,7 @@ std::vector<Rig> makeFactoryRigs()
         // pedal, rocked as you rub the muted strings over the pickup, and
         // the toggle-switch chop (GLITCH Killswitch, 1/16, on the song's
         // grid when the DAW plays).
-        make ("Bulls Scratch (RATM)", E, 2, "Song,Wah,Glitch,Expression", {
+        make ("Wah Scratch Chop", E, 2, "Song,Wah,Glitch,Expression", {
             { expressionTarget, pedalWah },
             { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
             { glitchDensity, 5 }, { glitchChaos, 0 }, { glitchMix, 1 },
@@ -231,43 +267,46 @@ std::vector<Rig> makeFactoryRigs()
         // the rest is in his hands (vibrato, bends, note choice).
 
         // "Comfortably Numb" solos: a Big Muff-style fuzz (sustain about 70%,
-        // tone 30-40%) into a delay of about 370 ms, through a subtly mixed
+        // tone 30-40%; Cosmonaut, the Green Russian, stands in for his
+        // earlier US ones, its LEVEL set to match) into a delay of about 370 ms, through a subtly mixed
         // rotating speaker (his Yamaha RA-200), with studio reverb.
-        make ("Numb Solo (Floyd)", E, 3, "Song,Lead,Fuzz", {
-            { driveOn, 1 }, { driveModel, muffFuzz }, { driveGain, 7 }, { driveTone, 3.5f }, { driveLevel, 1 },
-            { modOn, 1 }, { modType, rotary }, { modRate, 0.9f }, { modDepth, 0.5f }, { modMix, 0.3f },
+        make ("Soaring Fuzz Solo", E, 3, "Song,Lead,Fuzz", {
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 7 }, { driveTone, 3.5f }, { driveLevel, -1.5f },
+            // Cyclone slow and mixed in lightly (a third of the way into each rotor's MIX).
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 0 }, { modCycSlowSpeed, 0.9f }, { modCycLow, 1.5f }, { modCycHigh, 1.5f },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 370 }, { delayFeedback, 0.3f }, { delayMix, 0.25f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.18f } }),
 
         // "Us and Them": the neck pickup, clean, through a slow rotating
         // speaker (a Leslie dominated it; a Uni-Vibe is close too), with echo.
-        // For the louder chorus, stomp footswitch 2: a Fuzz Face-style fuzz
-        // is set up and waiting, as Gilmour kicked his in.
-        make ("Us and Them (Floyd)", E, 4, "Song,Clean,Modulation,Fuzz", {
-            { driveOn, 0 }, { driveModel, faceFuzz }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 0 },
-            { modOn, 1 }, { modType, rotary }, { modRate, 0.7f }, { modDepth, 0.6f }, { modMix, 0.6f },
+        // For the louder chorus, stomp footswitch 2: Halo, the germanium
+        // fuzz, is set up and waiting, as Gilmour kicked his in.
+        make ("Slow Rotary Clean", E, 4, "Song,Clean,Modulation,Fuzz", {
+            { driveOn, 0 }, { driveModel, halo }, { driveGain, 6 }, { driveLevel, 0 },
+            // Cyclone slow and well in the sound.
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 0 }, { modCycSlowSpeed, 0.7f }, { modCycLow, 4 }, { modCycHigh, 4 },
             { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, syncOff }, { delayTime, 420 }, { delayFeedback, 0.25f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbMix, 0.25f } }),
 
         // "Run Like Hell": muted eighths into a long, clean delay (about
         // 380 ms, five or six repeats) that makes the gallop, with flanging
         // and light compression.
-        make ("Run Like Hell (Floyd)", E, 5, "Song,Clean,Delay,Modulation", {
+        make ("Galloping Delay", E, 5, "Song,Clean,Delay,Modulation", {
             { compOn, 1 }, { compThreshold, -22 }, { compRatio, 3 }, { compLevel, 2 },
             { modOn, 1 }, { modType, flanger }, { modRate, 0.3f }, { modDepth, 0.5f }, { modManual, 4 }, { modRes, 3 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 380 }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
             { reverbOn, 1 }, { reverbType, room }, { reverbMix, 0.12f } }),
 
-        // "Money" solos: the bridge pickup into a Fuzz Face-style fuzz, with
+        // "Money" solos: the bridge pickup into Halo, the germanium fuzz, with
         // a multi-head echo in the spirit of his Binson Echorec.
-        make ("Money Solo (Floyd)", E, 6, "Song,Lead,Fuzz,Delay", {
-            { driveOn, 1 }, { driveModel, faceFuzz }, { driveGain, 7 }, { driveTone, 7 }, { driveLevel, 1 },
+        make ("Fuzz Echo Solo", E, 6, "Song,Lead,Fuzz,Delay", {
+            { driveOn, 1 }, { driveModel, halo }, { driveGain, 7 }, { driveLevel, 1 },
             { delayOn, 1 }, { delayType, multiTap }, { delaySync, syncOff }, { delayTime, 330 }, { delayFeedback, 0.3f }, { delayMix, 0.22f },
             { reverbOn, 1 }, { reverbType, room }, { reverbMix, 0.15f } }),
 
         // Tool, "Jambi" solo: a talk box on a tight, heavy tone. Load a
         // high-gain amp capture; the pedal opens the "mouth" from oo to ee.
-        make ("Jambi Talk Box (Tool)", E, 7, "Song,Lead,Talk Box,Expression", {
+        make ("Heavy Talk Box", E, 7, "Song,Lead,Talk Box,Expression", {
             { fpOn, 1 }, { fpType, talkBoxType }, { fpResonance, 6 }, { fpMix, 1 },
             { expressionTarget, pedalTalkBox },
             { driveOn, 1 }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 6 },
@@ -276,7 +315,7 @@ std::vector<Rig> makeFactoryRigs()
 
         // Peter Frampton, "Show Me the Way": the talk box on a warm, lightly
         // driven tone, the most famous talk box sound there is.
-        make ("Show Me the Way (Frampton)", E, 8, "Song,Lead,Talk Box,Expression", {
+        make ("Warm Talk Box", E, 8, "Song,Lead,Talk Box,Expression", {
             { fpOn, 1 }, { fpType, talkBoxType }, { fpResonance, 5 }, { fpMix, 1 },
             { expressionTarget, pedalTalkBox },
             { driveOn, 1 }, { driveModel, 0 }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 2 },
@@ -326,7 +365,7 @@ std::vector<Rig> makeFactoryRigs()
             { reverbOn, 1 }, { reverbType, plate }, { reverbMix, 0.2f } }),
 
         // These two follow the tempo (tapped, or the DAW's).
-        make ("Brownface Trem", C, 4, "Modulation,Clean,Vintage", {
+        make ("Vintage Amp Trem", C, 4, "Modulation,Clean,Vintage", {
             { modOn, 1 }, { modType, harmonicTremolo }, { modSync, eighth }, { modDepth, 0.7f },
             { reverbOn, 1 }, { reverbType, spring }, { reverbSize, 0.55f }, { reverbTone, 6 }, { reverbMix, 0.3f } }),
 
@@ -336,4 +375,33 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, multiTap }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
     };
+}
+
+juce::String currentFactoryName (const juce::String& name)
+{
+    // Factory rigs renamed in 0.49.0 to our own names (no trademarks,
+    // artists or song titles). Projects and favourites saved before then
+    // still name the old ones.
+    static const std::pair<const char*, const char*> renamed[] {
+        { "Leslie Spin", "Rotary Spin" },
+        { "Dimension Clean", "Prism Clean" },
+        { "Machine Gun Vibe", "Nebula Lead" },
+        { "Whammy Lead", "Quasar Lead" },
+        { "XP Wah Crunch", "Quasar Wah Crunch" },
+        { "Brownface Trem", "Vintage Amp Trem" },
+        { "Killing Solo (RATM)", "Octave Squeal Solo" },
+        { "Bulls Scratch (RATM)", "Wah Scratch Chop" },
+        { "Numb Solo (Floyd)", "Soaring Fuzz Solo" },
+        { "Us and Them (Floyd)", "Slow Rotary Clean" },
+        { "Run Like Hell (Floyd)", "Galloping Delay" },
+        { "Money Solo (Floyd)", "Fuzz Echo Solo" },
+        { "Jambi Talk Box (Tool)", "Heavy Talk Box" },
+        { "Show Me the Way (Frampton)", "Warm Talk Box" },
+        // 0.58.0: B12 moved to a stab, so its name followed.
+        { "Laser Transformer", "Stab Transformer" },
+    };
+    for (const auto& [oldName, newName] : renamed)
+        if (name == oldName)
+            return newName;
+    return name;
 }

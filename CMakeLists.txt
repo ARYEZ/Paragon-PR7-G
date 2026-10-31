@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.24)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures")
 
-project(ParagonX1 VERSION 0.35.0 LANGUAGES C CXX)
+project(ParagonX1 VERSION 0.58.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,6 +46,7 @@ juce_add_binary_data(ParagonX1Fonts
 target_sources(ParagonX1
     PRIVATE
         source/Parameters.cpp
+        source/LibraryFolders.cpp
         source/PluginProcessor.cpp
         source/PluginEditor.cpp
         source/dsp/AmpModel.cpp
@@ -53,7 +54,14 @@ target_sources(ParagonX1
         source/dsp/CabStage.cpp
         source/dsp/PitchDetector.cpp
         source/dsp/effects/CompGate.cpp
+        source/dsp/effects/Abyss.cpp
         source/dsp/effects/Aeon.cpp
+        source/dsp/effects/Cyclone.cpp
+        source/dsp/effects/Havok.cpp
+        source/dsp/effects/Chimera.cpp
+        source/dsp/effects/Cosmonaut.cpp
+        source/dsp/effects/Halo.cpp
+        source/dsp/effects/Rabid.cpp
         source/dsp/effects/Delay.cpp
         source/dsp/effects/Drive.cpp
         source/dsp/effects/FilterPitch.cpp
@@ -74,6 +82,7 @@ target_sources(ParagonX1
         source/ui/ModelSlot.cpp
         source/ui/Footswitch.cpp
         source/ui/EffectPanel.cpp
+        source/ui/Faceplate.cpp
         source/ui/RigBrowser.cpp
         source/ui/Icons.cpp
         source/ui/PedalBody.cpp
@@ -83,10 +92,12 @@ target_sources(ParagonX1
         source/ui/SignalChain.cpp
         source/ui/DockPanels.cpp
         source/ui/GraphicEqPanel.cpp
+        source/ui/HavokPanel.cpp
         source/ui/PerformanceControls.cpp
         source/ui/MainView.cpp
         source/ui/ParagonLookAndFeel.cpp
-        source/ui/Finish.cpp)
+        source/ui/Finish.cpp
+        source/ui/RackView.cpp)
 
 target_include_directories(ParagonX1 PUBLIC source)
 

@@ -5,8 +5,10 @@
 #include "PluginProcessor.h"
 #include "ui/DockPanels.h"
 #include "ui/EffectPanel.h"
+#include "ui/Faceplate.h"
 #include "ui/Finish.h"
 #include "ui/GraphicEqPanel.h"
+#include "ui/HavokPanel.h"
 #include "ui/Footswitch.h"
 #include "ui/LedDisplay.h"
 #include "ui/LevelMeter.h"
@@ -70,6 +72,16 @@ public:
     static constexpr int width = 1600;
     static constexpr int height = 900;
 
+    // HIDE RACK takes the rack's strip out (264 mockup pixels, from the
+    // rack's top to the SIGNAL CHAIN's) and the chain moves up under the
+    // floor unit, so the canvas, and the window, get shorter.
+    static constexpr int rackHeight = 253;
+    static constexpr int heightFor (bool rackShown) { return rackShown ? height : height - rackHeight; }
+
+    // Told after the rack is shown or hidden and the view has its new
+    // height, so the editor can resize the window to match.
+    std::function<void()> onHeightChanged;
+
     void paint (juce::Graphics&) override;
     void resized() override;
     bool keyPressed (const juce::KeyPress&) override;
@@ -77,12 +89,14 @@ public:
 private:
     // The blocks in signal-chain order; footswitches, the chain strip and
     // the summary cards select these to show their knobs.
-    enum Block { pitchBlock, compBlock, filterPitchBlock, driveBlock, ampBlock, cabBlock, eqBlock, glitchBlock, modBlock, delayBlock, reverbBlock, loFiBlock, numBlocks };
+    enum Block { pitchBlock, compBlock, filterPitchBlock, driveBlock, ampBlock, cabBlock, eqBlock, glitchBlock, modBlock, mod2Block, delayBlock, reverbBlock, loFiBlock, havokBlock, numBlocks };
 
     enum class Page { processor, presets, settings };
 
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
+    void layoutDock();    // the rack: the faceplate, the selected block's controls on it, EXPRESSION ASSIGN
     void applyFinish();   // colours the printed labels and redraws the unit in the current finish
+    void applyRackView(); // shows or hides the rack and sets the view's height to match
     void timerCallback() override;
 
     void selectBlock (int block);
@@ -139,12 +153,13 @@ private:
     int ticks = 0;
 
     // Dock and signal chain
-    RigNavigator rigNavigator;
-    SelectedRigPanel selectedRig;
+    Faceplate faceplate;   // the selected block as hardware, beside its knobs
     ExpressionPanel expressionPanel;
-    std::array<std::unique_ptr<EffectPanel>, numBlocks> panels;   // empty at eqBlock: the EQ has its own panel
+    std::array<std::unique_ptr<EffectPanel>, numBlocks> panels;   // empty at eqBlock and havokBlock: they have their own panels
     GraphicEqPanel eqPanel;
+    HavokPanel havokPanel;   // the touch pad, in the rack's display, and its keys
     juce::TextButton closePanel { "GRAPHIC EQ" };   // back to the EQ, the dock's default
+    juce::TextButton rackButton;                     // HIDE RACK / SHOW RACK, on the SIGNAL CHAIN strip
     SignalChain signalChain;
     int selectedBlock = eqBlock;
 

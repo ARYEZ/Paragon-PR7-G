@@ -1,5 +1,6 @@
 #include "DockPanels.h"
 
+#include "LibraryFolders.h"
 #include "Parameters.h"
 #include "ui/Finish.h"
 #include "ui/ParagonLookAndFeel.h"
@@ -37,271 +38,6 @@ namespace
         box.setColour (juce::ComboBox::outlineColourId, ParagonColours::panelEdge);
         box.setColour (juce::ComboBox::textColourId, ParagonColours::text);
         box.setColour (juce::ComboBox::arrowColourId, ParagonColours::text);
-    }
-}
-
-//==============================================================================
-RigNavigator::RigNavigator()
-{
-    rows = {
-        { "All Rigs", {}, Icons::Type::flame, 0, -1, {} },
-        { "Favourites", {}, Icons::Type::star, 1, -1, {} },
-        { "My Rigs", {}, Icons::Type::user, 2, -1, {} },
-        { "Factory Rigs", {}, Icons::Type::factory, 3, -1, {} },
-    };
-    for (int bank = 0; bank < Rig::numBanks; ++bank)
-        rows.push_back ({ "Bank " + Rig::bankName (bank), Rig::bankName (bank), Icons::Type::rig, -1, bank, {} });
-
-    setMouseCursor (juce::MouseCursor::PointingHandCursor);
-}
-
-void RigNavigator::layoutRows()
-{
-    auto area = getLocalBounds().reduced (12, 10);
-    area.removeFromTop (22);
-    for (size_t i = 0; i < 4; ++i)
-        rows[i].area = area.removeFromTop (23);
-
-    // The banks: one row of letter keys (A B C D E), like a floor unit's bank
-    // buttons, so adding a bank doesn't need another line.
-    area.removeFromTop (6);
-    banksTitle = area.removeFromTop (20);
-    auto keys = area.removeFromTop (26);
-    const auto numKeys = (int) rows.size() - 4;
-    constexpr int keyGap = 6;
-    const auto keyWidth = (keys.getWidth() - keyGap * (numKeys - 1)) / juce::jmax (1, numKeys);
-    for (size_t i = 4; i < rows.size(); ++i)
-    {
-        rows[i].area = keys.removeFromLeft (keyWidth);
-        keys.removeFromLeft (keyGap);
-    }
-}
-
-int RigNavigator::rowAt (juce::Point<int> position) const
-{
-    for (size_t i = 0; i < rows.size(); ++i)
-        if (rows[i].area.contains (position))
-            return (int) i;
-    return -1;
-}
-
-void RigNavigator::paint (juce::Graphics& g)
-{
-    layoutRows();
-    DockStyle::drawPanel (g, getLocalBounds().toFloat());
-    DockStyle::drawTitle (g, getLocalBounds().reduced (16, 10).removeFromTop (18), "RIG BROWSER");
-    DockStyle::drawTitle (g, banksTitle.withTrimmedLeft (4), "BANKS");
-
-    for (size_t i = 0; i < rows.size(); ++i)
-    {
-        const auto& row = rows[i];
-        const auto area = row.area.toFloat();
-        const auto isSelected = (int) i == selected;
-
-        if (row.bank >= 0)
-        {
-            // A bank key: its letter in a small rounded key, lit when chosen.
-            g.setColour (isSelected ? ParagonColours::accentDim.withAlpha (0.45f)
-                                    : (int) i == hovered ? juce::Colours::white.withAlpha (0.08f) : juce::Colour (0xff151217));
-            g.fillRoundedRectangle (area, 4.0f);
-            g.setColour (isSelected ? ParagonColours::accent.withAlpha (0.7f) : ParagonColours::panelEdge);
-            g.drawRoundedRectangle (area.reduced (0.5f), 4.0f, 1.0f);
-            g.setColour (isSelected ? ParagonColours::accent : ParagonColours::text.withAlpha (0.8f));
-            g.setFont (juce::FontOptions (12.5f, juce::Font::bold));
-            g.drawText (row.letter, area, juce::Justification::centred, false);
-            continue;
-        }
-
-        if (isSelected)
-        {
-            g.setColour (ParagonColours::accentDim.withAlpha (0.45f));
-            g.fillRoundedRectangle (area, 4.0f);
-            g.setColour (ParagonColours::accent.withAlpha (0.7f));
-            g.drawRoundedRectangle (area.reduced (0.5f), 4.0f, 1.0f);
-        }
-        else if ((int) i == hovered)
-        {
-            g.setColour (juce::Colours::white.withAlpha (0.05f));
-            g.fillRoundedRectangle (area, 4.0f);
-        }
-        else
-        {
-            g.setColour (ParagonColours::panelEdge.withAlpha (0.6f));
-            g.drawHorizontalLine (row.area.getBottom() - 1, area.getX() + 4.0f, area.getRight() - 4.0f);
-        }
-
-        auto content = area.reduced (8.0f, 0.0f);
-        const auto colour = isSelected ? ParagonColours::accent : ParagonColours::text.withAlpha (0.8f);
-        auto iconArea = content.removeFromLeft (16.0f);
-        if (row.letter.isNotEmpty())
-        {
-            g.setColour (colour);
-            g.setFont (juce::FontOptions (12.5f, juce::Font::bold));
-            g.drawText (row.letter, iconArea, juce::Justification::centred, false);
-        }
-        else
-        {
-            Icons::draw (g, row.icon, iconArea.withSizeKeepingCentre (13.0f, 13.0f), colour, 1.3f);
-        }
-        content.removeFromLeft (10.0f);
-        g.setColour (colour);
-        g.setFont (juce::FontOptions (12.5f));
-        g.drawText (row.text, content, juce::Justification::centredLeft, false);
-    }
-}
-
-void RigNavigator::mouseMove (const juce::MouseEvent& event)
-{
-    if (const auto row = rowAt (event.getPosition()); row != hovered)
-    {
-        hovered = row;
-        repaint();
-    }
-}
-
-void RigNavigator::mouseExit (const juce::MouseEvent&)
-{
-    hovered = -1;
-    repaint();
-}
-
-void RigNavigator::mouseUp (const juce::MouseEvent& event)
-{
-    const auto row = rowAt (event.getPosition());
-    if (row < 0 || ! event.mouseWasClicked())
-        return;
-
-    selected = row;
-    repaint();
-    if (onShow)
-        onShow (juce::jmax (0, rows[(size_t) row].filter), rows[(size_t) row].bank);
-}
-
-//==============================================================================
-SelectedRigPanel::SelectedRigPanel (ParagonX1AudioProcessor& p) : processor (p)
-{
-    for (int bank = 0; bank < Rig::numBanks; ++bank)
-        bankBox.addItem (Rig::bankName (bank) + "   Bank " + Rig::bankName (bank), bank + 1);
-    for (int number = 1; number <= Rig::maxNumber; ++number)
-        numberBox.addItem (juce::String (number).paddedLeft ('0', 3), number);
-
-    for (auto* box : { &bankBox, &numberBox })
-    {
-        styleCombo (*box);
-        box->onChange = [this] { refile(); };
-        box->setTooltip ("Where this rig is filed. Change it to move one of your own rigs; factory rigs stay where they are.");
-        addAndMakeVisible (*box);
-    }
-
-    styleButton (save, true);
-    styleButton (saveAs, false);
-    save.onClick = [this] { if (onSave) onSave(); };
-    saveAs.onClick = [this] { if (onSaveAs) onSaveAs(); };
-    addAndMakeVisible (save);
-    addAndMakeVisible (saveAs);
-
-    refresh();
-}
-
-void SelectedRigPanel::refresh()
-{
-    const juce::ScopedValueSetter<bool> guard (refreshing, true);
-    const auto current = processor.getCurrentRig();
-    const auto* entry = processor.findCurrentRigEntry();
-
-    name = current.name + (processor.isRigModified() ? " *" : "");
-    hasEntry = entry != nullptr;
-    favourite = entry != nullptr && entry->rig.favourite;
-    canRefile = entry != nullptr && ! entry->isFactory;
-
-    bankBox.setSelectedId (entry != nullptr ? entry->rig.bank + 1 : 0, juce::dontSendNotification);
-    numberBox.setSelectedId (entry != nullptr ? entry->rig.number : 0, juce::dontSendNotification);
-    bankBox.setTextWhenNothingSelected ("Not saved");
-    numberBox.setTextWhenNothingSelected ("---");
-    bankBox.setEnabled (canRefile);
-    numberBox.setEnabled (canRefile);
-    repaint();
-}
-
-void SelectedRigPanel::refile()
-{
-    if (refreshing || ! canRefile)
-        return;
-
-    if (const auto* entry = processor.findCurrentRigEntry())
-    {
-        auto details = entry->rig;
-        details.bank = bankBox.getSelectedId() - 1;
-        details.number = numberBox.getSelectedId();
-        processor.updateRigDetails (*entry, details);
-    }
-    refresh();
-}
-
-void SelectedRigPanel::paint (juce::Graphics& g)
-{
-    DockStyle::drawPanel (g, getLocalBounds().toFloat());
-    DockStyle::drawTitle (g, getLocalBounds().reduced (16, 10).removeFromTop (18), "SELECTED RIG");
-
-    // Name box with the favourite star, as in the mockup.
-    g.setColour (juce::Colour (0xff09070a));
-    g.fillRoundedRectangle (nameBox.toFloat(), 6.0f);
-    g.setColour (ParagonColours::panelEdge);
-    g.drawRoundedRectangle (nameBox.toFloat().reduced (0.5f), 6.0f, 1.0f);
-    g.setColour (ParagonColours::text);
-    g.setFont (juce::FontOptions (21.0f));
-    g.drawFittedText (name, nameBox.reduced (14, 0).withTrimmedRight (starArea.getWidth()), juce::Justification::centredLeft, 1, 0.8f);
-
-    if (hasEntry)
-    {
-        auto star = Icons::get (Icons::Type::star);
-        const auto area = starArea.toFloat().withSizeKeepingCentre (22.0f, 22.0f);
-        star.applyTransform (juce::AffineTransform::scale (area.getWidth()).translated (area.getX(), area.getY()));
-        g.setColour (ParagonColours::accent);
-        if (favourite)
-            g.fillPath (star);
-        else
-            g.strokePath (star, juce::PathStrokeType (1.4f));
-    }
-
-    g.setColour (ParagonColours::textDim);
-    g.setFont (juce::FontOptions (10.5f, juce::Font::bold));
-    g.drawText ("BANK", bankLabel, juce::Justification::centredLeft, false);
-    g.drawText ("NUMBER", numberLabel, juce::Justification::centredLeft, false);
-}
-
-void SelectedRigPanel::resized()
-{
-    auto area = getLocalBounds().reduced (16, 10);
-    area.removeFromTop (24);
-    nameBox = area.removeFromTop (42);
-    starArea = nameBox.withLeft (nameBox.getRight() - 44);
-    area.removeFromTop (10);
-
-    auto labels = area.removeFromTop (18);
-    const auto half = (area.getWidth() - 16) / 2;
-    bankLabel = labels.removeFromLeft (half);
-    numberLabel = labels.withTrimmedLeft (16);
-
-    auto combos = area.removeFromTop (30);
-    bankBox.setBounds (combos.removeFromLeft (half));
-    numberBox.setBounds (combos.withTrimmedLeft (16));
-
-    area.removeFromTop (18);
-    auto buttons = area.removeFromTop (32);
-    save.setBounds (buttons.removeFromLeft (half));
-    saveAs.setBounds (buttons.withTrimmedLeft (16));
-}
-
-void SelectedRigPanel::mouseUp (const juce::MouseEvent& event)
-{
-    if (! event.mouseWasClicked() || ! starArea.contains (event.getPosition()))
-        return;
-
-    if (const auto* entry = processor.findCurrentRigEntry())
-    {
-        processor.getRigLibrary().setFavourite (*entry, ! entry->rig.favourite);
-        refresh();
     }
 }
 
@@ -345,6 +81,39 @@ SettingsPage::SettingsPage (ParagonX1AudioProcessor& p)
 
     for (auto* component : std::initializer_list<juce::Component*> { &reference, &muteWhileTuning, &ccBox, &openFolder, &pearlWhite, &pearlWhiteNeon, &pearlBlack })
         addAndMakeVisible (component);
+
+    folderRows[0].label = "NAM AMPS";
+    folderRows[1].label = "CAB IRS";
+    for (int row = 0; row < 2; ++row)
+    {
+        auto& r = folderRows[row];
+        const auto kind = (LibraryFolders::Kind) row;
+        styleButton (r.choose, false);
+        styleButton (r.forget, false);
+        r.choose.setTooltip ("Choose the folder where your " + juce::String (row == 0 ? "NAM amp models" : "cabinet IRs") + " are");
+        r.forget.setTooltip ("Forget this folder");
+        r.choose.onClick = [this, row] { chooseFolder (row); };
+        r.forget.onClick = [this, kind] { LibraryFolders::set (kind, {}); repaint(); };
+        addAndMakeVisible (r.choose);
+        addAndMakeVisible (r.forget);
+    }
+}
+
+void SettingsPage::chooseFolder (int row)
+{
+    const auto kind = (LibraryFolders::Kind) row;
+    const auto current = LibraryFolders::get (kind);
+    folderChooser = std::make_unique<juce::FileChooser> ("Choose the folder with your " + juce::String (row == 0 ? "NAM amp models" : "cabinet IRs"),
+                                                         current.isDirectory() ? current : juce::File::getSpecialLocation (juce::File::userDocumentsDirectory));
+    folderChooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
+                                [this, kind] (const juce::FileChooser& chooser)
+                                {
+                                    if (const auto folder = chooser.getResult(); folder.isDirectory())
+                                    {
+                                        LibraryFolders::set (kind, folder);
+                                        repaint();
+                                    }
+                                });
 }
 
 SettingsPage::~SettingsPage()
@@ -389,6 +158,29 @@ void SettingsPage::paint (juce::Graphics& g)
     section (finishArea, "FINISH",
              "The unit's colour: pearl white with black keys, or pearl white or pearl black with neon pink-to-orange keys. "
              "Saved on this computer, so every Paragon PR7-G you open uses it.");
+    section (foldersArea, "AMP & CAB FOLDERS",
+             "Where your NAM amps and cab IRs are. The AMP and CABINET browsers open here, and a rig whose file has moved finds it here by name, "
+             "in any folder inside. Saved on this computer.");
+    for (const auto& r : folderRows)
+    {
+        const auto folder = LibraryFolders::get ((LibraryFolders::Kind) (&r - folderRows));
+        g.setColour (ParagonColours::text);
+        g.setFont (juce::FontOptions (13.0f, juce::Font::bold));
+        g.drawText (r.label, r.labelArea, juce::Justification::centredLeft, false);
+        g.setColour (folder.isDirectory() ? ParagonColours::accent : ParagonColours::textDim);
+        g.setFont (juce::FontOptions (13.0f));
+        // A long path loses its start, not its end: the folder's own name is what matters.
+        auto path = folder != juce::File() ? folder.getFullPathName() : juce::String ("Not set");
+        const auto fits = [&] (const juce::String& text)
+        {
+            return juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), text) < (float) r.pathArea.getWidth() * 1.8f;
+        };
+        const auto separator = juce::File::getSeparatorString();
+        while (! fits (path) && path.fromFirstOccurrenceOf (separator, false, false).contains (separator))
+            path = juce::String (juce::CharPointer_UTF8 ("\xe2\x80\xa6")) + path.fromFirstOccurrenceOf (separator, false, false)
+                                                                                 .fromFirstOccurrenceOf (separator, true, false);
+        g.drawFittedText (path, r.pathArea, juce::Justification::centredLeft, 2, 0.9f);
+    }
     section (rigsArea, "RIGS", "Your rigs are files in this folder, so you can back them up or share them:\n"
                                + processor.getRigLibrary().getFolder().getFullPathName());
     section (aboutArea, "ABOUT",
@@ -406,8 +198,22 @@ void SettingsPage::resized()
     tunerArea = top.removeFromLeft (third);
     expressionArea = top.withTrimmedLeft (12).removeFromLeft (third);
     finishArea = top.withTrimmedLeft (24 + third);
-    rigsArea = area.removeFromLeft (area.getWidth() / 2 - 6);
-    aboutArea = area.withTrimmedLeft (12);
+    rigsArea = area.removeFromLeft (third);
+    foldersArea = area.withTrimmedLeft (12).removeFromLeft (third);
+    aboutArea = area.withTrimmedLeft (24 + third);
+
+    auto folderControls = foldersArea.reduced (24, 18).withTrimmedTop (84);
+    for (auto& r : folderRows)
+    {
+        auto line = folderControls.removeFromTop (34);
+        folderControls.removeFromTop (8);
+        r.labelArea = line.removeFromLeft (84);
+        r.forget.setBounds (line.removeFromRight (30).withSizeKeepingCentre (30, 30));
+        line.removeFromRight (6);
+        r.choose.setBounds (line.removeFromRight (90).withSizeKeepingCentre (90, 30));
+        line.removeFromRight (10);
+        r.pathArea = line;
+    }
 
     auto tunerControls = tunerArea.reduced (24, 18).withTrimmedTop (90);
     reference.setBounds (tunerControls.removeFromTop (32).withWidth (juce::jmin (420, tunerControls.getWidth())));
