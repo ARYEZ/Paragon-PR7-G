@@ -64,6 +64,7 @@ private:
     juce::Rectangle<int> display, controls;            // in this panel's own coordinates
     juce::Rectangle<float> screenArea, onLabel, holdLabel, mapLabel, knobLabel, infoArea, soundLabel;
     mutable std::vector<juce::Rectangle<float>> glasses;
+    juce::String shownState;   // what the panel last drew (the timer repaints when it changes)
     int shownProgram = -1;
     juce::uint32 programShownSince = 0;   // a program with HOLD shows its number first, then the held position
     int blink = 0;

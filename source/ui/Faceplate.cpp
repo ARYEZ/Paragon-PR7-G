@@ -1,3 +1,4 @@
+#include <cstring>
 #include "Faceplate.h"
 
 #include "Finish.h"
@@ -159,12 +160,17 @@ Faceplate::Faceplate (ParagonX1AudioProcessor& processorToShow)
     : processor (processorToShow), parameters (processorToShow.getParameters())
 {
     setInterceptsMouseClicks (false, false);
+    for (auto* parameter : static_cast<juce::AudioProcessor&> (processor).getParameters())
+        if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*> (parameter))
+            allValues.push_back (parameters.getRawParameterValue (ranged->getParameterID()));
     Finish::changes().addChangeListener (this);
+    processor.statusBroadcaster.addChangeListener (this);   // an amp or cab finished loading
     startTimerHz (30);
 }
 
 Faceplate::~Faceplate()
 {
+    processor.statusBroadcaster.removeChangeListener (this);
     Finish::changes().removeChangeListener (this);
 }
 
@@ -172,11 +178,13 @@ void Faceplate::resized()
 {
     // Twice the size, so the grain stays fine on high-resolution screens (as on the unit).
     satin = Finish::makeSatinGrain (juce::jmax (1, getWidth() * 2), juce::jmax (1, getHeight() * 2), 4321);
+    chassisCache = {};
 }
 
-void Faceplate::changeListenerCallback (juce::ChangeBroadcaster*)
+void Faceplate::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
-    resized();   // the grain differs on black
+    if (source == &Finish::changes())
+        resized();   // the grain differs on black
     repaint();
 }
 
@@ -229,12 +237,78 @@ bool Faceplate::isOn() const
     return false;
 }
 
+bool Faceplate::isAnimated() const
+{
+    const auto look = getLook();
+    return (look == Look::delay || look == Look::modulation || look == Look::glitch) && isOn();
+}
+
+juce::uint64 Faceplate::settingsSignature() const
+{
+    // FNV-1a over every parameter's value, the tempo and the block shown.
+    juce::uint64 hash = 14695981039346656037ull;
+    const auto add = [&hash] (juce::uint64 value)
+    {
+        hash ^= value;
+        hash *= 1099511628211ull;
+    };
+    const auto bits = [] (auto number)
+    {
+        juce::uint64 result = 0;
+        std::memcpy (&result, &number, sizeof (number));
+        return result;
+    };
+    for (const auto* value : allValues)
+        add (bits (value->load (std::memory_order_relaxed)));
+    add (bits (processor.getTempoBpm()));
+    add ((juce::uint64) unit);
+    return hash;
+}
+
+Faceplate::Redraw Faceplate::checkRedraw()
+{
+    // A setting changed: the whole unit (its name, LED and display).
+    if (const auto signature = settingsSignature(); signature != shownSignature)
+    {
+        shownSignature = signature;
+        return Redraw::whole;
+    }
+    // Only a meter or an animation moved: just the display. The meters
+    // count only on the looks that draw them (DRIVE and AMP the input,
+    // the compressors their gain reduction).
+    const auto look = getLook();
+    const auto showsInput = look == Look::drive || look == Look::amp;
+    const auto showsReduction = look == Look::classic || look == Look::daybreak;
+    const std::pair meters { showsInput ? juce::roundToInt (juce::Decibels::gainToDecibels (shownInput, -60.0f) * 2.0f) : 0,
+                             showsReduction ? juce::roundToInt (shownReduction * 10.0f) : 0 };
+    if (meters != shownMeters || isAnimated())
+    {
+        shownMeters = meters;
+        return Redraw::display;
+    }
+    return Redraw::nothing;
+}
+
 void Faceplate::timerCallback()
 {
     if (! isShowing())
         return;
     updateMeters();
-    repaint();
+    switch (checkRedraw())
+    {
+        case Redraw::whole:
+            repaint();
+            break;
+        case Redraw::display:
+            // On the rack the block's controls sit beside the display, and stay as they are.
+            if (isRack())
+                repaint (getDisplayArea().expanded (4));
+            else
+                repaint();
+            break;
+        case Redraw::nothing:
+            break;
+    }
 }
 
 void Faceplate::updateMeters()
@@ -319,7 +393,31 @@ void Faceplate::paint (juce::Graphics& g)
     // The unit: the PR7's chassis, smaller (or as wide as the rack), in the current finish.
     const auto chassis = getLocalBounds().toFloat().reduced (glowRoom);
     const auto face = faceOf (getLocalBounds().toFloat());
-    PedalBody::paintUnit (g, chassis, face, [this] (juce::Graphics& gg) { gg.drawImage (satin, getLocalBounds().toFloat()); }, unitShape);
+    const auto drawSatin = [this] (juce::Graphics& gg) { gg.drawImage (satin, getLocalBounds().toFloat()); };
+    if (isRack() && getDisplayArea().expanded (8).contains (g.getClipBounds()))   // 4 round it, plus rounding to whole pixels
+    {
+        // Only the display is being redrawn (a meter or an animation): the
+        // chassis behind it from a picture drawn once, as its shadows and
+        // grain are slow to draw many times a second. Full redraws draw it
+        // directly, so its edges stay crisp (a picture drawn between pixels
+        // softens them a little; inside the face it can't be seen).
+        const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
+        if (chassisCache.isNull() || ! juce::approximatelyEqual (scale, chassisScale))
+        {
+            chassisScale = scale;
+            chassisCache = juce::Image (juce::Image::ARGB, juce::jmax (1, juce::roundToInt ((float) getWidth() * scale)),
+                                        juce::jmax (1, juce::roundToInt ((float) getHeight() * scale)), true);
+            juce::Graphics cache (chassisCache);
+            cache.addTransform (juce::AffineTransform::scale ((float) chassisCache.getWidth() / (float) juce::jmax (1, getWidth()),
+                                                              (float) chassisCache.getHeight() / (float) juce::jmax (1, getHeight())));
+            PedalBody::paintUnit (cache, chassis, face, drawSatin, unitShape);
+        }
+        g.drawImage (chassisCache, getLocalBounds().toFloat());
+    }
+    else
+    {
+        PedalBody::paintUnit (g, chassis, face, drawSatin, unitShape);
+    }
 
     // Its name top left, its status LED top right (as over the footswitches).
     auto content = face.reduced (12.0f, 8.0f);

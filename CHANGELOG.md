@@ -2,6 +2,17 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.58.1
+
+**Much lighter on the CPU with the window open.** The plugin's sound processing was never the problem (with every effect off it takes well under 1% of a core); the window was. It redrew far more than it needed to, many times a second, even while nothing changed.
+
+- **The rack unit at the bottom** (the faceplate showing the selected block) redrew itself completely 30 times a second, including its glowing edges, which are blurs and slow to draw. It now redraws only when something it shows changes: a setting (the whole unit), or a meter or a moving display (only the display, beside the knobs). Its chassis is kept as a picture for those display updates.
+- **The HAVOK panel** redrew itself, and everything behind it, 30 times a second. It now redraws only when the pad, the program or the recorder changes.
+- **The LED screens' shadows** are worked out once per size instead of every time a screen is drawn.
+- Measured here with the window open and nothing happening (software drawing on Linux, which is slower than Windows, so expect lower numbers on your machine): **from about 91% of a core to about 5%**; with HAVOK open, from 49% to 5%. With DELAY, MOD or GLITCH open *and switched on*, their display still moves (the running light, the wave, the steps), about 17% here (it was over 91%).
+- The sound is unchanged, and the window looks the same: the full unit is drawn exactly as before (checked pixel by pixel against 0.58.0); a display updated on its own differs from it by at most 1 step in 255.
+- New tests: the faceplate draws nothing while idle, only its display for meters and animations, and all of it for a setting change; and a display redrawn on its own matches the whole unit drawn at once. Two hidden benchmarks measure the CPU of the sound processing (`[cpu]`) and of the open window (`[uicpu]`).
+
 ## 0.58.0
 
 - **HAVOK's scratching: more stabs, and the factory rigs on them.** STAB, the distorted chord, scratches best: its hard front edge is what the crossfader cuts bite on.

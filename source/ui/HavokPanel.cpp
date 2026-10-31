@@ -327,7 +327,21 @@ void HavokPanel::timerCallback()
     if (blink == 0)
         for (auto& key : mapKeys)
             key.setToggleState (false, juce::dontSendNotification);
-    repaint();
+
+    // Repaint only when something drawn changed (the keys repaint
+    // themselves): redrawing the panel 30 times a second for nothing cost
+    // a good share of a core.
+    const auto& havok = processor.getHavok();
+    const auto shown = getDisplayText() + "|" + juce::String (program())
+                     + "|" + juce::String (raw (ParamIDs::havokX)) + "|" + juce::String (raw (ParamIDs::havokY))
+                     + "|" + juce::String (raw (ParamIDs::havokTouch)) + "|" + juce::String (raw (ParamIDs::havokHold))
+                     + "|" + juce::String (raw (ParamIDs::havokOn)) + "|" + juce::String ((int) havok.getRecState())
+                     + "|" + juce::String (havok.getRecordedSeconds(), 1);
+    if (shown != shownState)
+    {
+        shownState = shown;
+        repaint();
+    }
 }
 
 void HavokPanel::resized()
