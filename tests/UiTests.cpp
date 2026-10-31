@@ -16,6 +16,7 @@
 #include "ui/EqPresets.h"
 #include "ui/Faceplate.h"
 #include "ui/Finish.h"
+#include "ui/LedDisplay.h"
 #include "ui/PerformanceControls.h"
 #include "ui/RackView.h"
 #include "ui/SignalChain.h"
@@ -986,4 +987,27 @@ TEST_CASE ("A faceplate display redrawn on its own matches the whole unit drawn 
         }
     CAPTURE (worst);
     CHECK (worst <= 6);   // out of 255: the grain's sub-pixel difference, not a visible seam
+}
+
+TEST_CASE ("A screen draws the same whatever colour was set before it (its kept shadow isn't faded)", "[ui]")
+{
+    // The frame's shadow is kept as a picture, and JUCE draws a picture at
+    // the current colour's opacity: a half-clear colour left by whatever was
+    // drawn before (the faceplate's INPUT meter, for one) faded it.
+    const juce::Rectangle<float> bounds (20.3f, 30.6f, 180.0f, 70.0f);
+    const auto render = [&] (juce::Colour before)
+    {
+        juce::Image image (juce::Image::ARGB, 240, 140, true);
+        juce::Graphics g (image);
+        g.fillAll (juce::Colours::white);
+        g.setColour (before);
+        LedDisplay::paintScreen (g, bounds, 1.0f);
+        return image;
+    };
+    const auto opaque = render (juce::Colours::black), faint = render (juce::Colours::orange.withAlpha (0.3f));
+    int worst = 0;
+    for (int y = 0; y < opaque.getHeight(); ++y)
+        for (int x = 0; x < opaque.getWidth(); ++x)
+            worst = juce::jmax (worst, std::abs ((int) opaque.getPixelAt (x, y).getRed() - (int) faint.getPixelAt (x, y).getRed()));
+    CHECK (worst == 0);
 }
