@@ -71,8 +71,8 @@ SettingsPage::SettingsPage (ParagonX1AudioProcessor& p)
     };
 
     pearlWhite.setTooltip ("The original pearl white unit with black keys and knobs");
-    pearlWhiteNeon.setTooltip ("The pearl white unit with neon pink-to-orange keys and knobs");
-    pearlBlack.setTooltip ("A pearl black unit with neon pink-to-orange keys and knobs");
+    pearlWhiteNeon.setTooltip ("The pearl white unit with black keys and knobs in neon pink-to-orange rings");
+    pearlBlack.setTooltip ("A pearl black unit with black keys and knobs in neon pink-to-orange rings");
     pearlWhite.onClick = [] { Finish::set (Finish::Type::pearlWhite); };
     pearlWhiteNeon.onClick = [] { Finish::set (Finish::Type::pearlWhiteNeon); };
     pearlBlack.onClick = [] { Finish::set (Finish::Type::pearlBlack); };
@@ -156,7 +156,7 @@ void SettingsPage::paint (juce::Graphics& g)
              "A MIDI expression pedal moves the on-screen pedal. Pick the MIDI controller it sends "
              "(most send CC 11), and route the MIDI track to Paragon PR7-G in your DAW.");
     section (finishArea, "FINISH",
-             "The unit's colour: pearl white with black keys, or pearl white or pearl black with neon pink-to-orange keys. "
+             "The unit's colour: pearl white with chrome rings, or pearl white or pearl black with neon pink-to-orange rings round the black keys and knobs. "
              "Saved on this computer, so every Paragon PR7-G you open uses it.");
     section (foldersArea, "AMP & CAB FOLDERS",
              "Where your NAM amps and cab IRs are. The AMP and CABINET browsers open here, and a rig whose file has moved finds it here by name, "

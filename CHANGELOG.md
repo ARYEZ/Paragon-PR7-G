@@ -2,6 +2,17 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.59.0
+
+**A new look for Pearl Black and Pearl White + Neon: black keys in neon rings.** Before, those two finishes had pink-to-orange keys and knobs. Now the keys and knobs are black, as on Pearl White, and the pink-to-red-to-orange sits round them instead, so the colour frames each control rather than filling it.
+
+- **The keys:** the four footswitches, the AMP / CABINET / RIG buttons and the small keys (UNDO, REDO, BYPASS, TUNER, MUTE, TAP, SAVE, SAVE AS..., the EQ's ON and FLAT, the expression arrows) are black. Their rims are the neon gradient, lit along the top and darker at the front like the chrome they replace.
+- **The knobs:** RIG LEVEL and PRESENCE are black, and their glowing ring now runs pink to red to orange too (a little brighter than the keys' rims, as it's a light).
+- **The expression pedal:** the tread is black rubber with the gradient in its ribs (before, it was the gradient with dark ribs).
+- **The key labels** (UNDO, REDO, TUNER...) stay in the unit's ink, white on Pearl Black, dark on White + Neon.
+- **Pearl White is unchanged** (checked pixel by pixel against 0.58.2; the only difference is the TAP light, which blinks with the beat).
+- SETTINGS > FINISH describes the new look.
+
 ## 0.58.2
 
 - **The screens' shadows look as they did before 0.58.1.** 0.58.1's CPU fix keeps each screen's soft drop shadow as a saved picture instead of working it out every time. In a few places that saved picture came out fainter, so the thin dark line under the screen's metal frame was up to a fifth lighter: under the AMP screen, and under the small LEVEL readouts. There were two causes:
