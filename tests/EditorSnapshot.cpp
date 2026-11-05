@@ -5,7 +5,6 @@
 #include "PluginProcessor.h"
 #include "ui/EffectPanel.h"
 #include "ui/Finish.h"
-#include "ui/RackView.h"
 
 namespace
 {
@@ -48,10 +47,10 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
 
     const auto showPresets = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_PAGE", {}) == "presets";
 
-    // PARAGON_SNAPSHOT_FINISH=black or =neon: the pearl black unit, or pearl
-    // white + neon (not saved as the preference).
+    // PARAGON_SNAPSHOT_FINISH=aurora (or neon, white): the Aurora finish;
+    // otherwise Obsidian, the default (not saved as the preference).
     const auto finish = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_FINISH", {});
-    Finish::set (finish == "black" ? Finish::Type::pearlBlack : finish == "neon" ? Finish::Type::pearlWhiteNeon : Finish::Type::pearlWhite, false);
+    Finish::set (finish == "aurora" || finish == "neon" || finish == "white" ? Finish::Type::aurora : Finish::Type::obsidian, false);
     const auto rigFolder = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("ParagonX1SnapshotRigs");
     rigFolder.deleteRecursively();
     processor.useRigFolder (rigFolder);
@@ -123,9 +122,6 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
         if (auto* p = processor.getParameters().getParameter (setting.upToFirstOccurrenceOf ("=", false, false)))
             p->setValueNotifyingHost (p->convertTo0to1 (setting.fromFirstOccurrenceOf ("=", false, false).getFloatValue()));
 
-    // PARAGON_SNAPSHOT_RACK=hidden: the rack hidden (HIDE RACK), the window shorter.
-    RackView::setShown (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK", {}) != "hidden", false);
-
     // PARAGON_SNAPSHOT_RUN=seconds: run the audio that long first (silence),
     // so things that move with the sound, like Cyclone's rotors, are going.
     if (const auto run = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RUN", {}).getDoubleValue(); run > 0.0)
@@ -141,6 +137,9 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     }
 
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditor());
+    // The rack shown (a window opens with it hidden, as PARAGON_SNAPSHOT_RACK=hidden draws it).
+    if (auto* view = findType<MainView> (*editor))
+        view->setRackShown (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK", {}) != "hidden");
     if (showTuner)
         for (int i = 0; i < 12; ++i)   // let the editor's timers run: the tuner reads a few times
         {
