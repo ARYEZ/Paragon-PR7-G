@@ -42,7 +42,7 @@ private:
     juce::AudioProcessorValueTreeState::ButtonAttachment muteAttachment;
     juce::ComboBox ccBox;
     juce::TextButton openFolder { "OPEN RIGS FOLDER" };
-    juce::TextButton pearlWhite { "PEARL WHITE" }, pearlWhiteNeon { "WHITE + NEON" }, pearlBlack { "PEARL BLACK" };
+    juce::TextButton obsidian { "OBSIDIAN" }, aurora { "AURORA" };
     juce::Rectangle<int> tunerArea, expressionArea, finishArea, rigsArea, foldersArea, aboutArea;
 
     // AMP & CAB FOLDERS: where the NAM amps and cab IRs are, for each a
