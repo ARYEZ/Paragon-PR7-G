@@ -224,6 +224,13 @@ namespace ParamIDs
     // Version 35: what the scratch programs (61-68) scratch: one of our own sounds.
     inline constexpr auto havokScratchSound = "havokScratchSound";
 
+    // Version 36: SENTRY, the noise gate (inspired by the Fortin Zuul+). Its
+    // GATE is gateThreshold (above); these are the pedal's HOLD and RELEASE
+    // and its key (Clean: the guitar, Self: what it cuts).
+    inline constexpr auto sentryHold    = "sentryHold";      // ms
+    inline constexpr auto sentryRelease = "sentryRelease";   // ms
+    inline constexpr auto sentryKey     = "sentryKey";
+
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real
     // pedal's is: it's where your foot is, not part of the sound. What the

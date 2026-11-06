@@ -265,7 +265,7 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     {
         auto text = valueText (ParamIDs::compThreshold) + "  " + valueText (ParamIDs::compRatio);
         if (audioProcessor.getParameters().getRawParameterValue (ParamIDs::gateThreshold)->load() > effects::CompGate::gateOffDb)
-            text << "  + gate";
+            text << "  + SENTRY";
         return text;
     };
     footswitches[1] = std::make_unique<Footswitch> (2, "OD / DISTORTION", state, juce::StringArray { ParamIDs::driveOn });
@@ -368,7 +368,10 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
                           { ParamIDs::compAmount, "COMP", daybreak, true }, { ParamIDs::compDetail, "DETAIL", daybreak, true },
                           { ParamIDs::compMix, "MIX", daybreak, true }, { ParamIDs::compIntensity, "INTENSITY", daybreak, true },
                           { ParamIDs::compLevel, "LEVEL" } } },
-        { "NOISE GATE", { { ParamIDs::gateThreshold, "THRESHOLD" } } } });
+        // SENTRY (the noise gate, inspired by the Fortin Zuul+): the pedal's
+        // GATE, HOLD and RELEASE, and its key.
+        { "SENTRY", { { ParamIDs::gateThreshold, "GATE" }, { ParamIDs::sentryHold, "HOLD" },
+                      { ParamIDs::sentryRelease, "RELEASE" }, { ParamIDs::sentryKey, "KEY" } } } });
     panels[compBlock]->setMeter ([this] { return audioProcessor.getCompGainReductionDb(); });
     const auto fpIs = [this] (effects::FilterPitch::Type type)
     {

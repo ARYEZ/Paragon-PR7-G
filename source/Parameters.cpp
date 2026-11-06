@@ -1,6 +1,7 @@
 #include "Parameters.h"
 
 #include "dsp/effects/CompGate.h"
+#include "dsp/effects/Sentry.h"
 #include "dsp/effects/Delay.h"
 #include "dsp/effects/Drive.h"
 #include "dsp/effects/FilterPitch.h"
@@ -105,7 +106,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::compThreshold, "Comp Threshold", { -40.0f, 0.0f, 0.1f }, -18.0f, v3, asDb));
     layout.add (makeFloat (ParamIDs::compRatio, "Comp Ratio", skewed (1.0f, 20.0f, 4.0f, 0.1f), 4.0f, v3, asRatio));
     layout.add (makeFloat (ParamIDs::compLevel, "Comp Level", { -12.0f, 24.0f, 0.1f }, 0.0f, v3, asDb));
-    layout.add (makeFloat (ParamIDs::gateThreshold, "Gate Threshold", { effects::CompGate::gateOffDb, -20.0f, 1.0f },
+    layout.add (makeFloat (ParamIDs::gateThreshold, "Sentry Gate", { effects::CompGate::gateOffDb, -20.0f, 1.0f },
                            effects::CompGate::gateOffDb, v3, asGate));
 
     layout.add (makeSwitch (ParamIDs::driveOn, "Drive On", v3, false));
@@ -341,5 +342,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     }
     // Added in PR7-G 0.57.0: the scratch programs' sound (the vocal "ahh" to start).
     layout.add (makeChoice (ParamIDs::havokScratchSound, "Havok Scratch Sound", 35, effects::Havok::scratchSoundNames, 0));
+    // Added in PR7-G 0.61.0: SENTRY's HOLD, RELEASE and key. RELEASE starts at
+    // the old gate's 120 ms, so rigs saved before sound as close as they can.
+    layout.add (makeFloat (ParamIDs::sentryHold, "Sentry Hold", skewed (0.0f, 500.0f, 50.0f, 1.0f), 20.0f, 36, asMs));
+    layout.add (makeFloat (ParamIDs::sentryRelease, "Sentry Release", skewed (5.0f, 2000.0f, 150.0f, 1.0f), 120.0f, 36, asTime));
+    layout.add (makeChoice (ParamIDs::sentryKey, "Sentry Key", 36, effects::Sentry::keyNames, 0));
     return layout;
 }

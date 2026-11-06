@@ -4,8 +4,8 @@
 
 namespace effects
 {
-    // Footswitch 1: noise gate then compressor, before the amp.
-    // The gate comes first so the compressor doesn't bring the noise back up.
+    // Footswitch 1: the compressor, before the amp. (Its noise gate, SENTRY,
+    // listens to the clean guitar here but cuts after the amp: see Sentry.h.)
     // Two compressors:
     //
     //   classic   threshold and ratio, as studio compressors have
@@ -29,7 +29,6 @@ namespace effects
             float thresholdDb = -18.0f;  // classic
             float ratio = 4.0f;          // classic
             float levelDb = 0.0f;        // make-up gain (both)
-            float gateThresholdDb = gateOffDb;
             Type type = Type::classic;
             float amount = 5.0f;         // daybreak: COMP, 0 to 10
             float detail = 5.0f;         // daybreak: DETAIL, 0 to 10
@@ -37,7 +36,7 @@ namespace effects
             bool intensity = false;      // daybreak: INTENSITY
         };
 
-        // Gate threshold at (or below) this means the gate is off.
+        // SENTRY's GATE (the gateThreshold parameter) at or below this means it's off.
         static constexpr float gateOffDb = -90.0f;
 
         void prepare (double sampleRate, int maxBlockSize);
@@ -55,7 +54,6 @@ namespace effects
         void processDaybreak (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
-        juce::dsp::NoiseGate<float> gate;
         juce::dsp::Compressor<float> compressor;
         juce::SmoothedValue<float> makeUpGain;
         BypassFade bypass;
