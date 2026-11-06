@@ -2,6 +2,31 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.61.0
+
+**SENTRY: a new noise gate, inspired by the Fortin Zuul+.** The gate on the COMP / GATE stomp is rebuilt from the Zuul+ manual.
+
+- **It listens to your clean guitar, and cuts after the amp.** This is the pedal's "4 cable method" with its KEY IN: SENTRY hears the guitar straight from the input, before PITCH, the drive and the NAM amp, so a fuzz or high gain can't hold it open with their hiss. It cuts in the amp's effects loop, after the amp, cab and graphic EQ, so it silences their hiss too. MOD, DELAY and REVERB come after it, so your echoes and reverb tails ring on when it closes.
+- **The pedal's controls:**
+  - **GATE:** how loud you need to play to open it. This is the old gate's THRESHOLD, so your rigs keep their setting.
+  - **HOLD:** keeps it open through short pauses (0 to 500 ms).
+  - **RELEASE:** how long it fades from open to fully closed once HOLD is over (5 ms to 2 s, as a smooth fade).
+  - **KEY:** Clean (listens to the guitar, the default) or Self (listens to what it cuts, like the pedal without its key cable).
+- **Our choices** (the manual gives no numbers):
+  - the knobs' ranges;
+  - it opens in half a millisecond, so your pick attack isn't softened;
+  - it closes 4 dB below GATE, so it doesn't flutter on notes that sit right at the edge;
+  - it waits for the amp's delay, so it opens exactly when the amp's sound does.
+- **Rigs saved before** keep their GATE. RELEASE starts at the old gate's 120 ms, and HOLD at 20 ms. Because SENTRY now also cuts the amp's hiss, a rig's gate may sound tighter than before.
+- On the COMP / GATE panel the gate's section is now **SENTRY** (GATE, HOLD, RELEASE, KEY). It still works only while the COMP / GATE stomp is on.
+- Tests check:
+  - hold and release times;
+  - the 4 dB hysteresis;
+  - opening within a millisecond;
+  - the key waiting for the amp's latency;
+  - that a fuzz's hiss holds a gate listening to itself open, while SENTRY on Clean stays shut;
+  - that delay echoes ring on after SENTRY closes.
+
 ## 0.60.0
 
 **PR7-G now opens dark, compact and ready to play.**

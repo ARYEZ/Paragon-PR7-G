@@ -99,6 +99,7 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     amp.prepare (sampleRate, preparedBlockSize);
     cab.prepare (sampleRate, preparedBlockSize);
     compGate.prepare (sampleRate, preparedBlockSize);
+    sentry.prepare (sampleRate, preparedBlockSize, bypassDelay.getMaximumDelayInSamples());
     filterPitch.prepare (sampleRate, preparedBlockSize);
     drive.prepare (sampleRate, preparedBlockSize);
     presence.prepare (sampleRate, preparedBlockSize);
@@ -289,6 +290,11 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     inputMeter.pushSamples (mono, numSamples);
     faceplateMeter.pushSamples (mono, numSamples);
 
+    // SENTRY's key: the clean guitar, before anything shapes it, delayed by
+    // the amp's latency so it lines up with the amp's sound SENTRY gates.
+    sentry.setKeyDelay (amp.getLatencySamples());
+    sentry.pushKey (mono, numSamples);
+
     // PITCH: TUNING, OCTAVER and FREEZE, before anything else shapes the guitar.
     pitchBlock.process (monoBlock, { param (ParamIDs::pitchTune), isOn (ParamIDs::octOn), param (ParamIDs::octSubTwo),
                                      param (ParamIDs::octSubOne), param (ParamIDs::octDry), param (ParamIDs::octUp),
@@ -300,7 +306,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     wah.process (monoBlock, expressionTarget == ExpressionTargets::wah, pedal);
 
     compGate.process (monoBlock, { isOn (ParamIDs::compOn), param (ParamIDs::compThreshold), param (ParamIDs::compRatio),
-                                   param (ParamIDs::compLevel), param (ParamIDs::gateThreshold),
+                                   param (ParamIDs::compLevel),
                                    (effects::CompGate::Type) (int) param (ParamIDs::compType), param (ParamIDs::compAmount),
                                    param (ParamIDs::compDetail), param (ParamIDs::compMix), isOn (ParamIDs::compIntensity) });
     // PITCH / WHAMMY: the pedal bends the pitch shifter from no shift at
@@ -407,6 +413,15 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
         eq.gainsDb[band] = eqGainDb[band]->load();
     eq.levelDb = param (ParamIDs::eqLevel);
     graphicEq.process (monoBlock, eq);
+
+    // SENTRY, in the amp's effects loop: after the amp, cab and EQ (so it
+    // cuts their hiss), before GLITCH (Post), MOD, DELAY and REVERB (so
+    // their tails ring on). On the COMP / GATE stomp, as the gate always was.
+    const auto gateDb = param (ParamIDs::gateThreshold);
+    sentry.process (mono, numSamples, { isOn (ParamIDs::compOn) && gateDb > effects::CompGate::gateOffDb, gateDb,
+                                        param (ParamIDs::sentryHold), param (ParamIDs::sentryRelease),
+                                        (effects::Sentry::Key) (int) param (ParamIDs::sentryKey) });
+
     if (! glitchPre)
         glitch.process (monoBlock, glitchSettings, getTempoBpm(), songBeats);
 
