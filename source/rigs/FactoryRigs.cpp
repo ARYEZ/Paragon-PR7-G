@@ -63,6 +63,8 @@ namespace
     constexpr int H = 7;                 // bank H: an album's guitar sounds (Linkin Park, Hybrid Theory)
     constexpr float glitchInterfere = 2;
     constexpr float xpEnvFilter = 7;     // QUASAR program 08: Env Filter Sens
+    constexpr int I = 8;                 // bank I: an album's guitar sounds (Periphery, Periphery III: Select Difficulty)
+    constexpr float xpDiveBomb = 19;     // QUASAR program 20: Down 6 Octaves, a dive bomb
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -784,6 +786,143 @@ std::vector<Rig> makeFactoryRigs()
             { rigLevel, -4 },
             { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpEnvFilter }, { fpMix, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, sixteenth }, { delayFeedback, 0.2f }, { delayMix, 0.12f } }),
+
+        //======================================================================
+        // Bank I: an album's guitar sounds, inspired by Periphery's
+        // Periphery III: Select Difficulty (2016; the owner's fourth album
+        // bank). Cleans, effects and leads: the extended-range rhythm is the
+        // amp capture's job. Documented: three guitarists writing three parts,
+        // two double-tracked guitars left and right with the centre one on a
+        // lead or counterpoint (Misha Mansoor to Jackson Guitars); recorded
+        // through Fractal Axe-Fx units; Misha's pedals on the album included
+        // a Free The Tone Flight Time delay (precise, tempo-locked) and a
+        // noise gate; orchestral moments; "Lune" ends on thick synth layers
+        // over a spacious groove (reviews). The rest is our reading.
+
+        // The centre guitar's lead between the two rhythm parts: gated tight,
+        // boosted into your amp, a tempo-locked dotted-eighth echo and a plate.
+        make ("Center Counterpoint Lead", I, 1, "Album,Lead,Delay", {
+            { rigLevel, -7 },
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -62 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+
+        // A crisp, tempo-locked echo on a compressed clean: eighth notes,
+        // precise and bright, as a digital delay set to the song's tempo.
+        make ("Locked Echo Clean", I, 2, "Album,Clean,Delay", {
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 4 }, { compLevel, 3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { delayTone, 8 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.22f } }),
+
+        // Your part as two double-tracked guitars, one each side.
+        make ("Twin Takes Spread", I, 3, "Album,FX,Modulation", {
+            { rigLevel, -3 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
+
+        // Glassy clean arpeggios: compressed, bright, a light chorus, a
+        // dotted-eighth echo and a plate.
+        make ("Glassy Arpeggio Clean", I, 4, "Album,Clean,Delay", {
+            { rigLevel, 10 },
+            { compOn, 1 }, { compThreshold, -28 }, { compRatio, 4 }, { compLevel, 3 },
+            { eqOn, 1 }, { "eq125", -2 }, { "eq4k", 2 }, { "eq8k", 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.35f }, { modMix, 0.3f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.55f }, { reverbMix, 0.22f } }),
+
+        // Swells that sit with a string section: the pedal is a volume pedal,
+        // a wide dual chorus and a big hall.
+        make ("String Section Swell", I, 5, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 3 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modDepth, 0.7f }, { modMix, 0.5f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // The guitar as a synth layer: an octave above, smeared into grains,
+        // a rising shimmer and a cathedral.
+        make ("Synth Layer Pad", I, 6, "Album,FX,Ambient,Pitch", {
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.4f },
+            { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 7 }, { glitchChaos, 2 }, { glitchMix, 0.5f },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // A fluid legato lead: squeezed for sustain, boosted, a quarter-note
+        // echo and a hall.
+        make ("Legato Echo Lead", I, 7, "Album,Lead,Delay", {
+            { rigLevel, -4 },
+            { compOn, 1 }, { compThreshold, -30 }, { compRatio, 5 }, { compLevel, 4 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+
+        // A lead with an octave above gliding with it, boosted into your amp.
+        make ("Octave Glide Lead", I, 8, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -8 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.55f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 7 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+
+        // Stop-start stutters: what you play grabbed back in sixteenths (on
+        // the song's grid when your DAW plays), over your heavy amp.
+        make ("Stop-Start Chop", I, 9, "Album,FX,Glitch", {
+            { rigLevel, -3 },
+            { compOn, 1 }, { compThreshold, 0 }, { gateThreshold, -60 },
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 2 }, { glitchMix, 1 } }),
+
+        // A bright, poppy chorus clean: a lush stereo chorus, an eighth echo
+        // and a medium hall.
+        make ("Bright Chorus Clean", I, 10, "Album,Clean,Modulation", {
+            { rigLevel, 6 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.8f }, { modDepth, 0.5f }, { modMix, 0.45f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.55f }, { reverbMix, 0.22f } }),
+
+        // A lead that blooms into space: boosted, a long dotted-quarter echo
+        // and a cathedral that swell in the gaps.
+        make ("Bloom Lead", I, 11, "Album,Lead,Ambient,Delay", {
+            { rigLevel, -8 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, 4 }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { delayDuck, 0.6f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.3f }, { reverbDuck, 0.4f } }),
+
+        // A flanged clean for a bridge: a slow, wide flange and a room.
+        make ("Flanged Bridge Clean", I, 12, "Album,Clean,Modulation", {
+            { rigLevel, 2 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.2f }, { modDepth, 0.7f }, { modManual, 5 }, { modRes, 5 }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbMix, 0.2f } }),
+
+        // An ending that drifts away: every note swells in backwards from a
+        // reverse reverb, with a rising shimmer behind.
+        make ("Reverse Shimmer Outro", I, 13, "Album,FX,Ambient", {
+            { rigLevel, -4 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.6f }, { delayMix, 0.35f },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.7f }, { reverbMix, 0.5f }, { reverbPreDelay, 0 } }),
+
+        // A dive-bomb accent: QUASAR's six-octave dive on the expression
+        // pedal (heel: your note, toe: down to a rumble), over your heavy amp.
+        make ("Dive Accent", I, 14, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -2 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpDiveBomb }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah } }),
+
+        // A sparkling, compressed clean: squeezed even, the top lifted, a
+        // little chorus and a small plate.
+        make ("Sparkle Compressed Clean", I, 15, "Album,Clean", {
+            { rigLevel, 8 },
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 6 }, { compDetail, 5 }, { compMix, 0.8f },
+            { eqOn, 1 }, { "eq125", -2 }, { "eq2k", 1 }, { "eq8k", 3 }, { "eq16k", 2 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.25f }, { modMix, 0.25f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.35f }, { reverbMix, 0.15f } }),
     };
 }
 

@@ -763,3 +763,25 @@ TEST_CASE ("Bank H, a third album's guitar sounds: cleans, effects and leads tha
     CHECK (changed > windows * 15 / 100);
     CHECK (changed < windows * 90 / 100);
 }
+
+TEST_CASE ("Bank I, a fourth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (8, { "The", "Price", "Is", "Wrong", "Motormouth", "Marigold", "Way", "News", "Goes", "Remain", "Indoors",
+                         "Habitual", "Line", "Crosser", "Absolomb", "Catch", "Fire", "Flatline", "Prayer", "Position", "Lune" });
+
+    // The dive: heel down your note, toe down six octaves (to a rumble).
+    RigRig r;
+    r.processor.loadRig (r.entryNamed ("Dive Accent"));
+    for (const auto toe : { false, true })
+    {
+        r.set (ParamIDs::expression, toe ? 1.0f : 0.0f);
+        const auto out = pluck (r.processor, 1.0, 220.0, true);
+        const auto at220 = levelAtHz (out[0], 220.0, 0.2, 0.7);
+        const auto played = rmsOf (out[0], 0.2, 0.7);
+        CAPTURE (toe, dBOf (at220), dBOf (played));
+        if (toe)
+            CHECK (at220 < 0.1f * played);              // the note itself is gone
+        else
+            CHECK (at220 > 0.8f * played * 1.41f);      // your note, untouched (a sine's peak is 1.41 x its RMS)
+    }
+}

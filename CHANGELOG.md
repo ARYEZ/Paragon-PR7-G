@@ -2,6 +2,43 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.65.0
+
+- **A fourth album bank, bank I: 15 rigs inspired by the guitar sounds on Periphery's *Periphery III: Select Difficulty*** (2016). **Cleans, effects and leads** again: the extended-range rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **I01 Center Counterpoint Lead** | The centre guitar's lead between the rhythm parts: gated tight, boosted, a tempo-locked dotted-eighth echo, a plate | The album's three-part writing (two rhythm guitars left and right, the centre one on a lead or counterpoint) |
+  | **I02 Locked Echo Clean** | A compressed clean with crisp, tempo-locked eighth-note echoes and a hall | Misha Mansoor's precise, tempo-locked digital delay on the album |
+  | **I03 Twin Takes Spread** | Your part as two double-tracked guitars, one each side | The album's double-tracked rhythm guitars, left and right |
+  | **I04 Glassy Arpeggio Clean** | Compressed and bright, a light chorus, dotted-eighth echo, plate | "Marigold" |
+  | **I05 String Section Swell** | Volume swells (the pedal) with a wide dual chorus and a big hall, to sit with strings | The album's orchestral moments |
+  | **I06 Synth Layer Pad** | An octave above, smeared into grains, a rising shimmer and a cathedral | "Lune" (its thick synth layers) |
+  | **I07 Legato Echo Lead** | A fluid lead squeezed for sustain, boosted, a quarter echo and a hall | "The Price Is Wrong" (its leads) |
+  | **I08 Octave Glide Lead** | A lead with an octave above gliding with it | "Prayer Position" |
+  | **I09 Stop-Start Chop** | Sixteenth-note stutters on the song's grid, gated tight, over your heavy amp | "Motormouth" |
+  | **I10 Bright Chorus Clean** | A bright, poppy clean with a lush stereo chorus | "The Way the News Goes..." |
+  | **I11 Bloom Lead** | A lead that blooms into space: a long dotted-quarter echo and a cathedral | "Absolomb" |
+  | **I12 Flanged Bridge Clean** | A slow, wide flange on a clean, a room | "Habitual Line-Crosser" |
+  | **I13 Reverse Shimmer Outro** | Notes swelling in backwards from a reverse reverb, a shimmer behind | "Lune" (its ending) |
+  | **I14 Dive Accent** | QUASAR's six-octave dive on the expression pedal: heel your note, toe down to a rumble | "Flatline" |
+  | **I15 Sparkle Compressed Clean** | A sparkling, evenly squeezed clean, top lifted, a little chorus, a small plate | "Catch Fire" |
+
+  - **What's documented:**
+    - the three-part writing, with two double-tracked guitars left and right and the centre one on a lead or counterpoint (Misha Mansoor to Jackson Guitars);
+    - recording through Fractal Axe-Fx units;
+    - Misha's pedals on the album included a Free The Tone Flight Time delay (precise and tempo-locked) and a noise gate;
+    - the album's orchestral moments;
+    - "Lune"'s thick synth layers (reviews).
+  - **The rest is our reading, the most of any album bank so far:** no source I could reach says how individual songs' guitars were treated, so the song links for I04 and I07 to I15 are my guesses at where each sound fits. **I couldn't listen to the album or the rigs here.** Tell me which are off and how, or which songs have the parts you're after.
+  - **With the expression pedal:**
+    - **I05 swells from the heel.**
+    - **I14:** rock to the heel before you play. The pedal starts half way, which is three octaves down.
+  - **I01 and I09 use the gate:** they switch on the COMP / GATE stomp with the compressor out of the way.
+- **Tests:**
+  - bank I goes through the shared album-bank checks;
+  - "Dive Accent" plays your note untouched at the heel and has dived away from it at the toe.
+
 ## 0.64.0
 
 - **A third album bank, bank H: 15 rigs inspired by the guitar sounds on Linkin Park's *Hybrid Theory*** (2000). As before, it's **cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
