@@ -2,6 +2,45 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.64.0
+
+- **A third album bank, bank H: 15 rigs inspired by the guitar sounds on Linkin Park's *Hybrid Theory*** (2000). As before, it's **cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **H01 Chopped Grid Riff** | Your riff cut into sixteenths and grabbed back in stutters, on the song's grid, as if rearranged on a computer | "Points of Authority" (Brad's riff, chopped and rearranged by Mike Shinoda on the computer) |
+  | **H02 Broken Signal Riff** | The same idea, rougher: the riff broken up, pieces dropped, reversed or looped | "Points of Authority" (a second reading) |
+  | **H03 Harmonic Chime Verse** | Ringing harmonics: a firm, bright clean, light chorus, dotted-eighth echo, plate | "In the End" (Brad's verse harmonics) |
+  | **H04 Turntable Answer** | HAVOK's scratch programs on the stab, on the six map keys: touch the pad (or a MIDI pad) to scratch | Joe Hahn's turntables ("With You", "Forgotten") |
+  | **H05 Needle Drift Texture** | A dusty cloud of grains from your guitar, through a warbling cassette, in a reverse-swelling space | "Cure for the Itch" (Joe Hahn's instrumental) |
+  | **H06 Hazy Verse Clean** | A slow, wide chorus, a quarter echo and a hall, ducked | "Crawling" (its verses) |
+  | **H07 Picked Intro Clean** | A close, present clean, a short slap, a small room | "A Place for My Head" (its picked intro) |
+  | **H08 Phone Band Riff** | A thin, far-away part through a phone band | "Papercut" (its thin, filtered figures) |
+  | **H09 Wide Layered Takes** | Two extra "takes" either side of your part | The album's guitars, layered from several takes panned left and right |
+  | **H10 Octave Line Lead** | A single-note line with an octave above, boosted into your amp | "Runaway" (its melodic lines) |
+  | **H11 Soft Swell Pad** | The pedal as a volume pedal, into a long echo and a hall | "Pushing Me Away" (its quiet guitars) |
+  | **H12 Dotted Echo Lead** | A melodic lead with a ducking dotted-eighth echo and a hall | "One Step Closer" (its single-note line) |
+  | **H13 Bitcrushed Hook** | Your guitar crushed to a few bits, as if sampled from a record | "With You" (built on a sample) |
+  | **H14 Reverse Riser** | Every note echoing back in reverse, swelling into the next part | The album's electronic transitions |
+  | **H15 Filter Sweep Riff** | An envelope filter opening with each pick, so the part sounds processed | "By Myself" (its processed textures) |
+
+  - **What's documented:**
+    - the "Points of Authority" riff was Brad's, chopped and rearranged on the computer by Mike Shinoda so much that Brad learnt his own part back from it (Kerrang's oral history, via fan transcriptions);
+    - Brad plays the verse harmonics on "In the End";
+    - the heavy guitars are several takes panned left and right;
+    - Joe Hahn's turntables run through the record, and "Cure for the Itch" is his;
+    - the gear: a PRS CE24 into a Mesa/Boogie Dual Rectifier, a noise suppressor, probably a compressor, drop tunings.
+  - **The rest is our reading, more than in bank G:** no source says how the other songs' guitars were treated. **I couldn't listen to the album or the rigs here.** Least sure: H08, H10, H12 and H15 (which song does what is a guess). Tell me which are off and how.
+  - **With the pad and pedal:**
+    - **H04 scratches only while you touch HAVOK's pad** (or a MIDI pad, CC 92).
+    - **H11 swells from the heel.**
+    - **H01, H02 and H04 follow the tempo,** tapped or the DAW's.
+- **The PRESETS page's bank list is now two columns** (ALL BANKS across, then two banks to a row), with room for about eight more banks.
+- **Tests:**
+  - bank H goes through the same album-bank checks;
+  - "Chopped Grid Riff" changes between 15% and 90% of a phrase's 50 ms moments, so it really chops rather than just passing the riff through;
+  - the scratch-rig test now counts H04, which also scratches the stab.
+
 ## 0.63.0
 
 - **A second album bank, bank G: 15 rigs inspired by the guitar sounds on Korn's self-titled debut** (1994). Like bank F, it's all **cleans, effects and leads**: the detuned seven-string rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:

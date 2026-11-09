@@ -60,6 +60,9 @@ namespace
     constexpr int G = 6;                 // bank G: an album's guitar sounds (Korn, Korn)
     constexpr float wholeNote = 1;       // DELAY sync: 1/1, a bar in 4/4
     constexpr float xpBrassAttack = 8;   // QUASAR program 09: Brass Attack Sens (an envelope low-pass)
+    constexpr int H = 7;                 // bank H: an album's guitar sounds (Linkin Park, Hybrid Theory)
+    constexpr float glitchInterfere = 2;
+    constexpr float xpEnvFilter = 7;     // QUASAR program 08: Env Filter Sens
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -657,6 +660,130 @@ std::vector<Rig> makeFactoryRigs()
         make ("Funk Phase Riff", G, 15, "Album,FX,Modulation", {
             { modOn, 1 }, { modType, phaser }, { modRate, 0.9f }, { modDepth, 0.7f },
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveLevel, 2 } }),
+
+        //======================================================================
+        // Bank H: an album's guitar sounds, inspired by Linkin Park's Hybrid
+        // Theory (2000; the owner's third album bank). Cleans, effects and
+        // leads: the drop-tuned rhythm is the amp capture's job. Documented
+        // (Kerrang's oral history, Songfacts, Gearnews): the "Points of
+        // Authority" riff was Brad Delson's, chopped and rearranged on the
+        // computer by Mike Shinoda so much that Brad learnt his own part from
+        // it; the "In the End" verses are Brad's harmonics; the heavy parts
+        // are several takes panned left and right; Joe Hahn's turntables run
+        // through the record ("Cure for the Itch" is his). The gear was a
+        // PRS CE24 into a Dual Rectifier, a noise suppressor, probably a
+        // compressor. The other rigs are our reading of the record's sounds.
+
+        // The chopped riff: what you play cut into sixteenths and grabbed
+        // back in stutters, as if rearranged on a computer (on the song's
+        // grid when your DAW plays). Over your heavy amp.
+        make ("Chopped Grid Riff", H, 1, "Album,FX,Glitch", {
+            { rigLevel, -2 },
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 6 }, { glitchChaos, 1 }, { glitchMix, 1 } }),
+
+        // The same idea, rougher: the riff broken up as if the signal kept
+        // failing, pieces dropped out, reversed or caught in short loops.
+        make ("Broken Signal Riff", H, 2, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchInterfere }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 4 }, { glitchMix, 1 } }),
+
+        // Ringing harmonics for a verse: a firm, bright clean, a light chorus,
+        // a dotted-eighth echo and a plate, so each chime hangs in the air.
+        make ("Harmonic Chime Verse", H, 3, "Album,Clean,Delay", {
+            { rigLevel, 7 },
+            { compOn, 1 }, { compThreshold, -28 }, { compRatio, 4 }, { compLevel, 3 },
+            { eqOn, 1 }, { "eq125", -3 }, { "eq4k", 2 }, { "eq8k", 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.3f }, { modMix, 0.3f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // Answering the DJ: HAVOK's scratch programs on the six PROGRAM MAP
+        // keys, the stab on the record, in time with the song. Touch the pad
+        // (or a MIDI pad, CC 92) to scratch between your riffs.
+        make ("Turntable Answer", H, 4, "Album,FX,Scratch,Havok,Touch", {
+            { havokOn, 1 }, { havokProgram, scratchChirp }, { havokScratchSound, soundStab }, { havokX, rateSixteenth }, { havokY, 0.7f },
+            { "havokMap1Program", scratchBaby }, { "havokMap2Program", scratchChirp }, { "havokMap3Program", scratchTransformer },
+            { "havokMap4Program", scratchFlare }, { "havokMap5Program", scratchTear }, { "havokMap6Program", scratchCrab } }),
+
+        // A drifting, dusty texture from your guitar: a cloud of grains,
+        // through a warbling cassette, in a reverse-swelling space.
+        make ("Needle Drift Texture", H, 5, "Album,FX,Ambient,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 5 }, { glitchChaos, 5 }, { glitchMix, 0.6f },
+            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 5 }, { lofiNoise, 4 }, { lofiMix, 0.8f },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.6f }, { reverbMix, 0.45f } }),
+
+        // A hazy verse clean: a slow, wide chorus, a quarter-note echo and a
+        // hall, both ducked so the picking stays clear.
+        make ("Hazy Verse Clean", H, 6, "Album,Clean,Ambient", {
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.4f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, quarter }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { delayDuck, 0.4f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.35f }, { reverbDuck, 0.3f } }),
+
+        // A picked intro clean: close and present, a short slap and a small
+        // room, before the band comes in.
+        make ("Picked Intro Clean", H, 7, "Album,Clean", {
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 }, { compLevel, 2 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, syncOff }, { delayTime, 120 }, { delayFeedback, 0.15f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.35f }, { reverbMix, 0.18f } }),
+
+        // A thin, far-away part, as if through a phone band, for a quiet
+        // verse figure under the vocal.
+        make ("Phone Band Riff", H, 8, "Album,FX,Lo-Fi", {
+            { lofiOn, 1 }, { lofiType, telephone }, { lofiAmount, 6 }, { lofiNoise, 2 }, { lofiMix, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.2f }, { delayMix, 0.15f } }),
+
+        // Takes stacked and spread: two extra "takes" either side of your
+        // part, as the record layers its guitars left and right.
+        make ("Wide Layered Takes", H, 9, "Album,FX,Modulation", {
+            { rigLevel, -2 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.6f }, { modMix, 0.7f }, { modStereo, 1 } }),
+
+        // A single-note line with an octave above it, boosted into your amp,
+        // for melodic leads that cut through.
+        make ("Octave Line Lead", H, 10, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -5 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.5f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+
+        // Soft swells: the expression pedal is a volume pedal (rock it up
+        // under each note), into a long echo and a hall.
+        make ("Soft Swell Pad", H, 11, "Album,Clean,Ambient,Expression", {
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // A melodic lead with a dotted-eighth echo ducking under it and a hall.
+        make ("Dotted Echo Lead", H, 12, "Album,Lead,Delay", {
+            { rigLevel, -6 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.3f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+
+        // A crushed, sampled-sounding hook: your guitar through a bitcrusher,
+        // as if lifted from a record.
+        make ("Bitcrushed Hook", H, 13, "Album,FX,Lo-Fi", {
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 9 }, { lofiNoise, 1 }, { lofiMix, 1 },
+            { eqOn, 1 }, { "eq63", -4 }, { "eq8k", -3 } }),
+
+        // A backwards riser for transitions: every note echoes back in
+        // reverse, swelling into the next part, in a hall.
+        make ("Reverse Riser", H, 14, "Album,FX,Ambient,Delay", {
+            { rigLevel, -6 },
+            { delayOn, 1 }, { delayType, reverseDelay }, { delaySync, quarter }, { delayFeedback, 0.6f }, { delayMix, 0.6f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // A filtered, sample-like riff: an envelope filter opening with each
+        // pick, so the part sounds processed rather than played.
+        make ("Filter Sweep Riff", H, 15, "Album,FX,Filter", {
+            { rigLevel, -4 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpEnvFilter }, { fpMix, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, sixteenth }, { delayFeedback, 0.2f }, { delayMix, 0.12f } }),
     };
 }
 
