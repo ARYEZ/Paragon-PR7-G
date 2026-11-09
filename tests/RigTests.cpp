@@ -581,76 +581,106 @@ namespace
     }
 }
 
+namespace
+{
+    // An album bank's rigs, in slot order.
+    std::vector<Rig> bankRigs (int bank)
+    {
+        std::vector<Rig> rigs;
+        for (const auto& rig : makeFactoryRigs())
+            if (rig.bank == bank)
+                rigs.push_back (rig);
+        return rigs;
+    }
+
+    // What every album bank's rigs must do, measured on a plucked note.
+    void checkAlbumBank (int bank, const juce::StringArray& songWords)
+    {
+        const auto rigs = bankRigs (bank);
+        REQUIRE (rigs.size() == 15);
+
+        // Named for the sound: no word of a song title on the record.
+        for (const auto& rig : rigs)
+        {
+            INFO (rig.name);
+            CHECK (rig.tags.contains ("Album"));
+            CHECK ((rig.tags.contains ("Clean") || rig.tags.contains ("Lead") || rig.tags.contains ("FX")));
+            for (const auto& word : juce::StringArray::fromTokens (rig.name, " -", {}))
+                CHECK_FALSE (songWords.contains (word, true));
+        }
+
+        // Each rig's loudness while the note plays, the pedal where the rig
+        // is meant to start (a volume swell at the toe, a whammy at the
+        // heel). A fresh plugin for each: echoes and reverbs ring on after a
+        // rig change (as pedals' trails do), so the last rig's tail would
+        // be measured too.
+        RigRig plain;
+        plain.processor.loadRig (plain.entryNamed ("Clean Slate"));
+        const auto dry = pluck (plain.processor);
+        std::vector<float> levels;
+        const auto measures = juce::SystemStats::getEnvironmentVariable ("PARAGON_RIG_MEASURES", {}).isNotEmpty();
+        for (const auto& rig : rigs)
+        {
+            INFO (rig.name);
+            RigRig r;
+            r.processor.loadRig (r.entryNamed (rig.name));
+            const auto target = (int) r.get (ParamIDs::expressionTarget);
+            r.set (ParamIDs::expression, target == ExpressionTargets::volume ? 1.0f : 0.0f);
+            const auto out = pluck (r.processor);
+            const auto playing = rmsOf (out[0], 0.0, 1.0), tail = rmsOf (out[0], 2.0, 3.0);
+            levels.push_back (dBOf (playing));
+            if (measures)
+                std::printf ("%-24s playing %6.1f dB  tail %6.1f dB\n", rig.name.toRawUTF8(), dBOf (playing), dBOf (tail) - dBOf (playing));
+            REQUIRE (std::isfinite (playing));
+
+            // Ambient rigs ring on: a second after the note, the space is still there.
+            if (rig.tags.contains ("Ambient"))
+                CHECK (dBOf (tail) - dBOf (playing) > -30.0f);
+            // Dry rigs are dry: nothing after the note.
+            if (rig.tags.contains ("Dry"))
+                CHECK (dBOf (tail) - dBOf (playing) < -60.0f);
+            // The effects rigs change the sound: against the same note with
+            // every effect off, the difference is within 10 dB of the note.
+            if (rig.tags.contains ("FX"))
+            {
+                std::vector<float> difference (out[0].size());
+                for (size_t n = 0; n < difference.size(); ++n)
+                    difference[n] = out[0][n] - dry[0][n];
+                CHECK (dBOf (rmsOf (difference, 0.1, 1.0)) - dBOf (rmsOf (dry[0], 0.1, 1.0)) > -10.0f);
+            }
+            // Octave rigs add the octave above (Sub: below): on a pure 220 Hz
+            // note, that octave comes within 10 dB of the note itself.
+            if (rig.tags.contains ("Octave") || rig.tags.contains ("Sub"))
+            {
+                RigRig o;
+                o.processor.loadRig (o.entryNamed (rig.name));
+                const auto tone = pluck (o.processor, 1.0, 220.0, true);
+                const auto note = levelAtHz (tone[0], 220.0, 0.1, 0.6);
+                const auto octave = levelAtHz (tone[0], rig.tags.contains ("Sub") ? 110.0 : 440.0, 0.1, 0.6);
+                CAPTURE (dBOf (octave / note));
+                CHECK (dBOf (octave / note) > -10.0f);
+            }
+        }
+
+        // Balanced: switching between them doesn't jump in volume.
+        auto sorted = levels;
+        std::sort (sorted.begin(), sorted.end());
+        const auto median = sorted[sorted.size() / 2];
+        for (size_t n = 0; n < rigs.size(); ++n)
+        {
+            INFO (rigs[n].name << ": " << levels[n] << " dB, the bank's median " << median << " dB");
+            CHECK (std::abs (levels[n] - median) < 6.0f);
+        }
+    }
+}
+
 TEST_CASE ("Bank F, an album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
 {
-    std::vector<Rig> bank;
-    for (const auto& rig : makeFactoryRigs())
-        if (rig.bank == 5)
-            bank.push_back (rig);
-    REQUIRE (bank.size() == 15);
-
-    // Named for the sound: no word of a song title on the record.
-    const juce::StringArray songWords { "Sun", "Killer", "Hurt", "Yellowjacket", "Summit", "Secret", "Garden", "Silk", "Strings",
-                                        "Halcyon", "Strange", "World", "Holy", "Roller", "Eternal", "Blue", "Constance", "Circle" };
-    for (const auto& rig : bank)
-    {
-        INFO (rig.name);
-        CHECK (rig.tags.contains ("Album"));
-        CHECK ((rig.tags.contains ("Clean") || rig.tags.contains ("Lead") || rig.tags.contains ("FX")));
-        for (const auto& word : juce::StringArray::fromTokens (rig.name, " -", {}))
-            CHECK_FALSE (songWords.contains (word, true));
-    }
-
-    // Each rig's loudness while the note plays, the pedal where the rig is
-    // meant to start (a volume swell at the toe, a whammy at the heel). A
-    // fresh plugin for each: echoes and reverbs ring on after a rig change
-    // (as pedals' trails do), so the last rig's tail would be measured too.
-    std::vector<float> levels;
-    const auto measures = juce::SystemStats::getEnvironmentVariable ("PARAGON_RIG_MEASURES", {}).isNotEmpty();
-    for (const auto& rig : bank)
-    {
-        INFO (rig.name);
-        RigRig r;
-        r.processor.loadRig (r.entryNamed (rig.name));
-        const auto target = (int) r.get (ParamIDs::expressionTarget);
-        r.set (ParamIDs::expression, target == ExpressionTargets::volume ? 1.0f : 0.0f);
-        const auto out = pluck (r.processor);
-        const auto playing = rmsOf (out[0], 0.0, 1.0), tail = rmsOf (out[0], 2.0, 3.0);
-        levels.push_back (dBOf (playing));
-        if (measures)
-            std::printf ("%-24s playing %6.1f dB  tail %6.1f dB\n", rig.name.toRawUTF8(), dBOf (playing), dBOf (tail) - dBOf (playing));
-
-        REQUIRE (std::isfinite (playing));
-        // Ambient rigs ring on: a second after the note, the space is still there.
-        if (rig.tags.contains ("Ambient"))
-            CHECK (dBOf (tail) - dBOf (playing) > -30.0f);
-        // The DI-like clean is dry: nothing after the note.
-        if (rig.tags.contains ("Dry"))
-            CHECK (dBOf (tail) - dBOf (playing) < -60.0f);
-    }
-
-    // Balanced: switching between them doesn't jump in volume.
-    auto sorted = levels;
-    std::sort (sorted.begin(), sorted.end());
-    const auto median = sorted[sorted.size() / 2];
-    for (size_t i = 0; i < bank.size(); ++i)
-    {
-        INFO (bank[i].name << ": " << levels[i] << " dB, the bank's median " << median << " dB");
-        CHECK (std::abs (levels[i] - median) < 6.0f);
-    }
-
-    // The octave lead adds the octave above: on a pure 220 Hz note, 440 Hz
-    // comes within 10 dB of the note itself.
-    RigRig r;
-    r.processor.loadRig (r.entryNamed ("Glass Octave Lead"));
-    {
-        const auto out = pluck (r.processor, 1.0, 220.0, true);
-        const auto note = levelAtHz (out[0], 220.0, 0.1, 0.6), octave = levelAtHz (out[0], 440.0, 0.1, 0.6);
-        CAPTURE (dBOf (octave / note));
-        CHECK (dBOf (octave / note) > -10.0f);
-    }
+    checkAlbumBank (5, { "Sun", "Killer", "Hurt", "Yellowjacket", "Summit", "Secret", "Garden", "Silk", "Strings",
+                         "Halcyon", "Strange", "World", "Holy", "Roller", "Eternal", "Blue", "Constance", "Circle" });
 
     // The squeal: heel down your note, toe down an octave up (wet only).
+    RigRig r;
     r.processor.loadRig (r.entryNamed ("Riff Squeal Bend"));
     for (const auto toe : { false, true })
     {
@@ -660,24 +690,24 @@ TEST_CASE ("Bank F, an album's guitar sounds: cleans, effects and leads that do 
         CAPTURE (toe, dBOf (at220), dBOf (at440));
         CHECK ((toe ? at440 > 4.0f * at220 : at220 > 4.0f * at440));
     }
+}
 
-    // The effects rigs change the sound: against the same note with every
-    // effect off, the difference is within 10 dB of the note itself.
-    RigRig plain;
-    plain.processor.loadRig (plain.entryNamed ("Clean Slate"));
-    const auto dry = pluck (plain.processor);
-    for (const auto& rig : bank)
-    {
-        if (! rig.tags.contains ("FX"))
-            continue;
-        INFO (rig.name);
-        RigRig fx;
-        fx.processor.loadRig (fx.entryNamed (rig.name));
-        fx.set (ParamIDs::expression, 0.0f);
-        const auto out = pluck (fx.processor);
-        std::vector<float> difference (out[0].size());
-        for (size_t i = 0; i < difference.size(); ++i)
-            difference[i] = out[0][i] - dry[0][i];
-        CHECK (dBOf (rmsOf (difference, 0.1, 1.0)) - dBOf (rmsOf (dry[0], 0.1, 1.0)) > -10.0f);
-    }
+TEST_CASE ("Bank G, a second album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (6, { "Blind", "Ball", "Tongue", "Need", "To", "Clown", "Divine", "Faget", "Shoots", "And", "Ladders",
+                         "Predictable", "Fake", "Lies", "Helmet", "In", "The", "Bush", "Daddy" });
+
+    // The second guitar a bar behind, on the other side: a short note at
+    // 120 BPM (a bar is 2 s) comes back 2 s later, louder on one side than
+    // the other by 6 dB or more, and not much quieter than the note.
+    RigRig r;
+    r.processor.loadRig (r.entryNamed ("Bar-Behind Bend Echo"));
+    const auto out = pluck (r.processor, 0.3);
+    const auto noteLeft = rmsOf (out[0], 0.0, 0.3), noteRight = rmsOf (out[1], 0.0, 0.3);
+    const auto echoLeft = rmsOf (out[0], 2.0, 2.3), echoRight = rmsOf (out[1], 2.0, 2.3);
+    const auto quietBefore = std::max (rmsOf (out[0], 1.0, 1.9), rmsOf (out[1], 1.0, 1.9));
+    CAPTURE (dBOf (noteLeft), dBOf (noteRight), dBOf (echoLeft), dBOf (echoRight), dBOf (quietBefore));
+    CHECK (std::abs (dBOf (echoLeft) - dBOf (echoRight)) > 6.0f);
+    CHECK (dBOf (std::max (echoLeft, echoRight)) - dBOf (std::max (noteLeft, noteRight)) > -12.0f);
+    CHECK (dBOf (quietBefore) < dBOf (std::max (echoLeft, echoRight)) - 20.0f);   // nothing in between: it's a bar later
 }
