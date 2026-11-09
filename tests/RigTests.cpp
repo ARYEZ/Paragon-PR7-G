@@ -785,3 +785,26 @@ TEST_CASE ("Bank I, a fourth album's guitar sounds: cleans, effects and leads th
             CHECK (at220 > 0.8f * played * 1.41f);      // your note, untouched (a sine's peak is 1.41 x its RMS)
     }
 }
+
+TEST_CASE ("Bank J, a fifth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (9, { "Hero", "Pieces", "Ugly", "Desertion", "Silence", "Shadows", "In", "Red", "Never", "Failure",
+                         "See", "And", "Believe", "This", "Life", "The", "Last", "Song" });
+
+    // The throw: a short note, then its echoes carry on clearly once it
+    // stops (a quarter, 0.5 s, apart at 120 BPM), well above the same rig
+    // with its DELAY off.
+    const auto tailOf = [] (bool delayOn)
+    {
+        RigRig r;
+        r.processor.loadRig (r.entryNamed ("Echo Throw Accent"));
+        r.set (ParamIDs::delayOn, delayOn ? 1.0f : 0.0f);
+        const auto out = pluck (r.processor, 0.3);
+        return std::pair { rmsOf (out[0], 0.0, 0.3), rmsOf (out[0], 0.45, 1.5) };
+    };
+    const auto [note, tail] = tailOf (true);
+    const auto [plainNote, plainTail] = tailOf (false);
+    CAPTURE (dBOf (note), dBOf (tail), dBOf (plainTail));
+    CHECK (dBOf (tail) - dBOf (note) > -15.0f);
+    CHECK (dBOf (tail) - dBOf (plainTail) > 20.0f);
+}

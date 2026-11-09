@@ -2,6 +2,42 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.66.0
+
+- **A fifth album bank, bank J: 15 rigs inspired by the guitar sounds on Sevendust's *Next*** (2005), the album PR7-V's bank Q is built on. **Cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **J01 Champion Lead** | A soaring lead: boosted, a ducking dotted-eighth echo, a hall | "Hero" |
+  | **J02 Fragment Arpeggio Clean** | Compressed clean arpeggios, a gentle chorus, an eighth echo, a plate | "Pieces" |
+  | **J03 Scar Noise Accent** | Your riff breaking up into a wave of noise: pieces dropped out or caught in short loops | "Ugly" |
+  | **J04 Echo Throw Accent** | A note thrown into a big quarter-note echo that keeps going after it stops, thinned and roughened | "Silence" (a guitar answer to Morgan's delayed scream, which PR7-V's Q04-Q06 do for the voice) |
+  | **J05 Hushed Verse Clean** | A soft, close clean, a faint chorus, a plate | "Silence" (its verses) |
+  | **J06 Abandoned Swell** | Volume swells (the pedal) into a tape echo and a big hall | "Desertion" |
+  | **J07 Wired Texture** | An electronic edge: a cloud of grains through a radio band | "Never" (reviewers note its electronic effects) |
+  | **J08 Crimson Phaser Clean** | A dark, slowly phased clean in a dark room | "Shadows in Red" (on some editions) |
+  | **J09 Fallen Octave Lead** | A lead with an octave above it, boosted | "Failure" |
+  | **J10 Faith Chorus Clean** | A big clean with a wide dual chorus, a quarter echo, a hall | "See and Believe" |
+  | **J11 Living Soul Lead** | A soulful, warm singing lead: boosted, a slap, a plate | "This Life" |
+  | **J12 Farewell Clean** | A soft clean with a slow tape echo and a long hall | "The Last Song" |
+  | **J13 Fifth Harmony Lead** | Twin guitars in harmony: a fifth above every note, mixed in under your line | The album's two guitarists (no one song) |
+  | **J14 Wall Takes Spread** | Your part as two guitars, one each side | The album's two rhythm guitars |
+  | **J15 Soul Wah Lead** | A soulful wah lead on the expression pedal | The band's soulful leads (no one song) |
+
+  - **What's documented:**
+    - John Connolly plays lead (and produced the album);
+    - Sonny Mayo, formerly of Snot, plays rhythm (some credits swap them), on the first album after Clint Lowery left;
+    - the guitars are drop-tuned;
+    - reviewers note the electronic effects on "Never".
+  - **Little more is published about the guitars, so this bank is mostly our reading:** the song links for J01-J03, J05-J06 and J08-J12 are my guesses at where each sound fits. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **J04 is the guitar's version of the delayed scream.** If PR7-V's Q04-Q06 get tuned to the record once you've picked the closest, I can match J04 to it.
+  - **J06 swells from the heel.**
+  - **J15's wah starts half way,** because the pedal does.
+  - **J13's harmony is a fifth,** which sits in any key; a third would need the song's key.
+- **Tests:**
+  - bank J goes through the shared album-bank checks;
+  - "Echo Throw Accent" checks that after a short note the echoes carry on clearly, within 15 dB of the note and more than 20 dB above the same rig with DELAY off.
+
 ## 0.65.0
 
 - **A fourth album bank, bank I: 15 rigs inspired by the guitar sounds on Periphery's *Periphery III: Select Difficulty*** (2016). **Cleans, effects and leads** again: the extended-range rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
