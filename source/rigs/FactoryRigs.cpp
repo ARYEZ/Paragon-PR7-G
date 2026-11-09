@@ -49,6 +49,14 @@ namespace
     constexpr float room = 1, hall = 2, cathedral = 3, plate = 4, spring = 5, digital = 6, reverse = 7;
     // LO-FI types.
     constexpr float telephone = 0, amRadio = 1, megaphone = 2, cassette = 3, bitcrusher = 4;
+
+    // For bank F and the album banks after it.
+    constexpr int F = 5;                 // bank F: an album's guitar sounds (Spiritbox, Eternal Blue)
+    constexpr float phaser = 2;          // MOD's Hadron
+    constexpr float banshee = 1;         // OD / DISTORTION's MODEL: the Tube Screamer, as a boost into the amp
+    constexpr float pedalVolume = 1;     // the expression pedal as a volume pedal (swells)
+    constexpr float sixteenth = 9;       // DELAY / MOD sync: 1/16
+    constexpr float havokRingFilter = 41;   // HAVOK program 42: RING MOD+FILTER
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -374,6 +382,140 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, autoPan }, { modSync, quarter }, { modDepth, 0.8f },
             { delayOn, 1 }, { delayType, multiTap }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        //======================================================================
+        // Bank F: an album's guitar sounds, inspired by Spiritbox's Eternal
+        // Blue (2021; the owner's choice). Cleans, effects and leads only: the
+        // rhythm distortion is the amp capture's job, and factory rigs keep
+        // the user's amp and cab. Named for the sound (no artist, album or
+        // song words in the plugin); the CHANGELOG and README credit the
+        // songs. Documented: the album was recorded with amp-sim plugins,
+        // most songs have five or six layers of guitar ambience (the most on
+        // the closer), and the "Secret Garden" verses are a very dry,
+        // DI-like clean. The rest is our reading of how these sounds are
+        // commonly made, not the record's settings.
+
+        // The opening's ambient clean: a soft octave-up shimmer on the echoes
+        // and a big, ducked cathedral.
+        make ("Dawn Shimmer Intro", F, 1, "Album,Clean,Ambient,Delay", {
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 }, { compLevel, 2 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.35f }, { modDepth, 0.35f }, { modMix, 0.3f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
+            { delayTone, 6 }, { delayPingPong, 1 }, { delayDuck, 0.4f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.8f }, { reverbMix, 0.35f }, { reverbDuck, 0.3f } }),
+
+        // The chorus's singing lead: a light boost into your amp's gain, a
+        // dotted-eighth echo that ducks under the notes, a hall behind.
+        make ("Aching Chorus Lead", F, 2, "Album,Lead,Delay", {
+            { rigLevel, -9 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 6 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+
+        // Stinging stutters: sixteenth-note repeats grabbed from what you
+        // play (on the song's grid when the DAW plays), over your heavy amp.
+        make ("Wasp Stutter", F, 3, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 2 }, { glitchMix, 1 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.3f }, { reverbMix, 0.08f } }),
+
+        // Volume swells into a huge space: the expression pedal is a volume
+        // pedal (rock it up under each chord), a rising shimmer and a cathedral.
+        make ("Peak Swell Pad", F, 4, "Album,Clean,Ambient,Expression", {
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -28 }, { compRatio, 4 }, { compLevel, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.65f }, { delayMix, 0.4f },
+            { delayTone, 5 },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.5f } }),
+
+        // The "really dry" verse clean, close to a bare DI: firm compression,
+        // the lows trimmed and the top lifted, no echo and almost no room.
+        make ("Bare DI Clean", F, 5, "Album,Clean,Dry", {
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 6 }, { compDetail, 6 }, { compMix, 1 },
+            { eqOn, 1 }, { "eq63", -4 }, { "eq125", -2 }, { "eq500", -1 }, { "eq4k", 2 }, { "eq8k", 3 } }),
+
+        // The chorus's bloom: the clean opened out wide with a lush stereo
+        // chorus and a bright plate.
+        make ("Blooming Chorus Clean", F, 6, "Album,Clean,Modulation", {
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.55f }, { reverbMix, 0.28f } }),
+
+        // A glassy lead an octave up, doubled with the note you play, with a
+        // short echo: thin, high and singing.
+        make ("Glass Octave Lead", F, 7, "Album,Lead,Pitch", {
+            { rigLevel, -9 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.7f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 7 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+
+        // A calm, hazy clean: a wide dual chorus, a long drifting tape echo
+        // and a cathedral, both ducked so the notes stay clear.
+        make ("Calm Water Haze", F, 8, "Album,Clean,Ambient", {
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modDepth, 0.8f }, { modMix, 0.5f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.4f }, { reverbDuck, 0.4f } }),
+
+        // The guitar as an electronic texture: a cloud of grains smeared into
+        // a pad, through a warbling cassette, in a big digital space.
+        make ("Machine Dream Texture", F, 9, "Album,FX,Ambient,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 6 }, { glitchChaos, 4 }, { glitchMix, 0.6f },
+            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 4 }, { lofiNoise, 2 }, { lofiMix, 0.7f },
+            { reverbOn, 1 }, { reverbType, digital }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        // The squealing riff accents: QUASAR an octave up on the expression
+        // pedal (heel: your note, toe: an octave up), rocked on the accents,
+        // over your heavy amp.
+        make ("Riff Squeal Bend", F, 10, "Album,FX,Pitch,Expression", {
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah } }),
+
+        // A metallic shriek: HAVOK's ring modulator and filter held on (HOLD),
+        // for the noisy, inharmonic accents. Move X and Y on the pad to retune it.
+        make ("Ring Mod Shriek", F, 11, "Album,FX,Havok", {
+            { havokOn, 1 }, { havokProgram, havokRingFilter }, { havokX, 0.65f }, { havokY, 0.7f }, { havokHold, 1 } }),
+
+        // The rolling clean: dotted-eighth echoes bouncing side to side, a
+        // gentle chorus and a big hall.
+        make ("Tide Ping-Pong Clean", F, 12, "Album,Clean,Delay", {
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.3f }, { modMix, 0.3f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
+            { delayPingPong, 1 }, { delayDuck, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.75f }, { reverbMix, 0.3f } }),
+
+        // A soaring lead thrown into space: boosted, a long quarter-note echo
+        // and a long hall that bloom in the gaps.
+        make ("Ocean Lead", F, 13, "Album,Lead,Delay,Ambient", {
+            { rigLevel, -10 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 6 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
+            { delayDuck, 0.6f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.3f }, { reverbDuck, 0.4f } }),
+
+        // A wall of layered ambience, as if five or six cleans were stacked:
+        // two extra takes either side, an octave up shimmering behind, a
+        // rising shimmer echo and a cathedral.
+        make ("Layered Ambience Wall", F, 14, "Album,Clean,Ambient", {
+            { rigLevel, -7 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 1 }, { octUp, 0.25f },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.6f }, { modMix, 0.6f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, dottedEighth }, { delayFeedback, 0.55f }, { delayMix, 0.35f },
+            { delayPingPong, 1 },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+
+        // A circling clean arpeggio: a slow phaser turning, sixteenth echoes
+        // tight behind the notes and a medium hall.
+        make ("Orbit Arpeggio", F, 15, "Album,Clean,Modulation,Delay", {
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.25f }, { modDepth, 0.6f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, sixteenth }, { delayFeedback, 0.4f }, { delayMix, 0.22f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
     };
 }
 

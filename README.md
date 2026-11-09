@@ -86,7 +86,10 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
 - All effects start switched off, so projects made with earlier versions sound the same.
 - **Rigs:** SAVE in the header saves the current sound as a rig; **<** and **>** step through rigs; a
   `*` after the name means it's changed since loading. The **PRESETS** tab browses, searches, files
-  (banks A-D), tags and favourites rigs. Factory rigs set the effects and keep your amp and cab.
+  (banks A-F), tags and favourites rigs. Factory rigs set the effects and keep your amp and cab.
+  **E** holds rigs inspired by particular songs; **F** is the first album bank: 15 cleans, effects
+  and leads inspired by the guitar sounds on Spiritbox's *Eternal Blue* (the rhythm tone is your
+  amp capture; the CHANGELOG lists which song inspired each rig).
   INPUT and OUTPUT stay put when you switch rigs; each rig has its own **RIG LEVEL** (on the unit), which adds to OUTPUT.
 - **TAP** (header or pedal) sets the delay's tempo from your taps; the BPM turns orange. Click the
   BPM to follow your DAW's tempo again. The TAP light flashes in time.

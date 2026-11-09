@@ -518,3 +518,166 @@ TEST_CASE ("A rig file saved before reverb types loads with the original reverb"
     current.parameters["reverbType"] = 4.0f;
     CHECK (Rig::fromXml (*current.toXml())->parameters.at ("reverbType") == 4.0f);
 }
+
+namespace
+{
+    // Plays one plucked note (a 220 Hz guitar-like tone with harmonics,
+    // fading over a second) then three seconds of silence through the
+    // loaded rig, and returns both channels.
+    std::vector<std::vector<float>> pluck (ParagonX1AudioProcessor& processor, double noteSeconds = 1.0, double hz = 220.0, bool pure = false)
+    {
+        constexpr double rate = 48000.0;
+        constexpr int block = 256;
+        const auto total = (int) ((noteSeconds + 3.0) * rate);
+        std::vector<std::vector<float>> out (2);
+        juce::AudioBuffer<float> buffer (2, block);
+        juce::MidiBuffer midi;
+        for (int start = 0; start < total; start += block)
+        {
+            buffer.clear();
+            for (int i = 0; i < block; ++i)
+            {
+                const auto t = (start + i) / rate;
+                if (t >= noteSeconds)
+                    continue;
+                const auto envelope = 0.3 * std::exp (-t * 2.0);
+                auto sample = std::sin (juce::MathConstants<double>::twoPi * hz * t);
+                if (! pure)
+                    sample += 0.5 * std::sin (juce::MathConstants<double>::twoPi * 2.0 * hz * t)
+                            + 0.3 * std::sin (juce::MathConstants<double>::twoPi * 3.0 * hz * t);
+                buffer.setSample (0, i, (float) (envelope * sample));
+            }
+            processor.processBlock (buffer, midi);
+            for (int ch = 0; ch < 2; ++ch)
+                out[(size_t) ch].insert (out[(size_t) ch].end(), buffer.getReadPointer (ch), buffer.getReadPointer (ch) + block);
+        }
+        return out;
+    }
+
+    float rmsOf (const std::vector<float>& samples, double from, double to)
+    {
+        const auto a = (size_t) (from * 48000.0), b = std::min (samples.size(), (size_t) (to * 48000.0));
+        double sum = 0.0;
+        for (auto i = a; i < b; ++i)
+            sum += (double) samples[i] * samples[i];
+        return (float) std::sqrt (sum / (double) std::max<size_t> (1, b - a));
+    }
+
+    float dBOf (float gain) { return 20.0f * std::log10 (std::max (1.0e-9f, gain)); }
+
+    // The level of one frequency (Goertzel) over a stretch.
+    float levelAtHz (const std::vector<float>& samples, double hz, double from, double to)
+    {
+        const auto a = (size_t) (from * 48000.0), b = std::min (samples.size(), (size_t) (to * 48000.0));
+        const auto coefficient = 2.0 * std::cos (juce::MathConstants<double>::twoPi * hz / 48000.0);
+        double s1 = 0.0, s2 = 0.0;
+        for (auto i = a; i < b; ++i)
+        {
+            const auto s0 = samples[i] + coefficient * s1 - s2;
+            s2 = s1;
+            s1 = s0;
+        }
+        return (float) (2.0 * std::sqrt (std::max (0.0, s1 * s1 + s2 * s2 - coefficient * s1 * s2)) / (double) (b - a));
+    }
+}
+
+TEST_CASE ("Bank F, an album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    std::vector<Rig> bank;
+    for (const auto& rig : makeFactoryRigs())
+        if (rig.bank == 5)
+            bank.push_back (rig);
+    REQUIRE (bank.size() == 15);
+
+    // Named for the sound: no word of a song title on the record.
+    const juce::StringArray songWords { "Sun", "Killer", "Hurt", "Yellowjacket", "Summit", "Secret", "Garden", "Silk", "Strings",
+                                        "Halcyon", "Strange", "World", "Holy", "Roller", "Eternal", "Blue", "Constance", "Circle" };
+    for (const auto& rig : bank)
+    {
+        INFO (rig.name);
+        CHECK (rig.tags.contains ("Album"));
+        CHECK ((rig.tags.contains ("Clean") || rig.tags.contains ("Lead") || rig.tags.contains ("FX")));
+        for (const auto& word : juce::StringArray::fromTokens (rig.name, " -", {}))
+            CHECK_FALSE (songWords.contains (word, true));
+    }
+
+    // Each rig's loudness while the note plays, the pedal where the rig is
+    // meant to start (a volume swell at the toe, a whammy at the heel). A
+    // fresh plugin for each: echoes and reverbs ring on after a rig change
+    // (as pedals' trails do), so the last rig's tail would be measured too.
+    std::vector<float> levels;
+    const auto measures = juce::SystemStats::getEnvironmentVariable ("PARAGON_RIG_MEASURES", {}).isNotEmpty();
+    for (const auto& rig : bank)
+    {
+        INFO (rig.name);
+        RigRig r;
+        r.processor.loadRig (r.entryNamed (rig.name));
+        const auto target = (int) r.get (ParamIDs::expressionTarget);
+        r.set (ParamIDs::expression, target == ExpressionTargets::volume ? 1.0f : 0.0f);
+        const auto out = pluck (r.processor);
+        const auto playing = rmsOf (out[0], 0.0, 1.0), tail = rmsOf (out[0], 2.0, 3.0);
+        levels.push_back (dBOf (playing));
+        if (measures)
+            std::printf ("%-24s playing %6.1f dB  tail %6.1f dB\n", rig.name.toRawUTF8(), dBOf (playing), dBOf (tail) - dBOf (playing));
+
+        REQUIRE (std::isfinite (playing));
+        // Ambient rigs ring on: a second after the note, the space is still there.
+        if (rig.tags.contains ("Ambient"))
+            CHECK (dBOf (tail) - dBOf (playing) > -30.0f);
+        // The DI-like clean is dry: nothing after the note.
+        if (rig.tags.contains ("Dry"))
+            CHECK (dBOf (tail) - dBOf (playing) < -60.0f);
+    }
+
+    // Balanced: switching between them doesn't jump in volume.
+    auto sorted = levels;
+    std::sort (sorted.begin(), sorted.end());
+    const auto median = sorted[sorted.size() / 2];
+    for (size_t i = 0; i < bank.size(); ++i)
+    {
+        INFO (bank[i].name << ": " << levels[i] << " dB, the bank's median " << median << " dB");
+        CHECK (std::abs (levels[i] - median) < 6.0f);
+    }
+
+    // The octave lead adds the octave above: on a pure 220 Hz note, 440 Hz
+    // comes within 10 dB of the note itself.
+    RigRig r;
+    r.processor.loadRig (r.entryNamed ("Glass Octave Lead"));
+    {
+        const auto out = pluck (r.processor, 1.0, 220.0, true);
+        const auto note = levelAtHz (out[0], 220.0, 0.1, 0.6), octave = levelAtHz (out[0], 440.0, 0.1, 0.6);
+        CAPTURE (dBOf (octave / note));
+        CHECK (dBOf (octave / note) > -10.0f);
+    }
+
+    // The squeal: heel down your note, toe down an octave up (wet only).
+    r.processor.loadRig (r.entryNamed ("Riff Squeal Bend"));
+    for (const auto toe : { false, true })
+    {
+        r.set (ParamIDs::expression, toe ? 1.0f : 0.0f);
+        const auto out = pluck (r.processor, 1.0, 220.0, true);
+        const auto at220 = levelAtHz (out[0], 220.0, 0.2, 0.7), at440 = levelAtHz (out[0], 440.0, 0.2, 0.7);
+        CAPTURE (toe, dBOf (at220), dBOf (at440));
+        CHECK ((toe ? at440 > 4.0f * at220 : at220 > 4.0f * at440));
+    }
+
+    // The effects rigs change the sound: against the same note with every
+    // effect off, the difference is within 10 dB of the note itself.
+    RigRig plain;
+    plain.processor.loadRig (plain.entryNamed ("Clean Slate"));
+    const auto dry = pluck (plain.processor);
+    for (const auto& rig : bank)
+    {
+        if (! rig.tags.contains ("FX"))
+            continue;
+        INFO (rig.name);
+        RigRig fx;
+        fx.processor.loadRig (fx.entryNamed (rig.name));
+        fx.set (ParamIDs::expression, 0.0f);
+        const auto out = pluck (fx.processor);
+        std::vector<float> difference (out[0].size());
+        for (size_t i = 0; i < difference.size(); ++i)
+            difference[i] = out[0][i] - dry[0][i];
+        CHECK (dBOf (rmsOf (difference, 0.1, 1.0)) - dBOf (rmsOf (dry[0], 0.1, 1.0)) > -10.0f);
+    }
+}
