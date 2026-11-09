@@ -411,10 +411,23 @@ void RigBrowser::resized()
         sidebar.removeFromTop (4);
     }
     sidebar.removeFromTop (28);
-    for (auto* button : bankButtons)
+    // ALL BANKS across, then the banks two to a row: one per row stopped
+    // fitting with the album banks (bank H, PR7-G 0.64.0), as on PR7-V.
+    for (size_t i = 0; i < bankButtons.size(); ++i)
     {
-        button->setBounds (sidebar.removeFromTop (28));
-        sidebar.removeFromTop (4);
+        if (i == 0 || i % 2 == 1)
+        {
+            auto row = sidebar.removeFromTop (28);
+            sidebar.removeFromTop (4);
+            if (i == 0)
+            {
+                bankButtons[i]->setBounds (row);
+                continue;
+            }
+            bankButtons[i]->setBounds (row.removeFromLeft ((row.getWidth() - 4) / 2));
+            if (i + 1 < bankButtons.size())
+                bankButtons[i + 1]->setBounds (row.withTrimmedLeft (4));
+        }
     }
 
     area.removeFromLeft (12);

@@ -641,7 +641,8 @@ namespace
                 CHECK (dBOf (tail) - dBOf (playing) < -60.0f);
             // The effects rigs change the sound: against the same note with
             // every effect off, the difference is within 10 dB of the note.
-            if (rig.tags.contains ("FX"))
+            // (Touch rigs play only while the HAVOK pad is touched.)
+            if (rig.tags.contains ("FX") && ! rig.tags.contains ("Touch"))
             {
                 std::vector<float> difference (out[0].size());
                 for (size_t n = 0; n < difference.size(); ++n)
@@ -710,4 +711,55 @@ TEST_CASE ("Bank G, a second album's guitar sounds: cleans, effects and leads th
     CHECK (std::abs (dBOf (echoLeft) - dBOf (echoRight)) > 6.0f);
     CHECK (dBOf (std::max (echoLeft, echoRight)) - dBOf (std::max (noteLeft, noteRight)) > -12.0f);
     CHECK (dBOf (quietBefore) < dBOf (std::max (echoLeft, echoRight)) - 20.0f);   // nothing in between: it's a bar later
+}
+
+TEST_CASE ("Bank H, a third album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (7, { "Papercut", "One", "Step", "Closer", "With", "You", "Points", "Of", "Authority", "Crawling", "Runaway",
+                         "By", "Myself", "In", "The", "End", "A", "Place", "For", "My", "Head", "Forgotten", "Cure", "Itch",
+                         "Pushing", "Me", "Away" });
+
+    // The chopped riff really is chopped: on a phrase of changing notes,
+    // the stutter edits change a good share of its 50 ms moments.
+    const auto phrase = [] (ParagonX1AudioProcessor& processor)
+    {
+        constexpr double rate = 48000.0;
+        constexpr int block = 256;
+        const double notes[] = { 110.0, 130.8, 146.8, 164.8, 196.0, 220.0, 196.0, 146.8 };
+        std::vector<float> out;
+        juce::AudioBuffer<float> buffer (2, block);
+        juce::MidiBuffer midi;
+        for (int start = 0; start < (int) (2.0 * rate); start += block)
+        {
+            buffer.clear();
+            for (int i = 0; i < block; ++i)
+            {
+                const auto t = (start + i) / rate;
+                const auto hz = notes[(size_t) (t / 0.25) % 8];
+                buffer.setSample (0, i, (float) (0.2 * std::sin (juce::MathConstants<double>::twoPi * hz * t)));
+            }
+            processor.processBlock (buffer, midi);
+            out.insert (out.end(), buffer.getReadPointer (0), buffer.getReadPointer (0) + block);
+        }
+        return out;
+    };
+    RigRig plain, chopped;
+    plain.processor.loadRig (plain.entryNamed ("Clean Slate"));
+    chopped.processor.loadRig (chopped.entryNamed ("Chopped Grid Riff"));
+    const auto a = phrase (plain.processor), b = phrase (chopped.processor);
+    int changed = 0, windows = 0;
+    for (size_t start = 4800; start + 2400 <= a.size(); start += 2400, ++windows)
+    {
+        double difference = 0.0, level = 0.0;
+        for (size_t n = start; n < start + 2400; ++n)
+        {
+            difference += (double) (a[n] - b[n]) * (a[n] - b[n]);
+            level += (double) a[n] * a[n];
+        }
+        if (difference > 0.1 * level)
+            ++changed;
+    }
+    CAPTURE (changed, windows);
+    CHECK (changed > windows * 15 / 100);
+    CHECK (changed < windows * 90 / 100);
 }
