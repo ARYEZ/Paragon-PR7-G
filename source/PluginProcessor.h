@@ -8,7 +8,7 @@
 #include "dsp/InputTap.h"
 #include "dsp/TapTempo.h"
 #include "dsp/effects/CompGate.h"
-#include "dsp/effects/Sentry.h"
+#include "dsp/effects/Bastion.h"
 #include "dsp/effects/Delay.h"
 #include "dsp/effects/Drive.h"
 #include "dsp/effects/FilterPitch.h"
@@ -251,7 +251,7 @@ private:
     // -> graphic EQ -> modulation -> delay -> reverb. Up to the cab it's mono; from
     // modulation on it's stereo when the track is.
     effects::CompGate compGate;
-    effects::Sentry sentry;   // the noise gate: keyed from the clean guitar, cutting after the amp
+    effects::Bastion bastion;   // the noise gate: keyed from the clean guitar, cutting after the amp
     effects::FilterPitch filterPitch;   // after the compressor, before the drive
     effects::Drive drive;
     effects::Presence presence;

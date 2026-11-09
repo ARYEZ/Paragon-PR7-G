@@ -2,6 +2,14 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.70.0
+
+- **The noise gate is now called BASTION** (it was SENTRY). TC Electronic already sells a noise gate pedal called the Sentry, and we keep other makers' product names off our effects.
+  - **Only the name changes.** It sounds and works exactly as before: it listens to your clean guitar and cuts after the amp, cab and EQ, so echoes and reverb ring on. GATE, HOLD, RELEASE and KEY are where they were, on the COMP / GATE panel.
+  - **Your rigs and projects keep their settings.** Rigs and projects store each setting under a fixed internal ID, and those IDs keep the old name, so nothing has to be converted.
+  - **In your DAW's automation list** the controls now read "Bastion Gate", "Bastion Hold", "Bastion Release" and "Bastion Key". Automation you already recorded still works, because the DAW finds a control by its ID, not its name.
+  - **The name check:** before picking BASTION I searched for noise gate pedals and plugins with each candidate name and found none called Bastion. That was a web search, not a trademark search, so it's a good sign but not a guarantee.
+
 ## 0.69.0
 
 - **An eighth album bank, bank M: 15 rigs inspired by the guitar sounds on Cold's *13 Ways to Bleed on Stage*** (2000). **Cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:

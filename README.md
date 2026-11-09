@@ -38,7 +38,7 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
 - **Footswitches 1-4** turn the effect blocks on and off. Click a footswitch's name to show its knobs
   below. Signal chain: comp/gate → filter / pitch → overdrive → amp → cabinet → presence → graphic EQ → modulation
   → delay → reverb → lo-fi.
-  - **1 Comp / Gate:** a compressor and a noise gate (threshold; all the way down is off). The compressor has two TYPEs:
+  - **1 Comp / Gate:** a compressor and **BASTION**, the noise gate: it listens to your clean guitar and cuts after the amp, cab and EQ, so the amp's hiss goes and echoes and reverb ring on (GATE, all the way down is off; HOLD; RELEASE; KEY Clean or Self). The compressor has two TYPEs:
     **Classic** (threshold, ratio, level) and **Daybreak**, a modern pedal compressor: COMP (how much, with automatic make-up),
     DETAIL (how much pick attack gets through), MIX (parallel compression), INTENSITY (smooth or hard) and LEVEL. The panel shows a
     gain-reduction meter.

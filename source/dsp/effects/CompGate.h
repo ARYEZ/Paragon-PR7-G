@@ -4,8 +4,8 @@
 
 namespace effects
 {
-    // Footswitch 1: the compressor, before the amp. (Its noise gate, SENTRY,
-    // listens to the clean guitar here but cuts after the amp: see Sentry.h.)
+    // Footswitch 1: the compressor, before the amp. (Its noise gate, BASTION,
+    // listens to the clean guitar here but cuts after the amp: see Bastion.h.)
     // Two compressors:
     //
     //   classic   threshold and ratio, as studio compressors have
@@ -36,7 +36,7 @@ namespace effects
             bool intensity = false;      // daybreak: INTENSITY
         };
 
-        // SENTRY's GATE (the gateThreshold parameter) at or below this means it's off.
+        // BASTION's GATE (the gateThreshold parameter) at or below this means it's off.
         static constexpr float gateOffDb = -90.0f;
 
         void prepare (double sampleRate, int maxBlockSize);

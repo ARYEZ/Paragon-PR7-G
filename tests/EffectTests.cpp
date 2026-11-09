@@ -529,7 +529,7 @@ TEST_CASE ("Halo: the germanium fuzz circuit, its working point, FUZZ and clean-
     }
 }
 
-TEST_CASE ("SENTRY silences signal below its GATE and lets notes through untouched", "[effects][comp][sentry]")
+TEST_CASE ("BASTION silences signal below its GATE and lets notes through untouched", "[effects][comp][bastion]")
 {
     EffectRig rig;
     rig.set (ParamIDs::compOn, 1.0f);
@@ -543,7 +543,7 @@ TEST_CASE ("SENTRY silences signal below its GATE and lets notes through untouch
     CHECK_THAT (dB (rms (rig.runMono (note), 0.5) / rms (note, 0.5)), WithinAbs (0.0, 0.5));
 }
 
-TEST_CASE ("SENTRY keyed from the clean guitar shuts high-gain hiss that a gate listening to the drive can't", "[effects][sentry]")
+TEST_CASE ("BASTION keyed from the clean guitar shuts high-gain hiss that a gate listening to the drive can't", "[effects][bastion]")
 {
     // Quiet pickup hiss (-62 dB), turned up by a fuzz at full gain: after the
     // drive it's far over GATE (-55 dB), before it, under.
@@ -552,7 +552,7 @@ TEST_CASE ("SENTRY keyed from the clean guitar shuts high-gain hiss that a gate 
     for (auto& s : hiss)
         s = juce::Decibels::decibelsToGain (-62.0f) * (random.nextFloat() * 2.0f - 1.0f);
 
-    const auto hissOut = [&] (effects::Sentry::Key key)
+    const auto hissOut = [&] (effects::Bastion::Key key)
     {
         EffectRig rig;
         rig.set (ParamIDs::driveOn, 1.0f);
@@ -563,15 +563,15 @@ TEST_CASE ("SENTRY keyed from the clean guitar shuts high-gain hiss that a gate 
         rig.set (ParamIDs::sentryKey, (float) key);
         return rms (rig.runMono (hiss), 0.5);
     };
-    const auto self = hissOut (effects::Sentry::Key::self), clean = hissOut (effects::Sentry::Key::clean);
+    const auto self = hissOut (effects::Bastion::Key::self), clean = hissOut (effects::Bastion::Key::clean);
     CAPTURE (dB (self), dB (clean));
     CHECK (dB (self) > -55.0f);   // the driven hiss holds a gate listening to it open
-    CHECK (clean == 0.0f);        // the clean guitar is quiet: SENTRY is shut
+    CHECK (clean == 0.0f);        // the clean guitar is quiet: BASTION is shut
 }
 
-TEST_CASE ("SENTRY cuts after the amp but before DELAY, so echoes ring on after it closes", "[effects][sentry]")
+TEST_CASE ("BASTION cuts after the amp but before DELAY, so echoes ring on after it closes", "[effects][bastion]")
 {
-    // A 200 ms note, then nothing; SENTRY closes 20 + 120 ms after it.
+    // A 200 ms note, then nothing; BASTION closes 20 + 120 ms after it.
     auto input = sine (220.0, 0.2f, 0.2);
     input.resize ((size_t) (1.5 * sampleRate), 0.0f);
     const auto tail = [&] (bool delayOn)
@@ -583,7 +583,7 @@ TEST_CASE ("SENTRY cuts after the amp but before DELAY, so echoes ring on after 
         rig.set (ParamIDs::delayOn, delayOn ? 1.0f : 0.0f);
         rig.set (ParamIDs::delayFeedback, 0.5f);
         rig.set (ParamIDs::delayMix, 0.5f);
-        return rms (rig.runMono (input), 0.6, 1.5);   // well after SENTRY has closed
+        return rms (rig.runMono (input), 0.6, 1.5);   // well after BASTION has closed
     };
     CHECK (tail (false) == 0.0f);
     CHECK (dB (tail (true) / 0.2f) > -40.0f);   // the echoes are still there

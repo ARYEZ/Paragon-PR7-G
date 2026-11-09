@@ -1,8 +1,8 @@
-#include "Sentry.h"
+#include "Bastion.h"
 
 namespace effects
 {
-    void Sentry::prepare (double newSampleRate, int maxBlockSize, int maxKeyDelay)
+    void Bastion::prepare (double newSampleRate, int maxBlockSize, int maxKeyDelay)
     {
         sampleRate = newSampleRate;
         keyLine.assign ((size_t) juce::jmax (1, maxKeyDelay + maxBlockSize + 1), 0.0f);
@@ -12,7 +12,7 @@ namespace effects
         reset();
     }
 
-    void Sentry::reset()
+    void Bastion::reset()
     {
         std::fill (keyLine.begin(), keyLine.end(), 0.0f);
         std::fill (keyBlock.begin(), keyBlock.end(), 0.0f);
@@ -23,12 +23,12 @@ namespace effects
         holdLeft = 0;
     }
 
-    void Sentry::setKeyDelay (int samples) noexcept
+    void Bastion::setKeyDelay (int samples) noexcept
     {
         keyDelay = juce::jlimit (0, (int) keyLine.size() - 1, samples);
     }
 
-    void Sentry::pushKey (const float* clean, int numSamples) noexcept
+    void Bastion::pushKey (const float* clean, int numSamples) noexcept
     {
         const auto size = (int) keyLine.size();
         numSamples = juce::jmin (numSamples, (int) keyBlock.size());
@@ -43,7 +43,7 @@ namespace effects
         }
     }
 
-    void Sentry::process (float* samples, int numSamples, const Settings& settings) noexcept
+    void Bastion::process (float* samples, int numSamples, const Settings& settings) noexcept
     {
         // Off: open again (quickly but smoothly, so switching it off doesn't click).
         const auto openStep = 1.0f / (float) juce::jmax (1.0, openSeconds * sampleRate);

@@ -13,7 +13,7 @@ add_executable(ParagonX1Tests
     EffectTests.cpp
     CycloneTests.cpp
     HavokTests.cpp
-    SentryTests.cpp
+    BastionTests.cpp
     RigTests.cpp
     UiTests.cpp
     TunerTests.cpp
