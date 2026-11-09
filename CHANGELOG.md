@@ -2,6 +2,42 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.67.0
+
+- **A sixth album bank, bank K: 15 rigs inspired by the guitar sounds on Tool's *Ænima*** (1996). **Cleans, effects and leads**: the rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **K01 Flanged Delay Clean** | A clean through a slow flanger into a digital delay, as a compact flanger and delay on a board | "Forty Six & 2" (the clearest example of the album's turn to pedals) |
+  | **K02 Swirl Flange Riff** | A riff swirling through a deeper, resonant flange, over your amp | "Forty Six & 2" (a heavier reading) |
+  | **K03 Clean Repeat Echo** | A clean with a quarter-note digital echo, a little room | "Pushit" (the other clear example) |
+  | **K04 Shaver Buzz Drone** | A buzzing hum, as if a shaver were held to the strings: HAVOK's ring modulator held on low (X tunes it) | "Pushit" (its humming intro, said to be an Epilady shaver) |
+  | **K05 Bowed Sustain Swell** | A bowed, endless note: swell it with the pedal (a volume pedal), squeezed to sustain, a long echo, a hall | "Third Eye" (its opening, said to be an EBow) |
+  | **K06 Long Haze Clean** | A long, hazy clean for slow builds: a dotted echo and a cathedral, ducked | "Third Eye" (its long build) |
+  | **K07 Bass Head Lead** | A biting, gritty lead, boosted into your amp, a slap, a room | "Eulogy" |
+  | **K08 Tense Verse Clean** | A tense, dry verse clean: firm compression, a short slap | "Stinkfist" |
+  | **K09 Arpeggio Chorus Clean** | Clean arpeggios with a gentle chorus, an eighth echo, a plate | "H." |
+  | **K10 Rumble Noise Wash** | A wash of rumbling noise: grains from your playing through a noisy radio, a big space | "(-) Ions" |
+  | **K11 Crackle Phone Line** | Your guitar thin and crackling, as on an answering machine | "Message to Harry Manback" |
+  | **K12 Skipping Record** | A skipping record: eighth-note slices caught and repeated unevenly, on the song's grid | "Useful Idiot" |
+  | **K13 Doom Fuzz Lead** | A heavy, doomy fuzz lead with a dark echo | "Ænema" |
+  | **K14 Rotating Waltz Clean** | An octave below your note through a slow rotating speaker, like a fairground organ | "Intermission" |
+  | **K15 March Tremolo Chop** | A hard tremolo cutting every sixteenth, in time with the song, over your heavy amp | "Die Eier von Satan" |
+
+  - **What's documented:**
+    - on this album Adam Jones (with Justin Chancellor) turned to effects pedals for variation, with "Forty Six & 2" and "Pushit" the clearest examples (Andertons);
+    - his board from then lists a Boss DD-3 delay and a Boss BF-2 flanger (Equipboard, from his tech's board video);
+    - a mid-'70s Marshall Super Bass was the sole amp through this album.
+  - **Said, not confirmed:** forum posts quoting an old interview say the hum at the start of "Pushit" was an Epilady shaver on the strings (K04), and that "Third Eye" opens with an EBow (K05).
+  - **The rest is our reading:** the song links for K06-K15 are my guesses at where each sound fits. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **With the pad and pedal:**
+    - **K05 swells from the heel.**
+    - **K04's buzz** is tuned by HAVOK's X.
+    - **K12 and K15 follow the tempo,** tapped or the DAW's.
+- **Tests:**
+  - bank K goes through the shared album-bank checks;
+  - "March Tremolo Chop" checks that across a held note the level swings by more than 20 dB, sixteenths apart.
+
 ## 0.66.0
 
 - **A fifth album bank, bank J: 15 rigs inspired by the guitar sounds on Sevendust's *Next*** (2005), the album PR7-V's bank Q is built on. **Cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:

@@ -808,3 +808,25 @@ TEST_CASE ("Bank J, a fifth album's guitar sounds: cleans, effects and leads tha
     CHECK (dBOf (tail) - dBOf (note) > -15.0f);
     CHECK (dBOf (tail) - dBOf (plainTail) > 20.0f);
 }
+
+TEST_CASE ("Bank K, a sixth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (10, { "Stinkfist", "Eulogy", "H", "Useful", "Idiot", "Forty", "Six", "2", "Message", "To", "Harry",
+                          "Manback", "Hooker", "With", "A", "Penis", "Intermission", "Jimmy", "Die", "Eier", "Von", "Satan",
+                          "Pushit", "Cesaro", "Summability", "Aenema", "Ions", "Third", "Eye" });
+
+    // The march chop really chops: across a held note, the level in 10 ms
+    // steps swings by more than 20 dB, sixteenths apart.
+    RigRig r;
+    r.processor.loadRig (r.entryNamed ("March Tremolo Chop"));
+    const auto out = pluck (r.processor, 1.0, 220.0, true);
+    float loudest = 0.0f, quietest = 1.0f;
+    for (double t = 0.1; t < 0.6; t += 0.01)
+    {
+        const auto level = rmsOf (out[0], t, t + 0.01);
+        loudest = std::max (loudest, level);
+        quietest = std::min (quietest, level);
+    }
+    CAPTURE (dBOf (loudest), dBOf (quietest));
+    CHECK (dBOf (loudest) - dBOf (quietest) > 20.0f);
+}

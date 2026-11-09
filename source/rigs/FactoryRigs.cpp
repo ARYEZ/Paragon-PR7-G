@@ -66,6 +66,8 @@ namespace
     constexpr int I = 8;                 // bank I: an album's guitar sounds (Periphery, Periphery III: Select Difficulty)
     constexpr float xpDiveBomb = 19;     // QUASAR program 20: Down 6 Octaves, a dive bomb
     constexpr int J = 9;                 // bank J: an album's guitar sounds (Sevendust, Next)
+    constexpr int K = 10;                // bank K: an album's guitar sounds (Tool, Aenima)
+    constexpr float glitchEighth = 5;    // GLITCH's LENGTH: 1/8
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1046,6 +1048,122 @@ std::vector<Rig> makeFactoryRigs()
             { expressionTarget, pedalWah },
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 4 },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+
+        //======================================================================
+        // Bank K: an album's guitar sounds, inspired by Tool's Aenima (1996;
+        // the owner's sixth album bank). Cleans, effects and leads: the
+        // rhythm is the amp capture's job. Documented: on this album Adam
+        // Jones (with Justin Chancellor) turned to effects pedals for
+        // variation, "Forty Six & 2" and "Pushit" the clearest examples
+        // (Andertons); his board from then lists a Boss DD-3 delay and BF-2
+        // flanger (Equipboard, from his tech's board video); a mid-'70s
+        // Marshall Super Bass was the sole amp through this album. Forum
+        // quotes of an old interview, not verified: an Epilady shaver on the
+        // strings for the hum at the start of "Pushit", an EBow at the start
+        // of "Third Eye". The rest is our reading.
+
+        // A clean through a slow flanger into a digital delay, as a compact
+        // flanger and delay on a board.
+        make ("Flanged Delay Clean", K, 1, "Album,Clean,Modulation,Delay", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.15f }, { modDepth, 0.6f }, { modManual, 5 }, { modRes, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.12f } }),
+
+        // A riff swirling through a deeper flange, over your amp.
+        make ("Swirl Flange Riff", K, 2, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.25f }, { modDepth, 0.8f }, { modManual, 4 }, { modRes, 7 } }),
+
+        // A clean with a quarter-note digital echo and a little room.
+        make ("Clean Repeat Echo", K, 3, "Album,Clean,Delay", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, quarter }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.12f } }),
+
+        // A buzzing hum, as if a shaver were held to the strings: HAVOK's
+        // ring modulator held on at a low, buzzy setting (X tunes the buzz).
+        make ("Shaver Buzz Drone", K, 4, "Album,FX,Havok", {
+            { havokOn, 1 }, { havokProgram, havokRingFilter }, { havokX, 0.15f }, { havokY, 0.5f }, { havokHold, 1 } }),
+
+        // A bowed, endless note: no pick attack (swell it with the pedal,
+        // a volume pedal), squeezed to sustain, into a long echo and a hall.
+        make ("Bowed Sustain Swell", K, 5, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 1 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -34 }, { compRatio, 8 }, { compLevel, 5 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // A long, hazy clean for slow-building sections: a dotted echo and
+        // a cathedral, both ducked.
+        make ("Long Haze Clean", K, 6, "Album,Clean,Ambient", {
+            { rigLevel, 2 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { delayDuck, 0.4f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.35f }, { reverbDuck, 0.3f } }),
+
+        // A biting lead with grit, boosted into your amp, a slap and a room.
+        make ("Bass Head Lead", K, 7, "Album,Lead", {
+            { rigLevel, -9 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, syncOff }, { delayTime, 130 }, { delayFeedback, 0.2f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.12f } }),
+
+        // A tense, dry verse clean: firm compression, a short slap.
+        make ("Tense Verse Clean", K, 8, "Album,Clean", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 6 }, { compDetail, 5 }, { compMix, 1 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, syncOff }, { delayTime, 90 }, { delayFeedback, 0.1f }, { delayMix, 0.12f } }),
+
+        // Clean arpeggios: a gentle chorus, an eighth echo, a plate.
+        make ("Arpeggio Chorus Clean", K, 9, "Album,Clean,Modulation", {
+            { rigLevel, 7 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.35f }, { modMix, 0.3f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A wash of rumbling noise: grains smeared from what you play,
+        // through a noisy radio, in a big space.
+        make ("Rumble Noise Wash", K, 10, "Album,FX,Ambient,Glitch", {
+            { rigLevel, 4 },
+            { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 8 }, { glitchChaos, 7 }, { glitchMix, 0.7f },
+            { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 6 }, { lofiNoise, 6 }, { lofiMix, 0.8f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.45f } }),
+
+        // A crackling phone line: your guitar thin and noisy, as on an
+        // answering machine.
+        make ("Crackle Phone Line", K, 11, "Album,FX,Lo-Fi", {
+            { lofiOn, 1 }, { lofiType, telephone }, { lofiAmount, 7 }, { lofiNoise, 5 }, { lofiMix, 1 } }),
+
+        // A skipping record: eighth-note slices of what you play caught and
+        // repeated unevenly (on the song's grid when your DAW plays).
+        make ("Skipping Record", K, 12, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchEighth },
+            { glitchDensity, 7 }, { glitchChaos, 6 }, { glitchMix, 1 },
+            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 4 }, { lofiNoise, 3 }, { lofiMix, 0.6f } }),
+
+        // A heavy, doomy fuzz lead: a thick fuzz and a dark echo.
+        make ("Doom Fuzz Lead", K, 13, "Album,Lead,Fuzz", {
+            { rigLevel, -4 },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 7 }, { driveTone, 4 }, { driveLevel, -2 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.3f }, { delayMix, 0.18f }, { delayTone, 4 } }),
+
+        // A wheezing waltz: an octave below under your note through a slow
+        // rotating speaker, like a fairground organ.
+        make ("Rotating Waltz Clean", K, 14, "Album,Clean,Pitch,Sub", {
+            { rigLevel, 1 },
+            { octOn, 1 }, { octSubOne, 0.5f }, { octDry, 1 }, { octUp, 0 },
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 0 }, { modCycSlowSpeed, 0.8f }, { modCycLow, 4 }, { modCycHigh, 4 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A marching chop: a hard tremolo cutting every sixteenth, over your
+        // heavy amp, in time with the song.
+        make ("March Tremolo Chop", K, 15, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, tremolo }, { modSync, sixteenth }, { modDepth, 1 } }),
     };
 }
 
