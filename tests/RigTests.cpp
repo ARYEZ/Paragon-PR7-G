@@ -830,3 +830,36 @@ TEST_CASE ("Bank K, a sixth album's guitar sounds: cleans, effects and leads tha
     CAPTURE (dBOf (loudest), dBOf (quietest));
     CHECK (dBOf (loudest) - dBOf (quietest) > 20.0f);
 }
+
+TEST_CASE ("Bank L, a seventh album's guitar sounds: effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (11, { "People", "Of", "The", "Sun", "Bulls", "On", "Parade", "Vietnow", "Revolver", "Snakecharmer", "Tire",
+                          "Me", "Down", "Rodeo", "Without", "A", "Face", "Wind", "Below", "Roll", "Right", "Year", "Tha", "Boomerang" });
+
+    // The two-octave lead: a 220 Hz note comes out at 880 Hz, and the note
+    // itself is gone (the shifter is wet only).
+    RigRig r;
+    r.processor.loadRig (r.entryNamed ("Two-Octave Stack Lead"));
+    const auto out = pluck (r.processor, 1.0, 220.0, true);
+    const auto at220 = levelAtHz (out[0], 220.0, 0.2, 0.7), at880 = levelAtHz (out[0], 880.0, 0.2, 0.7);
+    CAPTURE (dBOf (at220), dBOf (at880));
+    CHECK (at880 > 4.0f * at220);
+
+    // The pedal rigs: heel your note, toe the interval (2 octaves up, 2 octaves down, a tone up).
+    const std::tuple<const char*, double> pedals[] = { { "Two-Octave Pedal Shriek", 880.0 }, { "Siren Dive", 55.0 },
+                                                       { "Whole-Step Pedal Bend", 246.94 } };
+    for (const auto& [name, toeHz] : pedals)
+    {
+        INFO (name);
+        for (const auto toe : { false, true })
+        {
+            RigRig p;   // a fresh plugin for each, the pedal already there
+            p.processor.loadRig (p.entryNamed (name));
+            p.set (ParamIDs::expression, toe ? 1.0f : 0.0f);
+            const auto o = pluck (p.processor, 1.0, 220.0, true);
+            const auto note = levelAtHz (o[0], 220.0, 0.25, 0.75), moved = levelAtHz (o[0], toeHz, 0.25, 0.75);
+            CAPTURE (toe, dBOf (note), dBOf (moved));
+            CHECK ((toe ? moved > 2.0f * note : note > 2.0f * moved));
+        }
+    }
+}

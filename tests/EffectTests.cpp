@@ -4,6 +4,7 @@
 
 #include "Parameters.h"
 #include "PluginProcessor.h"
+#include "dsp/effects/PitchShifter.h"
 #include "dsp/effects/Modulation.h"
 #include "dsp/effects/Delay.h"
 #include "dsp/effects/Reverb.h"
@@ -2527,3 +2528,26 @@ TEST_CASE ("AEON: the flanger follows the BF-2's circuit and specifications", "[
 }
 
 
+
+TEST_CASE ("PitchShifter: clean from two octaves down to two up, steady or gliding into the shift", "[effects][pitch]")
+{
+    // A 220 Hz tone shifted by each ratio: the shifted pitch is at least
+    // 20 dB above any of the original left over. (Up to 0.66.0 a steady x4,
+    // or QUASAR's pedal gliding to it, leaked the original at -21 dB.)
+    for (const auto ratio : { 0.25f, 0.5f, 0.75f, 1.5f, 2.0f, 3.0f, 3.5f, 4.0f })
+        for (const auto glide : { false, true })
+        {
+            effects::PitchShifter shifter;
+            shifter.prepare (sampleRate);
+            std::vector<float> out;
+            for (int n = 0; n < (int) sampleRate; ++n)
+            {
+                const auto x = 0.3f * (float) std::sin (juce::MathConstants<double>::twoPi * 220.0 * n / sampleRate);
+                const auto into = glide ? std::min (1.0f, (float) n / 1440.0f) : 1.0f;   // 30 ms, like QUASAR's pedal
+                out.push_back (shifter.processSample (x, std::exp2 (std::log2 (ratio) * into)));
+            }
+            const auto shifted = levelAt (out, 220.0 * ratio, 0.5), original = levelAt (out, 220.0, 0.5);
+            CAPTURE (ratio, glide, dB (shifted / 0.3f), dB (original / 0.3f));
+            CHECK (dB (shifted / original) > 20.0f);
+        }
+}

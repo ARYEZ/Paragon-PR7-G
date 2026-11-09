@@ -75,8 +75,22 @@ namespace effects
         };
 
         const auto centre = fromDelay + direction * (float) jumpSamples;
-        const auto lowest = juce::jmax ((int) minDelay + 1, (int) (centre - (float) searchSamples));
-        const auto highest = juce::jmin ((int) maxDelay - 1, (int) (centre + (float) searchSamples));
+        auto lowest = juce::jmax ((int) minDelay + 1, (int) (centre - (float) searchSamples));
+        auto highest = juce::jmin ((int) maxDelay - 1, (int) (centre + (float) searchSamples));
+
+        // Land with room to finish the cross-fade and reach the next jump:
+        // the head moves (ratio - 1) samples a sample, so a fade's travel
+        // twice over. Without this, near two octaves up the search could
+        // land so close that the head reached the buffer's end mid-fade and
+        // was held there, playing the guitar at its own pitch (0.67.0
+        // measured the original note leaking at -21 dB at a steady x4).
+        // It only narrows the search above about +16 semitones (below 0.4x
+        // going down), so smaller shifts are exactly as before.
+        const auto travel = 2.0f * (float) fadeSamples * std::abs (ratioNow - 1.0f) + 2.0f;
+        if (direction > 0.0f)
+            lowest = juce::jmax (lowest, juce::jmin (highest, (int) std::ceil (minDelay + travel)));
+        else
+            highest = juce::jmin (highest, juce::jmax (lowest, (int) std::floor (maxDelay - travel)));
 
         // Coarse search in steps of 2, then refine either side of the best.
         auto best = juce::jlimit (lowest, highest, (int) centre);

@@ -68,6 +68,8 @@ namespace
     constexpr int J = 9;                 // bank J: an album's guitar sounds (Sevendust, Next)
     constexpr int K = 10;                // bank K: an album's guitar sounds (Tool, Aenima)
     constexpr float glitchEighth = 5;    // GLITCH's LENGTH: 1/8
+    constexpr int L = 11;                // bank L: an album's guitar sounds (Rage Against the Machine, Evil Empire)
+    constexpr float xpUpTwoOctaves = 13, xpUpSecond = 14, xpDownTwoOctaves = 18;   // QUASAR programs 14, 15 and 19
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1164,6 +1166,110 @@ std::vector<Rig> makeFactoryRigs()
         // heavy amp, in time with the song.
         make ("March Tremolo Chop", K, 15, "Album,FX,Modulation", {
             { modOn, 1 }, { modType, tremolo }, { modSync, sixteenth }, { modDepth, 1 } }),
+
+        //======================================================================
+        // Bank L: an album's guitar sounds, inspired by Rage Against the
+        // Machine's Evil Empire (1996; the owner's seventh album bank).
+        // Effects and leads above all, a clean: the rhythm is the amp
+        // capture's job. Documented (Morello's own words to Guitarist via
+        // MusicRadar, Premier Guitar, Guitar.com, gear guides): the same few
+        // pedals from the start, a wah, a Whammy, a delay (a Boss DD-2) and a
+        // phaser, plus an EQ pedal as a solo boost and an Ibanez flanger; the
+        // "Year of tha Boomerang" lead is heavily multi-tracked Whammy parts
+        // two octaves up; the "Bulls on Parade" solo is a scratch made with
+        // the pickup selector as a kill switch while rubbing the strings, the
+        // wah parked fully down; "People of the Sun" is built on a repeated
+        // scratch across a power chord; the Whammy makes the squeals and
+        // octave harmonies. The rest is our reading. (Bank E's Wah Scratch
+        // Chop is the pedal-wah version of the scratch.)
+
+        // The two-octave lead: your line two octaves up, doubled wide as if
+        // multi-tracked, boosted into your amp.
+        make ("Two-Octave Stack Lead", L, 1, "Album,Lead,Pitch", {
+            { rigLevel, -6 },
+            { fpOn, 1 }, { fpType, pitchShifter }, { fpInterval, 24 }, { fpMix, 1 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.6f }, { modStereo, 1 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveLevel, 4 } }),
+
+        // The scratch: the wah parked fully down (a fixed, nasal peak) and
+        // the end of every sixteenth cut, as if flicking the pickup selector
+        // (on the song's grid when your DAW plays). Rub the muted strings.
+        make ("Parked Wah Scratch", L, 2, "Album,FX,Glitch,Wah", {
+            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 0 }, { glitchMix, 1 },
+            { eqOn, 1 }, { "eq63", -10 }, { "eq125", -8 }, { "eq250", -4 }, { "eq1k", 4 }, { "eq2k", 8 }, { "eq4k", 2 }, { "eq8k", -6 }, { "eq16k", -10 } }),
+
+        // A two-octave squeal on the expression pedal: heel your note, toe
+        // two octaves up (rock to the heel before you play).
+        make ("Two-Octave Pedal Shriek", L, 3, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -2 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpTwoOctaves }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah } }),
+
+        // An octave harmony: an octave above and below your riff at once.
+        make ("Octave Harmony Riff", L, 4, "Album,FX,Pitch,Octave", {
+            { rigLevel, -3 },
+            { octOn, 1 }, { octSubOne, 0.4f }, { octDry, 0.9f }, { octUp, 0.6f } }),
+
+        // The kill-switch stutter alone: the end of every sixteenth cut, as
+        // if flicking a pickup selector off and on, in time with the song.
+        make ("Toggle Kill Stutter", L, 5, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 6 }, { glitchChaos, 0 }, { glitchMix, 1 } }),
+
+        // A solo lifted by an EQ pedal: the mids pushed and the level up,
+        // into your amp.
+        make ("Graphic Boost Lead", L, 6, "Album,Lead", {
+            { rigLevel, -6 },
+            { eqOn, 1 }, { "eq250", 1 }, { "eq500", 3 }, { "eq1k", 5 }, { "eq2k", 3 }, { eqLevel, 4 } }),
+
+        // A riff through a slow phaser.
+        make ("Slow Phase Riff", L, 7, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.4f }, { modDepth, 0.7f } }),
+
+        // A jet flange on a riff, in the spirit of a '80s Ibanez flanger.
+        make ("Jet Flange Riff", L, 8, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.3f }, { modDepth, 0.8f }, { modManual, 6 }, { modRes, 8 } }),
+
+        // A delay pushed to the edge: short repeats fed back until they
+        // run away, for noises and swirls between riffs.
+        make ("Runaway Echo Swirl", L, 9, "Album,FX,Ambient,Delay", {
+            { rigLevel, -3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, sixteenth }, { delayFeedback, 0.88f }, { delayMix, 0.4f } }),
+
+        // A scratched chord with a short slap, like a picked stab doubled
+        // right behind itself.
+        make ("Scratched Chord Slap", L, 10, "Album,FX,Delay", {
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, syncOff }, { delayTime, 45 }, { delayFeedback, 0.15f }, { delayMix, 0.45f } }),
+
+        // A wah lead on the expression pedal, boosted into your amp.
+        make ("Wah Sweep Lead", L, 11, "Album,Lead,Wah,Expression", {
+            { rigLevel, -6 },
+            { expressionTarget, pedalWah },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveLevel, 4 } }),
+
+        // A siren dive on the pedal: heel your note, toe two octaves down.
+        make ("Siren Dive", L, 12, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -2 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpDownTwoOctaves }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah } }),
+
+        // A whole-step bend on the pedal: heel your note, toe a tone up, for
+        // bends no string could make.
+        make ("Whole-Step Pedal Bend", L, 13, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -2 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpSecond }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah } }),
+
+        // A dry, muted clean pulse, firm and close.
+        make ("Muted Clean Pulse", L, 14, "Album,Clean,Dry", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 6 }, { compDetail, 5 }, { compMix, 1 },
+            { eqOn, 1 }, { "eq63", -3 }, { "eq2k", 2 } }),
+
+        // Your guitar as if through a talk-radio broadcast, with static.
+        make ("Radio Static Riff", L, 15, "Album,FX,Lo-Fi", {
+            { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 7 }, { lofiNoise, 5 }, { lofiMix, 1 } }),
     };
 }
 

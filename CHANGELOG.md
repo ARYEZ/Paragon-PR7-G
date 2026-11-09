@@ -2,6 +2,47 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.68.0
+
+- **Fixed: shifting two octaves up wasn't clean.** At or near two octaves up, the pitch shifter could leave your original note leaking through at about -21 dB, with the shifted note weak. It only happened there; an octave and smaller were always fine.
+  - **What it affected:** QUASAR's **14 Up 2 Octaves** program (bank E's notes suggested it for a higher squeal), the FILTER / PITCH shifter's INTERVAL at +24, and anything else asking for a full two-octave rise.
+  - **Why:** going up two octaves, the shifter races through its buffer three samples per sample. When it jumped back to find a matching waveform, it could land so close to the end that it ran out of room halfway through its 8 ms cross-fade. It was then held there, playing the guitar at its own pitch.
+  - **The fix:** a jump now always leaves room for a full cross-fade. This only changes anything above about +16 semitones (or below about two octaves down), so octaves, fifths, dives, the shimmer delay, HAVOK and GLITCH sound exactly as before.
+  - **A new test** checks the shifter from two octaves down to two up, steady or gliding into the shift: the shifted note must be at least 20 dB above any of the original left over. It fails on 0.67.0 at two octaves up and passes now.
+- **A seventh album bank, bank L: 15 rigs inspired by the guitar sounds on Rage Against the Machine's *Evil Empire*** (1996). Mostly **effects and leads**, with a clean: the rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **L01 Two-Octave Stack Lead** | Your line two octaves up, doubled wide as if multi-tracked, boosted | "Year of tha Boomerang" (its lead: heavily multi-tracked Whammy parts two octaves up) |
+  | **L02 Parked Wah Scratch** | The wah parked fully down (a fixed, nasal peak) with the end of every sixteenth cut, as if flicking the pickup selector: rub the muted strings | "Bulls on Parade" (the scratch solo: the pickup selector as a kill switch, the wah fully down) |
+  | **L03 Two-Octave Pedal Shriek** | QUASAR two octaves up on the pedal: heel your note, toe the shriek | The album's Whammy squeals |
+  | **L04 Octave Harmony Riff** | An octave above and below your riff at once | The album's Whammy octave harmonies |
+  | **L05 Toggle Kill Stutter** | The kill-switch stutter alone, every sixteenth, in time | The kill-switch trick (no one song) |
+  | **L06 Graphic Boost Lead** | A solo lifted by an EQ pedal: the mids pushed, the level up | Morello's EQ pedal used as a solo boost |
+  | **L07 Slow Phase Riff** | A riff through a slow phaser | The phaser on his short pedal list |
+  | **L08 Jet Flange Riff** | A jet flange on a riff | The flanger on his board |
+  | **L09 Runaway Echo Swirl** | Short repeats fed back until they run away, for noises between riffs | His delay used for noises (no one song) |
+  | **L10 Scratched Chord Slap** | A scratched chord doubled by a short slap | "People of the Sun" (built on a repeated scratch across a power chord) |
+  | **L11 Wah Sweep Lead** | A wah lead on the expression pedal | "Down Rodeo" |
+  | **L12 Siren Dive** | QUASAR two octaves down on the pedal: heel your note, toe a siren dive | "Snakecharmer" |
+  | **L13 Whole-Step Pedal Bend** | QUASAR a tone up on the pedal, for bends no string could make | "Tire Me" |
+  | **L14 Muted Clean Pulse** | A dry, firm, muted clean | "Wind Below" |
+  | **L15 Radio Static Riff** | Your guitar as if through a talk-radio broadcast, with static | "Vietnow" (its talk-radio theme) |
+
+  - **What's documented:**
+    - Morello's own words: the same few pedals from the start, "a wah, a Whammy, a delay, and a phaser", plus an EQ pedal as a solo boost and a flanger (gear guides name a Crybaby, a DigiTech WH-1, a Boss DD-2, a DOD FX40B and an Ibanez flanger);
+    - the "Year of tha Boomerang" lead: multi-tracked Whammy parts two octaves up;
+    - the "Bulls on Parade" scratch: the pickup selector as a kill switch while rubbing the strings, the wah fully down;
+    - "People of the Sun": built on a repeated scratch across a power chord;
+    - the Whammy makes his squeals and octave harmonies.
+  - **The rest is our reading:** L11-L15's song links are my guesses. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **With the pedal:** rock it to the heel before playing **L03, L12 and L13** (QUASAR programs). It starts half way, which is part of the way up or down. **L11** is a wah on the pedal.
+  - **Bank E's "Wah Scratch Chop"** is the pedal-wah version of the "Bulls on Parade" scratch; L02 parks the wah as on the record.
+- **Tests:**
+  - bank L goes through the shared album-bank checks;
+  - "Two-Octave Stack Lead" checks a 220 Hz note comes out at 880 Hz with the original gone;
+  - each QUASAR pedal rig is your note at the heel and the interval at the toe (this is the test that found the two-octave fault).
+
 ## 0.67.0
 
 - **A sixth album bank, bank K: 15 rigs inspired by the guitar sounds on Tool's *Ænima*** (1996). **Cleans, effects and leads**: the rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
