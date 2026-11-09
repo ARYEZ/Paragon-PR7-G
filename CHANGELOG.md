@@ -2,6 +2,52 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.62.0
+
+- **A new bank of 15 factory rigs, bank F, inspired by the guitar sounds on Spiritbox's *Eternal Blue*** (2021), the first album bank for PR7-G. As you asked, it's all **cleans, effects and leads**: the heavy rhythm tone is your amp capture's job, and like every factory rig these keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **F01 Dawn Shimmer Intro** | Ambient clean: a soft chorus, octave-up shimmer on the echoes, a big ducked cathedral | "Sun Killer" (its clean opening) |
+  | **F02 Aching Chorus Lead** | Singing lead: a light boost into your amp, a dotted-eighth echo that ducks under the notes, a hall | "Hurt You" (the melodic lead over the chorus) |
+  | **F03 Wasp Stutter** | Sixteenth-note stutters grabbed from what you play, on the song's grid when your DAW plays | "Yellowjacket" (its glitchy, chopped parts) |
+  | **F04 Peak Swell Pad** | Volume swells: the expression pedal is a volume pedal, into a rising shimmer and a cathedral | "The Summit" (its swelling, airy guitars) |
+  | **F05 Bare DI Clean** | The very dry, DI-like clean: firm compression, lows trimmed, top lifted, no echo or room | "Secret Garden" (the verses) |
+  | **F06 Blooming Chorus Clean** | The clean opened out wide: lush stereo dual chorus, eighth echo, bright plate | "Secret Garden" (the chorus) |
+  | **F07 Glass Octave Lead** | Glassy lead with an octave above your note, a short echo and a plate | "Silk in the Strings" (its high melodic lines) |
+  | **F08 Calm Water Haze** | Hazy clean: a wide dual chorus, a drifting tape echo and a cathedral, both ducked | "Halcyon" |
+  | **F09 Machine Dream Texture** | The guitar as an electronic pad: a cloud of grains through a warbling cassette, a big digital space | "We Live in a Strange World" (its electronic textures) |
+  | **F10 Riff Squeal Bend** | QUASAR an octave up on the expression pedal: heel your note, toe the squeal | "Holy Roller" (the squealing riff accents) |
+  | **F11 Ring Mod Shriek** | HAVOK's ring modulator and filter held on: a metallic, noisy shriek (move X and Y to retune it) | "Holy Roller" (its noisy, inharmonic stabs) |
+  | **F12 Tide Ping-Pong Clean** | Dotted-eighth echoes bouncing side to side, a gentle chorus, a big hall | "Eternal Blue" (its cleans) |
+  | **F13 Ocean Lead** | A soaring lead thrown into space: boosted, a long echo and hall that bloom in the gaps | "Eternal Blue" (its leads) |
+  | **F14 Layered Ambience Wall** | A wall of ambience, as if five or six cleans were stacked: extra takes either side, an octave above, shimmer, cathedral | "Constance" |
+  | **F15 Orbit Arpeggio** | Circling clean arpeggio: a slow phaser, tight sixteenth echoes, a hall | "Circle With Me" |
+
+  - **What's documented:**
+    - the album's guitars were recorded with amp-sim plugins;
+    - most songs have five or six layers of guitar ambience, the most on "Constance" (F14 stacks layers for that reason);
+    - the "Secret Garden" verses are a very dry clean, close to a bare DI (F05).
+  - **The rest is our reading, not the record's settings,** built from how sounds like these are commonly made. **I couldn't listen to the album or the rigs here.** The ones I'm least sure of:
+    - **F03:** which parts of "Yellowjacket" are actually stuttered;
+    - **F10 and F11:** how the "Holy Roller" squeals are made. Live, it's said (on a forum, not by the band) to be a ring-mod / whammy / noise preset, which is why there are two readings;
+    - **F07:** the lead for "Silk in the Strings".
+
+    Tell me which rigs are off and how, and I'll adjust them.
+  - **With the expression pedal:**
+    - **F10:** rock to the heel before you play. The pedal starts half way, which is half an octave up.
+    - **F04:** swell from the heel.
+  - **Levels:** balanced so switching between them doesn't jump, within 6 dB of each other on a test note. The leads' boost pushes your amp, so with a high-gain capture they may come out a little louder than the cleans; adjust RIG LEVEL to taste.
+- **The PRESETS page has a Bank F button**, and your own rigs can be filed in bank F too.
+- **A new test** plays every bank F rig and checks it:
+  - the ambient rigs still ring a second after the note;
+  - the dry clean is silent after it;
+  - the octave lead adds the octave above;
+  - the squeal is your note at the heel and the octave at the toe;
+  - the effects rigs change the sound;
+  - all are within 6 dB of each other;
+  - no rig name uses a word from a song title.
+
 ## 0.61.0
 
 **SENTRY: a new noise gate, inspired by the Fortin Zuul+.** The gate on the COMP / GATE stomp is rebuilt from the Zuul+ manual.

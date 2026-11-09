@@ -16,7 +16,7 @@
 // RIG LEVEL for balancing rigs against each other instead.
 struct Rig
 {
-    static constexpr int numBanks = 5;          // A to D, and E for the song-inspired rigs
+    static constexpr int numBanks = 6;          // A to D, E for the song-inspired rigs, F on for album banks
     static constexpr int maxNumber = 99;
 
     juce::String name { "New Rig" };
@@ -39,7 +39,7 @@ struct Rig
     bool keepAmpAndCab = false;
 
     juce::String getSlotName() const;           // e.g. "A01"
-    static juce::String bankName (int bank);    // "A".."E"
+    static juce::String bankName (int bank);    // "A".."F"
 
     std::unique_ptr<juce::XmlElement> toXml() const;
     // Returns nothing if the XML isn't a rig.
