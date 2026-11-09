@@ -57,6 +57,9 @@ namespace
     constexpr float pedalVolume = 1;     // the expression pedal as a volume pedal (swells)
     constexpr float sixteenth = 9;       // DELAY / MOD sync: 1/16
     constexpr float havokRingFilter = 41;   // HAVOK program 42: RING MOD+FILTER
+    constexpr int G = 6;                 // bank G: an album's guitar sounds (Korn, Korn)
+    constexpr float wholeNote = 1;       // DELAY sync: 1/1, a bar in 4/4
+    constexpr float xpBrassAttack = 8;   // QUASAR program 09: Brass Attack Sens (an envelope low-pass)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -445,7 +448,7 @@ std::vector<Rig> makeFactoryRigs()
 
         // A glassy lead an octave up, doubled with the note you play, with a
         // short echo: thin, high and singing.
-        make ("Glass Octave Lead", F, 7, "Album,Lead,Pitch", {
+        make ("Glass Octave Lead", F, 7, "Album,Lead,Pitch,Octave", {
             { rigLevel, -9 },
             { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.7f },
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 7 }, { driveLevel, 4 },
@@ -516,6 +519,144 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, phaser }, { modRate, 0.25f }, { modDepth, 0.6f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, sixteenth }, { delayFeedback, 0.4f }, { delayMix, 0.22f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        //======================================================================
+        // Bank G: an album's guitar sounds, inspired by Korn's self-titled
+        // debut (1994; the owner's second album bank). Cleans, effects and
+        // leads: the detuned seven-string rhythm is the amp capture's job.
+        // From Munky's track-by-track (MusicRadar, 2015): the "Blind" chord
+        // through an old Silvertone amp built into its case; no Whammy yet,
+        // the noises are feedback or notes "super-high up on the fretboard";
+        // on "Ball Tongue" Head's bent, vibratoed noise with Munky "about a
+        // bar behind him", left to right; a "super-clean", tightly muted
+        // middle section on "Faget"; reversed tape swells, "violining", on
+        // "Fake"; Head's "aggressive high note" wiggled on "Lies"; a rigid,
+        // Ministry-like, drum-machine song in "Helmet in the Bush"; Alice in
+        // Chains bending on "Predictable"; horns like hip-hop samples on
+        // "Clown". Munky's Ibanez BC-9 chorus, which he calls a really
+        // messed-up sounding chorus, has been on his board since this album, and Head used an
+        // Electric Mistress flanger (gear lists). The settings are ours.
+
+        // The dissonant chord through a small, boxy amp built into its case:
+        // the lows and highs cut away, a nasal middle, a little grit and a
+        // small room. Best on a clean or lightly driven capture.
+        make ("Box Amp Dissonance", G, 1, "Album,Clean,Drive", {
+            { rigLevel, -4 },
+            { driveOn, 1 }, { driveModel, halo }, { driveGain, 4 }, { driveLevel, -2 },
+            { eqOn, 1 }, { "eq63", -12 }, { "eq125", -9 }, { "eq250", -3 }, { "eq1k", 4 }, { "eq2k", 3 }, { "eq4k", -4 }, { "eq8k", -10 }, { "eq16k", -12 },
+            { eqLevel, 4 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.25f }, { reverbMix, 0.15f } }),
+
+        // The creepy, warbling chorus: deep and quick enough to go seasick,
+        // in the spirit of Munky's messed-up chorus pedal.
+        make ("Warped Chorus Clean", G, 2, "Album,Clean,Modulation", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 2.5f }, { modDepth, 0.9f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.35f }, { reverbMix, 0.15f } }),
+
+        // Bent, vibratoed noises answered a bar later from the other side: a
+        // one-bar ping-pong echo plays your phrase back on the far speaker,
+        // as the second guitar did. A light boost into your amp's gain.
+        make ("Bar-Behind Bend Echo", G, 3, "Album,FX,Delay", {
+            { rigLevel, -5 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, wholeNote }, { delayFeedback, 0.1f }, { delayMix, 0.5f },
+            { delayPingPong, 1 } }),
+
+        // A howling, feedback-like lead: an octave above every note (feedback
+        // often jumps to it), boosted and squeezed so it sustains.
+        make ("Harmonic Howl Lead", G, 4, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -3 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.7f }, { octUp, 0.6f },
+            { compOn, 1 }, { compThreshold, -30 }, { compRatio, 6 }, { compLevel, 4 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 7 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+
+        // The super-clean, tightly muted section: firm, quick compression, a
+        // touch of top, completely dry.
+        make ("Tight Muted Clean", G, 5, "Album,Clean,Dry", {
+            { rigLevel, 2 },
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 7 }, { compDetail, 4 }, { compMix, 1 }, { compIntensity, 1 },
+            { eqOn, 1 }, { "eq63", -3 }, { "eq2k", 2 }, { "eq4k", 2 } }),
+
+        // Swells that play backwards, like guitar tape flipped over: the
+        // expression pedal is a volume pedal (swell up from the heel) into
+        // a reverse echo, with a soft hall: a bowed, "violining" sound.
+        make ("Reverse Tape Swell", G, 6, "Album,FX,Ambient,Expression", {
+            { rigLevel, 2 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, reverseDelay }, { delaySync, quarter }, { delayFeedback, 0.4f }, { delayMix, 0.6f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.3f } }),
+
+        // Guitar parts played like sampled hip-hop horns: QUASAR's brass
+        // envelope (a low-pass that opens with each pick), a little grit.
+        make ("Sampled Horn Stab", G, 7, "Album,FX,Filter", {
+            { rigLevel, -3 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpBrassAttack }, { fpMix, 1 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveLevel, 2 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.3f }, { reverbMix, 0.1f } }),
+
+        // An aggressive high note picked hard and shaken: boosted, the upper
+        // mids pushed so it screams, a short slap behind it. The wiggle is
+        // your fretting hand.
+        make ("High Note Shriek", G, 8, "Album,Lead", {
+            { rigLevel, -7 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 8 }, { driveLevel, 5 },
+            { eqOn, 1 }, { "eq250", -2 }, { "eq2k", 3 }, { "eq4k", 3 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, syncOff }, { delayTime, 110 }, { delayFeedback, 0.15f }, { delayMix, 0.15f } }),
+
+        // Rigid, drum-machine industrial: every sixteenth chopped at its end
+        // (on the song's grid when your DAW plays) and a metallic flange.
+        make ("Machine Grid Chop", G, 9, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 4 }, { glitchChaos, 0 }, { glitchMix, 1 },
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.6f }, { modDepth, 0.6f }, { modManual, 6 }, { modRes, 7 } }),
+
+        // A haunted, slow flange on a clean, in the spirit of Head's
+        // Electric Mistress: resonant and drifting, in a dark room.
+        make ("Haunted Flange Clean", G, 10, "Album,Clean,Modulation", {
+            { rigLevel, 1 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.12f }, { modDepth, 0.8f }, { modManual, 4 }, { modRes, 7 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbTone, 4 }, { reverbMix, 0.2f } }),
+
+        // A sludgy bending lead: a thick fuzz, a slow phaser and a dark echo.
+        make ("Sludge Bend Lead", G, 11, "Album,Lead,Fuzz", {
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 6 }, { driveTone, 3.5f }, { driveLevel, -2 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.3f }, { modDepth, 0.5f },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.25f }, { delayMix, 0.15f }, { delayTone, 4 } }),
+
+        // A dread-filled throbbing clean: a slow, deep uni-vibe and a dark spring.
+        make ("Dread Vibe Clean", G, 12, "Album,Clean,Modulation", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, uniVibe }, { modRate, 1.2f }, { modDepth, 0.8f }, { modMix, 0.5f },
+            { reverbOn, 1 }, { reverbType, spring }, { reverbSize, 0.5f }, { reverbTone, 4 }, { reverbMix, 0.25f } }),
+
+        // A loose, spiralling jam: a wide chorus into a long tape echo that
+        // keeps on repeating, and a big hall: for drawn-out, improvised endings.
+        make ("Spiral Jam Echo", G, 13, "Album,FX,Ambient,Delay", {
+            { rigLevel, -3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.8f }, { modDepth, 0.6f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.7f }, { delayMix, 0.35f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.8f }, { reverbMix, 0.3f } }),
+
+        // A drone to play with pipes: an octave below under your note,
+        // doubled wide and sustained, for open, droning chords.
+        make ("Pipe Drone Octave", G, 14, "Album,FX,Pitch,Sub", {
+            { rigLevel, 2 },
+            { octOn, 1 }, { octSubOne, 0.7f }, { octDry, 1 }, { octUp, 0 },
+            { compOn, 1 }, { compThreshold, -30 }, { compRatio, 5 }, { compLevel, 3 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+
+        // A funky riff through a vintage four-stage phaser, the kind in a box
+        // of '70s pedals, with a touch of grit and no space.
+        make ("Funk Phase Riff", G, 15, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.9f }, { modDepth, 0.7f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveLevel, 2 } }),
     };
 }
 

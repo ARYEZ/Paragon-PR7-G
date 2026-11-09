@@ -2,6 +2,63 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.63.0
+
+- **A second album bank, bank G: 15 rigs inspired by the guitar sounds on Korn's self-titled debut** (1994). Like bank F, it's all **cleans, effects and leads**: the detuned seven-string rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **G01 Box Amp Dissonance** | A small, boxy amp: lows and highs cut away, a nasal middle, a little grit, a small room (best on a clean capture) | "Blind" (the dissonant chord, through an old Silvertone amp built into its case) |
+  | **G02 Warped Chorus Clean** | A creepy, warbling chorus, deep and quick enough to go seasick | Munky's chorus pedal, on his board since this album |
+  | **G03 Bar-Behind Bend Echo** | Your phrase played back a bar later on the other speaker (a one-bar ping-pong echo), with a light boost | "Ball Tongue" (Head's bent noise, with Munky "about a bar behind him", left to right) |
+  | **G04 Harmonic Howl Lead** | A feedback-like howl: an octave above every note, boosted and squeezed so it sustains | "Ball Tongue" (the noises made "with feedback or ... super-high up on the fretboard") |
+  | **G05 Tight Muted Clean** | Super-clean and tightly muted: firm, fast compression, a touch of top, completely dry | "Faget" (the middle section) |
+  | **G06 Reverse Tape Swell** | Swells that play backwards: the pedal is a volume pedal into a reverse echo, with a soft hall | "Fake" (guitar swells on tape, flipped over: "a violining sort of effect") |
+  | **G07 Sampled Horn Stab** | Guitar like a sampled hip-hop horn: QUASAR's brass envelope opening with each pick | "Clown" (going for the horns hip-hop producers sampled) |
+  | **G08 High Note Shriek** | An aggressive high note: boosted, upper mids pushed, a short slap (the wiggle is your fretting hand) | "Lies" (Head's "aggressive high note", not a Whammy) |
+  | **G09 Machine Grid Chop** | Rigid, drum-machine industrial: each sixteenth chopped at its end, a metallic flange | "Helmet in the Bush" (written with a drum machine, "very Ministry-esque") |
+  | **G10 Haunted Flange Clean** | A slow, resonant, drifting flange on a clean, in a dark room | Head's flanger, and the album's haunted cleans ("Daddy") |
+  | **G11 Sludge Bend Lead** | A sludgy bending lead: thick fuzz, a slow phaser, a dark echo | "Predictable" (Alice in Chains' *Dirt*-style bending) |
+  | **G12 Dread Vibe Clean** | A slow, deep uni-vibe and a dark spring: a throbbing, uneasy clean | The album's creepy cleans |
+  | **G13 Spiral Jam Echo** | A wide chorus into a long, repeating tape echo and a big hall, for drawn-out endings | "Daddy" (its improvised last two minutes) |
+  | **G14 Pipe Drone Octave** | An octave below your note, doubled wide and sustained, for droning chords | "Shoots and Ladders" (playing along with bagpipes) |
+  | **G15 Funk Phase Riff** | A funky riff through a vintage phaser, a touch of grit | The box of '70s pedals at the studio, and the band's funk grooves ("Need To") |
+
+  - **What's documented, mostly from Munky's own track-by-track (MusicRadar, 2015):**
+    - the "Blind" chord through a Silvertone amp built into its case;
+    - no Whammy pedal until *Follow the Leader*: the noises are feedback or very high notes;
+    - "Ball Tongue"'s bar-behind, left-to-right answering noise;
+    - the super-clean muted section of "Faget";
+    - the flipped-tape swells on "Fake";
+    - Head's high note on "Lies";
+    - the drum-machine origin of "Helmet in the Bush";
+    - the Alice in Chains influence on "Predictable";
+    - the bagpipes on "Shoots and Ladders";
+    - the improvised end of "Daddy".
+  - **Also documented:**
+    - Munky's chorus pedal, which he says has been on his board since the first album;
+    - Head's flanger (gear lists);
+    - the studio's box of '70s pedals.
+  - **The settings are ours,** and **I couldn't listen to the album or the rigs here.** Least sure:
+    - **G07:** whether "Clown"'s horn idea was on guitar at all;
+    - **G12 and G15:** they follow the album's general feel rather than one part;
+    - **G14:** a drone to play with, not a copy of anything on the record.
+
+    Tell me which rigs are off and how.
+  - **Set TUNING in PITCH** if you're on a six-string: the album is a seven-string tuned down a whole step (low A).
+  - **G06 swells from the heel** (the pedal is a volume pedal).
+  - **G03's echo** follows the tempo, tapped or the DAW's: a bar at the song's tempo.
+- **The PRESETS page has a Bank G button.** **The bank list is now full:** the next album bank needs it laid out in two columns.
+- **The album-bank test now checks every album bank the same way:**
+  - ambient tails;
+  - dry rigs;
+  - that the effects change the sound;
+  - the octave rigs (above or below);
+  - balance;
+  - song-title words in rig names.
+
+  For bank G it also checks that "Bar-Behind Bend Echo" answers a bar later, on one side, at nearly the note's level, with nothing in between.
+
 ## 0.62.0
 
 - **A new bank of 15 factory rigs, bank F, inspired by the guitar sounds on Spiritbox's *Eternal Blue*** (2021), the first album bank for PR7-G. As you asked, it's all **cleans, effects and leads**: the heavy rhythm tone is your amp capture's job, and like every factory rig these keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
