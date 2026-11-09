@@ -70,6 +70,7 @@ namespace
     constexpr float glitchEighth = 5;    // GLITCH's LENGTH: 1/8
     constexpr int L = 11;                // bank L: an album's guitar sounds (Rage Against the Machine, Evil Empire)
     constexpr float xpUpTwoOctaves = 13, xpUpSecond = 14, xpDownTwoOctaves = 18;   // QUASAR programs 14, 15 and 19
+    constexpr int M = 12;                // bank M: an album's guitar sounds (Cold, 13 Ways to Bleed on Stage)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1270,6 +1271,124 @@ std::vector<Rig> makeFactoryRigs()
         // Your guitar as if through a talk-radio broadcast, with static.
         make ("Radio Static Riff", L, 15, "Album,FX,Lo-Fi", {
             { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 7 }, { lofiNoise, 5 }, { lofiMix, 1 } }),
+
+        //======================================================================
+        // Bank M: an album's guitar sounds, inspired by Cold's 13 Ways to
+        // Bleed on Stage (2000; the owner's eighth album bank). Cleans,
+        // effects and leads: the drop-tuned rhythm is the amp capture's job.
+        // Documented (credits, reviews): Kelly Hayes on guitar with Terry
+        // Balsamo brought in for this album, Scooter Ward giving up guitar
+        // for vocals, keyboards and piano; Chris Vrenna among those credited;
+        // reviewers hear it as cleaner-sounding than the debut. Little is
+        // published about the guitar sounds, so this bank is mostly our
+        // reading.
+
+        // A haunted clean arpeggio: a slow, wide chorus, an eighth echo and
+        // a dark plate.
+        make ("Haunted Arpeggio Clean", M, 1, "Album,Clean,Modulation", {
+            { rigLevel, 4 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.4f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.55f }, { reverbTone, 4 }, { reverbMix, 0.22f } }),
+
+        // A dark, lush chorus clean for a verse, and a hall.
+        make ("Dark Chorus Clean", M, 2, "Album,Clean,Modulation", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbTone, 4 }, { reverbMix, 0.25f } }),
+
+        // A sparse, dry verse clean: firm and close, nothing after the note.
+        make ("Sparse Verse Clean", M, 3, "Album,Clean,Dry", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 5 }, { compDetail, 5 }, { compMix, 1 },
+            { eqOn, 1 }, { "eq63", -3 }, { "eq4k", 1 } }),
+
+        // A doomy lead: boosted, a slow phaser and a dark echo.
+        make ("Doom Phase Lead", M, 4, "Album,Lead,Modulation", {
+            { rigLevel, -4 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 5 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.25f }, { modDepth, 0.6f },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.3f }, { delayMix, 0.18f }, { delayTone, 4 } }),
+
+        // A whispered, trembling clean: a slow, soft tremolo and a plate.
+        make ("Whisper Tremolo Clean", M, 5, "Album,Clean,Modulation", {
+            { rigLevel, 4 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, tremolo }, { modSync, eighth }, { modDepth, 0.5f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.22f } }),
+
+        // A warped, tape-worn clean: through a wobbling cassette, a room.
+        make ("Warped Tape Clean", M, 6, "Album,Clean,Lo-Fi", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 5 }, { lofiNoise, 2 }, { lofiMix, 0.7f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // A spinning, circus-organ clean: an octave above your note through
+        // a fast rotating speaker.
+        make ("Spinning Calliope Clean", M, 7, "Album,Clean,Pitch,Octave", {
+            { rigLevel, 1 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.6f },
+            { modOn, 1 }, { modType, rotary }, { modCycFast, 1 }, { modCycLow, 4 }, { modCycHigh, 4 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbMix, 0.18f } }),
+
+        // A drowsy haze: a slow chorus and a reverse reverb that swells in
+        // behind each note.
+        make ("Narcotic Haze", M, 8, "Album,Clean,Ambient", {
+            { rigLevel, 6 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.3f }, { modDepth, 0.6f }, { modMix, 0.4f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.6f }, { reverbMix, 0.45f } }),
+
+        // A bitter, singing lead: boosted, a dotted-eighth echo, a plate.
+        make ("Bitter Lead", M, 9, "Album,Lead,Delay", {
+            { rigLevel, -7 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+
+        // A hexed riff: a deep, resonant flange over your amp.
+        make ("Hex Flange Riff", M, 10, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.35f }, { modDepth, 0.8f }, { modManual, 5 }, { modRes, 8 } }),
+
+        // Industrial grit: stutters on the song's grid and a bitcrushed edge,
+        // as programming might cut up a guitar.
+        make ("Industrial Grit Chop", M, 11, "Album,FX,Glitch,Lo-Fi", {
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 3 }, { glitchMix, 1 },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 7 }, { lofiNoise, 1 }, { lofiMix, 0.5f } }),
+
+        // A spacey pad: a rising shimmer and a long tape echo in a big space.
+        make ("Space Echo Pad", M, 12, "Album,FX,Ambient,Delay", {
+            { rigLevel, -3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.6f }, { delayMix, 0.35f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // Wounded swells: the pedal is a volume pedal (swell from the heel),
+        // into a tape echo and a big hall.
+        make ("Wounded Swell", M, 13, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 2 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // A bell-like clean to sit with piano: an octave above, bright and
+        // even, a plate.
+        make ("Bell Tone Clean", M, 14, "Album,Clean,Pitch,Octave", {
+            { rigLevel, 3 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.5f },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 4 }, { compLevel, 2 },
+            { eqOn, 1 }, { "eq4k", 2 }, { "eq8k", 2 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.22f } }),
+
+        // Your part as two guitars, one each side.
+        make ("Twin Guitar Spread", M, 15, "Album,FX,Modulation", {
+            { rigLevel, -3 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
     };
 }
 

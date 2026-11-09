@@ -863,3 +863,10 @@ TEST_CASE ("Bank L, a seventh album's guitar sounds: effects and leads that do w
         }
     }
 }
+
+TEST_CASE ("Bank M, an eighth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (12, { "Just", "Got", "Wicked", "She", "Said", "No", "One", "End", "Of", "The", "World", "Confession",
+                          "It's", "All", "Good", "Send", "In", "Clowns", "Same", "Drug", "Anti", "Love", "Song", "Witch",
+                          "Sick", "Man", "Outerspace", "Bleed" });
+}

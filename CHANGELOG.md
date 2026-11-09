@@ -2,6 +2,39 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.69.0
+
+- **An eighth album bank, bank M: 15 rigs inspired by the guitar sounds on Cold's *13 Ways to Bleed on Stage*** (2000). **Cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **M01 Haunted Arpeggio Clean** | A haunted clean arpeggio: a slow wide chorus, an eighth echo, a dark plate | "Just Got Wicked" |
+  | **M02 Dark Chorus Clean** | A dark, lush dual-chorus clean, a hall | "She Said" |
+  | **M03 Sparse Verse Clean** | A sparse, dry verse clean, firm and close | "No One" |
+  | **M04 Doom Phase Lead** | A doomy lead: boosted, a slow phaser, a dark echo | "End of the World" |
+  | **M05 Whisper Tremolo Clean** | A soft, trembling clean, a plate | "Confession" |
+  | **M06 Warped Tape Clean** | A tape-worn clean through a wobbling cassette | "It's All Good" |
+  | **M07 Spinning Calliope Clean** | An octave above your note through a fast rotating speaker, like a circus organ | "Send in the Clowns" |
+  | **M08 Narcotic Haze** | A drowsy haze: a slow chorus, a reverse reverb swelling in behind each note | "Same Drug" |
+  | **M09 Bitter Lead** | A bitter, singing lead: boosted, a dotted-eighth echo, a plate | "Anti-Love Song" |
+  | **M10 Hex Flange Riff** | A deep, resonant flange over your amp | "Witch" |
+  | **M11 Industrial Grit Chop** | Stutters on the song's grid with a bitcrushed edge, as programming might cut up a guitar | The album's programmed, industrial touches ("Sick of Man") |
+  | **M12 Space Echo Pad** | A rising shimmer and a long echo in a big space | "Outerspace" |
+  | **M13 Wounded Swell** | Volume swells (the pedal) into a tape echo and a big hall | "Bleed" |
+  | **M14 Bell Tone Clean** | A bell-like clean to sit with piano: an octave above, bright and even, a plate | Scooter Ward's piano and keys |
+  | **M15 Twin Guitar Spread** | Your part as two guitars, one each side | Kelly Hayes and Terry Balsamo's two guitars |
+
+  - **What's documented (credits and reviews):**
+    - Kelly Hayes on guitar, with Terry Balsamo brought in for this album;
+    - Scooter Ward gave up guitar to concentrate on vocals, keyboards and piano;
+    - Chris Vrenna is among those credited (producer credits differ between sources);
+    - reviewers hear it as cleaner-sounding than the band's debut.
+  - **Almost everything else is our reading,** as much as any bank so far: I found nothing published on the album's guitar effects, so every song link is my guess at where each sound fits. **I couldn't listen to the album or the rigs here.** Tell me which are off and how, or which songs have the parts you're after.
+  - **M13 swells from the heel.**
+  - **M11 follows the tempo,** tapped or the DAW's.
+- **The PRESETS page's bank list** has room for one more row (banks N and O); after that it needs another change of layout.
+- **Tests:** bank M goes through the shared album-bank checks.
+
 ## 0.68.0
 
 - **Fixed: shifting two octaves up wasn't clean.** At or near two octaves up, the pitch shifter could leave your original note leaking through at about -21 dB, with the shifted note weak. It only happened there; an octave and smaller were always fine.
