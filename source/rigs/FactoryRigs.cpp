@@ -65,6 +65,7 @@ namespace
     constexpr float xpEnvFilter = 7;     // QUASAR program 08: Env Filter Sens
     constexpr int I = 8;                 // bank I: an album's guitar sounds (Periphery, Periphery III: Select Difficulty)
     constexpr float xpDiveBomb = 19;     // QUASAR program 20: Down 6 Octaves, a dive bomb
+    constexpr int J = 9;                 // bank J: an album's guitar sounds (Sevendust, Next)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -923,6 +924,128 @@ std::vector<Rig> makeFactoryRigs()
             { eqOn, 1 }, { "eq125", -2 }, { "eq2k", 1 }, { "eq8k", 3 }, { "eq16k", 2 },
             { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.25f }, { modMix, 0.25f }, { modStereo, 1 },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.35f }, { reverbMix, 0.15f } }),
+
+        //======================================================================
+        // Bank J: an album's guitar sounds, inspired by Sevendust's Next
+        // (2005; the owner's fifth album bank, and PR7-V's bank Q). Cleans,
+        // effects and leads: the drop-tuned rhythm is the amp capture's job.
+        // Documented: John Connolly on lead (and producing) and Sonny Mayo
+        // on rhythm, the first album after Clint Lowery left; drop tunings;
+        // reviewers note electronic effects on "Never". Little more is
+        // published about the guitars, so this bank is mostly our reading.
+        // J04 answers, on guitar, the delayed scream on "Silence" the owner
+        // asked PR7-V to nail.
+
+        // A soaring lead: boosted into your amp, a dotted-eighth echo that
+        // ducks under the notes, a hall.
+        make ("Champion Lead", J, 1, "Album,Lead,Delay", {
+            { rigLevel, -7 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+
+        // Clean arpeggios: compressed, a gentle chorus, an eighth echo, a plate.
+        make ("Fragment Arpeggio Clean", J, 2, "Album,Clean,Delay", {
+            { rigLevel, 6 },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 4 }, { compLevel, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.35f }, { modMix, 0.3f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A wave of broken noise for accents: your riff breaking up, pieces
+        // dropping out or caught in short loops, over your heavy amp.
+        make ("Scar Noise Accent", J, 3, "Album,FX,Glitch", {
+            { rigLevel, -2 },
+            { glitchOn, 1 }, { glitchMode, glitchInterfere }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 6 }, { glitchChaos, 5 }, { glitchMix, 1 } }),
+
+        // A note thrown into echoes that keep going after it stops: a big
+        // quarter-note throw, ducked while you play, thinned and roughened.
+        make ("Echo Throw Accent", J, 4, "Album,FX,Ambient,Delay", {
+            { rigLevel, -4 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveLevel, 3 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.5f },
+            { delayTone, 5 }, { delayDuck, 0.3f } }),
+
+        // A soft, close verse clean: a faint chorus and a plate.
+        make ("Hushed Verse Clean", J, 5, "Album,Clean", {
+            { rigLevel, 5 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.4f }, { modDepth, 0.25f }, { modMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.45f }, { reverbMix, 0.2f } }),
+
+        // Lonely swells: the expression pedal is a volume pedal (swell up from
+        // the heel), into a tape echo and a big hall.
+        make ("Abandoned Swell", J, 6, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 2 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // An electronic edge: a cloud of grains through a radio band.
+        make ("Wired Texture", J, 7, "Album,FX,Glitch", {
+            { rigLevel, 7 },
+            { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 6 }, { glitchChaos, 3 }, { glitchMix, 0.5f },
+            { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 5 }, { lofiNoise, 2 }, { lofiMix, 0.6f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // A dark, phased clean: a slow phaser and a dark room.
+        make ("Crimson Phaser Clean", J, 8, "Album,Clean,Modulation", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.3f }, { modDepth, 0.6f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbTone, 4 }, { reverbMix, 0.2f } }),
+
+        // A lead with an octave above it, boosted into your amp.
+        make ("Fallen Octave Lead", J, 9, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -8 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.55f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+
+        // A big chorus clean: a wide dual chorus, a quarter echo and a hall.
+        make ("Faith Chorus Clean", J, 10, "Album,Clean,Modulation", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modDepth, 0.7f }, { modMix, 0.5f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, quarter }, { delayFeedback, 0.3f }, { delayMix, 0.18f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.28f } }),
+
+        // A singing lead, soulful and warm: boosted, a slap and a plate.
+        make ("Living Soul Lead", J, 11, "Album,Lead", {
+            { rigLevel, -10 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, syncOff }, { delayTime, 140 }, { delayFeedback, 0.2f }, { delayMix, 0.18f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.55f }, { reverbMix, 0.2f } }),
+
+        // A soft farewell clean: a slow tape echo and a long hall.
+        make ("Farewell Clean", J, 12, "Album,Clean,Ambient", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.35f } }),
+
+        // Twin guitars in harmony: a fifth above every note, mixed in under
+        // your line, boosted into your amp.
+        make ("Fifth Harmony Lead", J, 13, "Album,Lead,Pitch", {
+            { rigLevel, -6 },
+            { fpOn, 1 }, { fpType, pitchShifter }, { fpInterval, 7 }, { fpMix, 0.4f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+
+        // Your part as two guitars, one each side.
+        make ("Wall Takes Spread", J, 14, "Album,FX,Modulation", {
+            { rigLevel, -3 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
+
+        // A soulful wah lead: the expression pedal is a wah, boosted, a plate.
+        make ("Soul Wah Lead", J, 15, "Album,Lead,Wah,Expression", {
+            { rigLevel, -5 },
+            { expressionTarget, pedalWah },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 4 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
     };
 }
 
