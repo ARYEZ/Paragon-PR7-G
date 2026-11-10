@@ -944,3 +944,193 @@ TEST_CASE ("CIPHER stage 3: the sequencer and ENVELOPE 2 are saved in rigs and p
     processor.loadRig ({ plain, {}, false });
     CHECK (processor.getCipherSequenceRow (2) == 0u);
 }
+
+//==============================================================================
+// Stage 4: the spectral effects.
+namespace
+{
+    Cipher::Settings fftSlot (Cipher::Type type, float main, float p1 = 0.5f, float p2 = 0.5f, int sizeIndex = 2)
+    {
+        return oneSlot (type, main, p1, p2, Cipher::optionFor (type, sizeIndex));
+    }
+
+    // Two sines at once (for the effects that pick between loud and quiet frequencies).
+    juce::AudioBuffer<float> runTwo (const Cipher::Settings& s, double hzA, float levelA, double hzB, float levelB, double seconds)
+    {
+        Cipher cipher;
+        cipher.prepare (sampleRate, blockSize);
+        const auto length = (int) (seconds * sampleRate);
+        juce::AudioBuffer<float> out (2, length);
+        for (int i = 0; i < length; ++i)
+        {
+            const auto v = levelA * (float) std::sin (juce::MathConstants<double>::twoPi * hzA * i / sampleRate)
+                         + levelB * (float) std::sin (juce::MathConstants<double>::twoPi * hzB * i / sampleRate);
+            out.setSample (0, i, v);
+            out.setSample (1, i, v);
+        }
+        for (int start = 0; start < length; start += blockSize)
+        {
+            juce::dsp::AudioBlock<float> block (out.getArrayOfWritePointers(), 2, (size_t) start, (size_t) juce::jmin (blockSize, length - start));
+            cipher.process (block, s);
+        }
+        return out;
+    }
+}
+
+TEST_CASE ("CIPHER stage 4: a spectral slot delays the sound by its FFT SIZE, reports it, and passes a full band at unity", "[effects][cipher]")
+{
+    // FFT Bandpass, 8 octaves wide around 600 Hz: a 600 Hz tone comes out at its level.
+    CHECK_THAT (gainAt (fftSlot (Cipher::Type::fftBandpass, at (600.0f), 1.0f), 600.0), WithinAbs (0.0, 0.3));
+    // A click comes out exactly one frame (2048 samples) later, and the engine reports it.
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    const auto s = fftSlot (Cipher::Type::fftBandpass, at (600.0f), 1.0f);
+    juce::AudioBuffer<float> out (2, 8192);
+    out.clear();
+    out.setSample (0, 3000, 1.0f);   // after CIPHER's 20 ms fade in from off
+    out.setSample (1, 3000, 1.0f);
+    for (int start = 0; start < 8192; start += blockSize)
+    {
+        juce::dsp::AudioBlock<float> block (out.getArrayOfWritePointers(), 2, (size_t) start, (size_t) blockSize);
+        cipher.process (block, s);
+    }
+    int peakAt = 0;
+    for (int i = 0; i < 8192; ++i)
+        if (std::abs (out.getSample (0, i)) > std::abs (out.getSample (0, peakAt)))
+            peakAt = i;
+    CHECK (peakAt == 3000 + 2048);
+    CHECK (cipher.getLatencySamples() == 2048);
+    // Two spectral slots add up; the smallest size is 512.
+    auto two = s;
+    two.slots[1] = s.slots[0];
+    two.slots[1].option = Cipher::optionFor (Cipher::Type::fftBandpass, 0);
+    Cipher both;
+    both.prepare (sampleRate, blockSize);
+    run (both, two, 600.0, 0.05);
+    CHECK (both.getLatencySamples() == 2048 + 512);
+
+    // MIX at half way: the dry sound is delayed to match, so nothing cancels (a 0 dB law sums both at full level).
+    auto half = s;
+    half.slots[0].mix = 0.5f;
+    CHECK_THAT (gainAt (half, 600.0), WithinAbs (0.0, 0.3));
+    auto master = s;
+    master.master.mix = 0.5f;
+    master.master.mixLaw = 0;   // -6 dB law: wet and dry at half, in time, add back to the whole
+    CHECK_THAT (gainAt (master, 600.0), WithinAbs (0.0, 0.3));
+
+    // The plugin tells the host: the amp's latency plus CIPHER's.
+    ParagonX1AudioProcessor processor;
+    processor.prepareToPlay (sampleRate, blockSize);
+    auto& state = processor.getParameters();
+    const auto set = [&state] (const juce::String& id, float value)
+    {
+        auto* p = state.getParameter (id);
+        p->setValueNotifyingHost (p->convertTo0to1 (value));
+    };
+    set (ParamIDs::cipherOn, 1.0f);
+    set (ParamIDs::cipherSlot (1, "Type"), (float) Cipher::Type::fftSmear);
+    juce::AudioBuffer<float> buffer (2, blockSize);
+    juce::MidiBuffer midi;
+    buffer.clear();
+    processor.processBlock (buffer, midi);
+    CHECK (processor.getCipher().getLatencySamples() == 2048);
+    for (int i = 0; i < 20 && processor.getLatencySamples() != 2048; ++i)
+    {
+        juce::Thread::sleep (30);
+        juce::Timer::callPendingTimersSynchronously();   // the processor's timer reports it
+    }
+    CHECK (processor.getLatencySamples() == 2048);
+}
+
+TEST_CASE ("CIPHER stage 4: Shift, Rotate, Mirror, Twist and Bandpass move or pick frequencies", "[effects][cipher]")
+{
+    // Shift +200 Hz: 1 kHz comes out at 1.2 kHz.
+    const auto translate = 0.5f + std::sqrt (200.0f / 2000.0f) * 0.5f;
+    auto out = runTone (fftSlot (Cipher::Type::fftShift, translate), 1000.0, 1.0);
+    CHECK (bandLevel (out, 0, 1200.0, 0.4, 1.0) > 8.0f * bandLevel (out, 0, 1000.0, 0.4, 1.0));
+    // SCALE x2: 500 Hz to 1 kHz.
+    out = runTone (fftSlot (Cipher::Type::fftShift, 0.5f, 0.75f), 500.0, 1.0);
+    CHECK (bandLevel (out, 0, 1000.0, 0.4, 1.0) > 8.0f * bandLevel (out, 0, 500.0, 0.4, 1.0));
+
+    // Mirror around 1 kHz (2 octaves): 800 Hz comes out at 1.25 kHz.
+    out = runTone (fftSlot (Cipher::Type::fftMirror, at (1000.0f), (2.0f - 0.1f) / 5.9f), 800.0, 1.0);
+    CHECK (bandLevel (out, 0, 1250.0, 0.4, 1.0) > 8.0f * bandLevel (out, 0, 800.0, 0.4, 1.0));
+
+    // Rotate: a tone moves up by the shift (a quarter of the spectrum, 6 kHz here).
+    out = runTone (fftSlot (Cipher::Type::fftRotate, 0.75f), 1000.0, 1.0);
+    CHECK (bandLevel (out, 0, 7000.0, 0.4, 1.0) > 8.0f * bandLevel (out, 0, 1000.0, 0.4, 1.0));
+
+    // Twist half way round a 2-octave band around 1 kHz: 600 Hz (inside it) moves; 5 kHz (outside) doesn't.
+    out = runTone (fftSlot (Cipher::Type::fftTwist, at (1000.0f), 0.5f, (2.0f - 0.1f) / 5.9f), 600.0, 1.0);
+    CHECK (bandLevel (out, 0, 600.0, 0.4, 1.0) < 0.2f * 0.25f);
+    CHECK_THAT (gainAt (fftSlot (Cipher::Type::fftTwist, at (1000.0f), 0.5f, (2.0f - 0.1f) / 5.9f), 5000.0), WithinAbs (0.0, 0.5));
+
+    // Bandpass, 1 octave around 1 kHz: brick-wall steep.
+    const auto narrow = fftSlot (Cipher::Type::fftBandpass, at (1000.0f), (1.0f - 0.1f) / 7.9f);
+    CHECK_THAT (gainAt (narrow, 1000.0), WithinAbs (0.0, 0.5));
+    CHECK (gainAt (narrow, 300.0) < -40.0f);
+    CHECK (gainAt (narrow, 3000.0) < -40.0f);
+}
+
+TEST_CASE ("CIPHER stage 4: Smear, Reverb, Scatter and Cascade keep sound going after it stops", "[effects][cipher]")
+{
+    // A note for half a second, then silence: these ring on; Bandpass stops.
+    const auto tail = [] (Cipher::Type type, float main, float p1 = 0.5f, float p2 = 0.5f)
+    {
+        Cipher cipher;
+        cipher.prepare (sampleRate, blockSize);
+        const auto s = fftSlot (type, main, p1, p2);
+        const auto note = run (cipher, s, 700.0, 0.5);
+        const auto after = run (cipher, s, 700.0, 1.0, 0.0f);
+        return dB (rms (after, 0, 0.3, 0.6) / juce::jmax (1.0e-9f, rms (note, 0, 0.2, 0.5)));
+    };
+    CHECK (tail (Cipher::Type::fftBandpass, at (700.0f), 1.0f) < -80.0f);
+    CHECK (tail (Cipher::Type::fftSmear, 0.8f, 0.0f) > -30.0f);
+    CHECK (tail (Cipher::Type::fftReverb, 0.6f) > -30.0f);
+    CHECK (tail (Cipher::Type::fftScatter, 0.6f, 0.6f, 0.0f) > -40.0f);
+    CHECK (tail (Cipher::Type::fftCascade, 0.6f, 0.6f, 0.2f) > -40.0f);
+    // A longer reverb TIME rings longer.
+    CHECK (tail (Cipher::Type::fftReverb, 0.7f) > tail (Cipher::Type::fftReverb, 0.2f) + 15.0f);
+}
+
+TEST_CASE ("CIPHER stage 4: Stretch keeps the pitch; Compress, Corrupt, Lofi and Spread reshape the spectrum", "[effects][cipher]")
+{
+    // Stretch at 30%: a 440 Hz note stays at 440.
+    const auto stretched = runTone (fftSlot (Cipher::Type::fftStretch, 0.3f, 0.0f, 0.0f), 440.0, 1.0);
+    CHECK (bandLevel (stretched, 0, 440.0, 0.4, 1.0) > 0.5f * 0.25f);
+
+    // A loud 500 Hz and a quiet 2 kHz (26 dB apart).
+    const auto ratio = [] (const juce::AudioBuffer<float>& out) { return dB (toneLevel (out, 0, 2000.0, 0.5, 1.0) / toneLevel (out, 0, 500.0, 0.5, 1.0)); };
+    const auto plain = ratio (runTwo (oneSlot (Cipher::Type::off), 500.0, 0.4f, 2000.0, 0.02f, 1.0));
+    CAPTURE (plain);
+    // Compress pulls them together (towards white at TONE right).
+    CHECK (ratio (runTwo (fftSlot (Cipher::Type::fftCompress, 0.8f, 1.0f), 500.0, 0.4f, 2000.0, 0.02f, 1.0)) > plain + 10.0f);
+    // Corrupt left takes out the quiet one; a little right of centre, the loud one.
+    CHECK (ratio (runTwo (fftSlot (Cipher::Type::fftCorrupt, 0.1f, 0.0f), 500.0, 0.4f, 2000.0, 0.02f, 1.0)) < plain - 20.0f);
+    CHECK (ratio (runTwo (fftSlot (Cipher::Type::fftCorrupt, 0.6f, 0.0f), 500.0, 0.4f, 2000.0, 0.02f, 1.0)) > plain + 20.0f);
+    // Lofi at full FACTOR keeps only the loudest frequencies: the quiet one goes.
+    CHECK (ratio (runTwo (fftSlot (Cipher::Type::fftLofi, 1.0f, 0.0f, 0.0f), 500.0, 0.4f, 2000.0, 0.02f, 1.0)) < plain - 20.0f);
+    // Spread: a pure tone's energy reaches its neighbours (200 Hz away).
+    const auto pure = runTone (fftSlot (Cipher::Type::fftSpread, 0.0f), 1000.0, 1.0);
+    const auto spread = runTone (fftSlot (Cipher::Type::fftSpread, 0.6f), 1000.0, 1.0);
+    CHECK (toneLevel (spread, 0, 1200.0, 0.4, 1.0) > 10.0f * toneLevel (pure, 0, 1200.0, 0.4, 1.0));
+}
+
+TEST_CASE ("CIPHER: CPU with ten spectral slots at 4096 (prints the share of a core)", "[.cpu]")
+{
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    Cipher::Settings s;
+    s.on = true;
+    for (int i = 0; i < Cipher::numSlots; ++i)
+    {
+        auto& slot = s.slots[(size_t) i];
+        slot.type = (Cipher::Type) ((int) Cipher::Type::fftShift + i);
+        slot.option = Cipher::optionFor (slot.type, 3);
+        slot.p1 = slot.p2 = 0.5f;
+    }
+    const auto started = juce::Time::getMillisecondCounterHiRes();
+    run (cipher, s, 220.0, 10.0);
+    const auto seconds = (juce::Time::getMillisecondCounterHiRes() - started) / 1000.0;
+    std::printf ("CIPHER, ten spectral slots at 4096: %.1f%% of a core, latency %d samples\n", seconds / 10.0 * 100.0, cipher.getLatencySamples());
+}

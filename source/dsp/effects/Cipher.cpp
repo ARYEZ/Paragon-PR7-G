@@ -234,6 +234,20 @@ namespace effects
             case Type::reverse:    return { "SPEED", "TEMPO", "", false };
             case Type::gate:       return { "THRESHOLD", "HOLD", "RELEASE", false, "HPF" };
             case Type::compress:   return { "COMPRESS", "", "", false, "STEREO", &compModeNames };
+            case Type::fftShift:    return { "SHIFT", "SCALE", "", false, "STEREO", &fftSizeNames };
+            case Type::fftRotate:   return { "SHIFT", "", "", false, "STEREO", &fftSizeNames };
+            case Type::fftTwist:    return { "FREQ", "TWIST", "BANDWIDTH", false, "STEREO", &fftSizeNames };
+            case Type::fftMirror:   return { "FREQ", "BANDWIDTH", "", false, "STEREO", &fftSizeNames };
+            case Type::fftBandpass: return { "FREQUENCY", "BANDWIDTH", "", false, "STEREO", &fftSizeNames };
+            case Type::fftStretch:  return { "SPEED", "TEMPO", "CHAOS", false, "STEREO", &fftSizeNames };
+            case Type::fftScatter:  return { "LENGTH", "FEEDBACK", "RATE", false, "STEREO", &fftSizeNames };
+            case Type::fftCascade:  return { "LENGTH", "FEEDBACK", "CENTRE", false, "STEREO", &fftSizeNames };
+            case Type::fftSmear:    return { "LENGTH", "CHAOS", "", false, "STEREO", &fftSizeNames };
+            case Type::fftReverb:   return { "TIME", "TONE", "", false, "STEREO", &fftSizeNames };
+            case Type::fftCompress: return { "AMOUNT", "TONE", "", false, "STEREO", &fftSizeNames };
+            case Type::fftCorrupt:  return { "AMOUNT", "DECAY", "", false, "STEREO", &fftSizeNames };
+            case Type::fftLofi:     return { "FACTOR", "RANDOMISE", "SLOW", false, "STEREO", &fftSizeNames };
+            case Type::fftSpread:   return { "AMOUNT", "", "", false, "STEREO", &fftSizeNames };
             case Type::off:        break;
         }
         return { "", "", "", false };
@@ -245,13 +259,18 @@ namespace effects
         if (modes == nullptr)
             return 0;
         const auto count = modes->size();
-        return ((option - 3) % count + count) % count;
+        const auto first = isSpectral (type) ? 2 : 0;   // OPTION's default is 2048 for the spectral effects
+        return ((option - 3 + first) % count + count) % count;
     }
 
     int Cipher::optionFor (Type type, int mode) noexcept
     {
         const auto* modes = labelsFor (type).modes;
-        return modes == nullptr ? 3 : (mode + 3) % modes->size();
+        if (modes == nullptr)
+            return 3;
+        const auto count = modes->size();
+        const auto first = isSpectral (type) ? 2 : 0;
+        return ((mode - first + 3) % count + count) % count;
     }
 
     float Cipher::shiftHz (float main01) noexcept
@@ -329,6 +348,32 @@ namespace effects
             return hz (30.0f * std::pow (33.0f, juce::jlimit (0.0f, 1.0f, main01)));
         if (type == Type::gate)
             return juce::String (juce::roundToInt (gateThresholdDb (main01))) + " dB";
+        if (type == Type::fftShift)
+        {
+            const auto x = (main01 - 0.5f) * 2.0f;
+            const auto f = (x < 0.0f ? -1.0f : 1.0f) * x * x * 2000.0f;
+            return (f > 0.0f ? "+" : "") + juce::String (juce::roundToInt (f)) + " Hz";
+        }
+        if (type == Type::fftRotate)
+        {
+            const auto p = juce::roundToInt ((main01 - 0.5f) * 200.0f);
+            return (p > 0 ? "+" : "") + juce::String (p) + "%";
+        }
+        if (type == Type::fftStretch)
+            return juce::String (juce::roundToInt ((0.05f + 0.95f * main01) * 100.0f)) + "%";
+        if (type == Type::fftScatter || type == Type::fftCascade)
+            return ms (main01 * 1500.0f);
+        if (type == Type::fftSmear)
+            return ms (main01 * main01 * 2000.0f);
+        if (type == Type::fftReverb)
+            return juce::String (reverbSeconds (main01), 1) + " s";
+        if (type == Type::fftCorrupt)
+        {
+            const auto a = juce::roundToInt ((main01 - 0.5f) * 200.0f);
+            return a == 0 ? juce::String ("OFF") : a < 0 ? "QUIET " + juce::String (-a) + "%" : "LOUD " + juce::String (a) + "%";
+        }
+        if (type == Type::fftCompress || type == Type::fftLofi || type == Type::fftSpread)
+            return juce::String (juce::roundToInt (main01 * 100.0f)) + "%";
         if (type == Type::off)
             return "-";
         return hz (cutoffHz (main01));
@@ -353,6 +398,16 @@ namespace effects
         }
         if (type == Type::gate)
             return juce::String (juce::roundToInt (p * 500.0f)) + " ms";
+        if (type == Type::fftShift)
+            return "x" + juce::String (std::pow (2.0f, (p - 0.5f) * 4.0f), 2);
+        if (type == Type::fftMirror)
+            return juce::String (0.1f + p * 5.9f, 1) + " oct";
+        if (type == Type::fftBandpass)
+            return juce::String (0.1f + p * 7.9f, 1) + " oct";
+        if (type == Type::fftStretch)
+            return noteNames[noteStep (p, 6)];
+        if (type == Type::fftCompress)
+            return p < 0.5f ? "PINK " + juce::String (juce::roundToInt ((1.0f - p) * 100.0f)) + "%" : "WHITE " + juce::String (juce::roundToInt (p * 100.0f)) + "%";
         return juce::String (juce::roundToInt (p * 100.0f)) + "%";
     }
 
@@ -381,6 +436,15 @@ namespace effects
             const auto t = 5.0f * std::pow (400.0f, p);
             return t < 1000.0f ? juce::String (juce::roundToInt (t)) + " ms" : juce::String (t / 1000.0f, 1) + " s";
         }
+        if (type == Type::fftTwist)
+            return juce::String (0.1f + p * 5.9f, 1) + " oct";
+        if (type == Type::fftCascade)
+        {
+            const auto f = cutoffHz (p);
+            return f < 1000.0f ? juce::String (juce::roundToInt (f)) + " Hz" : juce::String (f / 1000.0f, 1) + " kHz";
+        }
+        if (type == Type::fftLofi)
+            return juce::String (1 + juce::roundToInt (p * 40.0f)) + " FR";
         if (type == Type::delay)
             return p < 0.49f ? "DARK " + juce::String (juce::roundToInt ((0.5f - p) * 200.0f)) + "%"
                  : p > 0.51f ? "BRIGHT " + juce::String (juce::roundToInt ((p - 0.5f) * 200.0f)) + "%" : juce::String ("FLAT");
@@ -790,6 +854,8 @@ namespace effects
             s = std::make_unique<SlotState>();
         for (auto& t : timeStates)
             t = std::make_unique<TimeState>();
+        for (auto& sp : spectral)
+            sp = std::make_unique<CipherSpectral>();
         master = std::make_unique<MasterState>();
         for (int i = 0; i < numEnvelopes; ++i)
         {
@@ -824,6 +890,10 @@ namespace effects
         master->bassWet.setType (juce::dsp::LinkwitzRileyFilterType::highpass);
         for (auto& t : timeStates)
             t->prepare (sampleRate, maxBlockSize);
+        for (auto& sp : spectral)
+            sp->prepare (sampleRate);
+        for (auto& line : dryLine)
+            line.assign ((size_t) (maxLatency + maxBlockSize + 8), 0.0f);
         reset();
     }
 
@@ -847,6 +917,11 @@ namespace effects
         freeBeats = 0.0;
         for (auto& t : timeStates)
             t->reset();
+        for (auto& sp : spectral)
+            sp->reset();
+        for (auto& line : dryLine)
+            std::fill (line.begin(), line.end(), 0.0f);
+        dryWrite = 0;
         for (int c = 0; c < 2; ++c)
             master->toneState[c] = master->dcIn[c] = master->dcOut[c] = 0.0f;
     }
@@ -865,6 +940,15 @@ namespace effects
     //==========================================================================
     void Cipher::process (juce::dsp::AudioBlock<float> block, const Settings& settings)
     {
+        // The spectral slots' delay, added up (each is its FFT SIZE).
+        {
+            auto total = 0;
+            if (settings.on)
+                for (const auto& slot : settings.slots)
+                    if (slot.on && isSpectral (slot.type))
+                        total += CipherSpectral::sizeFor (modeOf (slot.type, slot.option));
+            latency = total;
+        }
         fade.process (block, settings.on, [&] (juce::dsp::AudioBlock<float> wet)
         {
             const auto numSamples = (int) wet.getNumSamples();
@@ -928,6 +1012,25 @@ namespace effects
                         followerLevel += decay * (target - followerLevel);
                 }
                 follower = followerLevel;
+            }
+
+            // MIX and CLEAN BASS take the dry sound delayed as much as the
+            // spectral slots delay the wet, so the two stay lined up.
+            {
+                const auto delayBy = juce::jlimit (0, maxLatency, latency.load());
+                const auto lineSize = (int) dryLine[0].size();
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    auto readAt = dryWrite - delayBy;
+                    if (readAt < 0)
+                        readAt += lineSize;
+                    for (int c = 0; c < numChannels; ++c)
+                    {
+                        dryLine[(size_t) c][(size_t) dryWrite] = dry.getSample (c, i);
+                        dry.setSample (c, i, dryLine[(size_t) c][(size_t) readAt]);
+                    }
+                    dryWrite = dryWrite + 1 < lineSize ? dryWrite + 1 : 0;
+                }
             }
 
             //------------------------------------------------------------------
@@ -1323,7 +1426,9 @@ namespace effects
                     case Type::comb: case Type::phaser: case Type::pitchShift: case Type::freqShift: case Type::ringMod: case Type::fm:
                     case Type::distort: case Type::decimate: case Type::delay: case Type::reverb: case Type::reflect: case Type::vocoder:
                     case Type::loop: case Type::stretch: case Type::varispeed: case Type::slow: case Type::reverse: case Type::gate:
-                    case Type::compress:
+                    case Type::compress: case Type::fftShift: case Type::fftRotate: case Type::fftTwist: case Type::fftMirror: case Type::fftBandpass:
+                    case Type::fftStretch: case Type::fftScatter: case Type::fftCascade: case Type::fftSmear: case Type::fftReverb:
+                    case Type::fftCompress: case Type::fftCorrupt: case Type::fftLofi: case Type::fftSpread:
                         break;
                 }
             }
@@ -1513,7 +1618,9 @@ namespace effects
                         case Type::comb: case Type::phaser: case Type::pitchShift: case Type::freqShift: case Type::ringMod: case Type::fm:
                     case Type::distort: case Type::decimate: case Type::delay: case Type::reverb: case Type::reflect: case Type::vocoder:
                     case Type::loop: case Type::stretch: case Type::varispeed: case Type::slow: case Type::reverse: case Type::gate:
-                    case Type::compress:
+                    case Type::compress: case Type::fftShift: case Type::fftRotate: case Type::fftTwist: case Type::fftMirror: case Type::fftBandpass:
+                    case Type::fftStretch: case Type::fftScatter: case Type::fftCascade: case Type::fftSmear: case Type::fftReverb:
+                    case Type::fftCompress: case Type::fftCorrupt: case Type::fftLofi: case Type::fftSpread:
                             break;
                     }
                     if (! std::isfinite (y))
@@ -2263,6 +2370,35 @@ namespace effects
                     for (int c = 0; c < numChannels; ++c)
                         finish (c, i, chans[c][i], chans[c][i] * t.gateGain);
                 }
+                break;
+            }
+
+            //------------------------------------------------------------------
+            case Type::fftShift: case Type::fftRotate: case Type::fftTwist: case Type::fftMirror: case Type::fftBandpass:
+            case Type::fftStretch: case Type::fftScatter: case Type::fftCascade: case Type::fftSmear: case Type::fftReverb:
+            case Type::fftCompress: case Type::fftCorrupt: case Type::fftLofi: case Type::fftSpread:
+            {
+                // The spectral effects: the slot's own FFT engine; its MIX takes
+                // the dry sound delayed by the frame (FFT SIZE), so they line up.
+                CipherSpectral::Controls controls;
+                controls.effect = (CipherSpectral::Effect) ((int) type - (int) Type::fftShift);
+                controls.size = CipherSpectral::sizeFor (mode);
+                controls.main[0] = mainPerSide[0];
+                controls.main[1] = mainPerSide[1];
+                controls.p1 = p1;
+                controls.p2 = p2;
+                controls.samplesPerBeat = samplesPerBeat;
+                controls.songBeats = settings.songBeats >= 0.0 ? settings.songBeats + (double) start / samplesPerBeat : -1.0;
+                float dryCopy[2][tick];
+                float* dryOut[2] = { dryCopy[0], dryCopy[1] };
+                spectral[(size_t) index]->process (chans, dryOut, numChannels, count, controls);
+                for (int c = 0; c < numChannels; ++c)
+                    for (int i = 0; i < count; ++i)
+                    {
+                        const auto wetSample = chans[c][i];
+                        chans[c][i] = dryCopy[c][i];
+                        finish (c, i, dryCopy[c][i], wetSample);
+                    }
                 break;
             }
 

@@ -759,7 +759,8 @@ void ParagonX1AudioProcessor::timerCallback()
 {
     amp.collectGarbage();
 
-    if (const auto latency = amp.getLatencySamples(); latency != getLatencySamples())
+    // The amp's latency plus CIPHER's spectral slots' (each its FFT SIZE).
+    if (const auto latency = amp.getLatencySamples() + cipher.getLatencySamples(); latency != getLatencySamples())
         setLatencySamples (latency);
 
     syncMidiExpressionToParameter();

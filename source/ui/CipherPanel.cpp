@@ -35,7 +35,9 @@ namespace
         const char* names[] = { "-", "LAD LP", "LAD BP", "LAD HP", "DIG LP", "DIG BP", "DIG HP", "101 LP", "101 BP", "101 HP",
                                 "M20 LP", "M20 BP", "M20 HP", "NOTCH", "DUAL", "FORM", "BELL", "LO SH", "HI SH", "GAIN", "PAN",
                                 "COMB", "PHASER", "PITCH", "FSHIFT", "RING", "FM", "DIST", "DECIM", "DELAY", "VERB", "REFLCT",
-                                "VOCODR", "LOOP", "STRTCH", "VARI", "SLOW", "REV", "GATE", "COMP" };
+                                "VOCODR", "LOOP", "STRTCH", "VARI", "SLOW", "REV", "GATE", "COMP",
+                                "F SHFT", "F ROT", "F TWST", "F MIRR", "F BAND", "F STRT", "F SCAT", "F CASC", "F SMR",
+                                "F VERB", "F COMP", "F CORR", "F LOFI", "F SPRD" };
         return names[juce::jlimit (0, (int) std::size (names) - 1, (int) type)];
     }
 }
@@ -936,7 +938,7 @@ void CipherPanel::resized()
         auto row4 = area.removeFromTop (24);
         area.removeFromTop (6);
         placeChoice (typeList, row2, 40, 150);
-        optionLabel = row2.removeFromLeft (46).toFloat();
+        optionLabel = row2.removeFromLeft (56).toFloat();
         const auto labels = Cipher::labelsFor (shownType());
         const auto keyCount = labels.modes != nullptr ? labels.modes->size() : labels.hasSlope ? 4 : 0;
         for (int i = 0; i < (int) optionKeys.size(); ++i)
@@ -1059,7 +1061,8 @@ void CipherPanel::paint (juce::Graphics& g)
         for (auto* k : { &slotOn, &syncKey, &retrigAudio, &retrigMidi, &randomStart, &envLoop })
             drawKey (*k);
         if (labels.hasSlope || labels.modes != nullptr)
-            stamped (g, labels.modes != nullptr ? "MODE" : "SLOPE", optionLabel, 9.0f, juce::Justification::centredRight);
+            stamped (g, labels.modes == &Cipher::fftSizeNames ? "FFT SIZE" : labels.modes != nullptr ? "MODE" : "SLOPE",
+                     optionLabel, 9.0f, juce::Justification::centredRight);
         stamped (g, "ENV MOD", styleLabel, 9.0f, juce::Justification::centredRight);
         stamped (g, "RETRIG", retrigLabel, 9.0f, juce::Justification::centredLeft);
 

@@ -292,7 +292,7 @@ private:
 
     // BYPASS: the clean input, delayed by our latency so switching bypass
     // never shifts the guitar in time, crossfaded in over 20 ms.
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::None> bypassDelay { 8192 };
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::None> bypassDelay { 65536 };   // room for the amp's latency plus CIPHER's spectral slots (up to 40960)
     juce::AudioBuffer<float> bypassDry;
     juce::AudioBuffer<float> modPreScratch;   // MOD in PRE: the mono guitar on two channels, for the (stereo) block
     juce::SmoothedValue<float> bypassAmount;

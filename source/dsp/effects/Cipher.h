@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EffectUtils.h"
+#include "CipherSpectral.h"
 
 #include <array>
 #include <atomic>
@@ -35,14 +36,23 @@ namespace effects
                           model20Lp, model20Bp, model20Hp, notch, dualFilter, formant, eqBell, eqLowShelf, eqHighShelf, gain, pan,
                           // Stage 2 (0.73.0): the time effects and the Gate and Compress utilities.
                           comb, phaser, pitchShift, freqShift, ringMod, fm, distort, decimate, delay, reverb, reflect, vocoder,
-                          loop, stretch, varispeed, slow, reverse, gate, compress };
+                          loop, stretch, varispeed, slow, reverse, gate, compress,
+                          // Stage 4 (0.75.0): the spectral (FFT) effects.
+                          fftShift, fftRotate, fftTwist, fftMirror, fftBandpass, fftStretch, fftScatter, fftCascade, fftSmear,
+                          fftReverb, fftCompress, fftCorrupt, fftLofi, fftSpread };
         static inline const juce::StringArray typeNames { "Off", "Ladder LP", "Ladder BP", "Ladder HP", "Digital LP", "Digital BP", "Digital HP",
                                                           "101 LP", "101 BP", "101 HP", "Model-20 LP", "Model-20 BP", "Model-20 HP",
                                                           "Notch", "Dual Filter", "Formant", "EQ Bell", "EQ Low Shelf", "EQ High Shelf",
                                                           "Gain", "Pan",
                                                           "Comb", "Phaser", "Pitch Shift", "Freq Shift", "Ring Mod", "FM", "Distort",
                                                           "Decimate", "Delay", "Reverb", "Reflect", "Vocoder", "Loop", "Stretch",
-                                                          "Varispeed", "Slow", "Reverse", "Gate", "Compress" };
+                                                          "Varispeed", "Slow", "Reverse", "Gate", "Compress",
+                                                          "FFT Shift", "FFT Rotate", "FFT Twist", "FFT Mirror", "FFT Bandpass",
+                                                          "FFT Stretch", "FFT Scatter", "FFT Cascade", "FFT Smear", "FFT Reverb",
+                                                          "FFT Compress", "FFT Corrupt", "FFT Lofi", "FFT Spread" };
+        static bool isSpectral (Type t) noexcept { return t >= Type::fftShift; }
+        // The spectral effects' FFT SIZE (on OPTION; 2048 by default).
+        static inline const juce::StringArray fftSizeNames { "512", "1024", "2048", "4096" };
         static bool isTimeEffect (Type t) noexcept { return t >= Type::comb; }
         // OPTION: a filter's steepness (Ladder, Digital and Model-20), or an
         // effect's mode (Pan, Phaser, Distort, Delay, Reverb, Loop, Varispeed,
@@ -203,6 +213,8 @@ namespace effects
         // MIDI (audio thread, before process): note-ons retrigger, and with MIDI on,
         // the held notes' classes (C to A) switch slots 1-10 on.
         void handleMidi (const juce::MidiBuffer&) noexcept;
+        // The delay the spectral effects add, in samples (the slots' FFT sizes added up), for the host.
+        int getLatencySamples() const noexcept { return latency.load(); }
         // For the panel: the step playing, the audio follower's level, whether a slot sounds now.
         int getStep() const noexcept { return step.load(); }
         float getFollower() const noexcept { return follower.load(); }
@@ -245,7 +257,12 @@ namespace effects
         std::array<std::array<std::atomic<float>, tableSize>, numEnvelopes> tables;
         std::array<std::atomic<float>, numSlots> phases, moved;
         std::array<std::atomic<juce::uint32>, numSlots> sequence {};
-        std::atomic<int> step { 0 };
+        std::atomic<int> step { 0 }, latency { 0 };
+        std::array<std::unique_ptr<CipherSpectral>, numSlots> spectral;
+        // The dry sound delayed by the spectral slots' latency, for MIX and CLEAN BASS.
+        static constexpr int maxLatency = 4096 * numSlots;
+        std::array<std::vector<float>, 2> dryLine;
+        int dryWrite = 0;
         std::atomic<float> follower { 0.0f };
         std::array<std::atomic<bool>, numSlots> active {};
         // The block's triggers (sample offsets), the audio trigger's and follower's state, MIDI.

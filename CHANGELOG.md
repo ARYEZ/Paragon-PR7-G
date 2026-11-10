@@ -2,6 +2,43 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.75.0
+
+- **CIPHER stage 4: the 14 spectral effects** (the Infiltrator 2 manual's "Spectral" list). Each slot can now take an **FFT** effect, which turns the sound into its frequencies, changes them, and turns them back:
+  - **FFT Shift:** SHIFT moves every frequency up or down (+-2 kHz); SCALE spreads them out or squeezes them (x0.25 to x4).
+  - **FFT Rotate:** shifts the whole spectrum and wraps it round (what goes off the top comes in at the bottom).
+  - **FFT Twist:** turns the spectrum round inside a band (FREQ, TWIST, BANDWIDTH).
+  - **FFT Mirror:** flips the spectrum inside a band (FREQ, BANDWIDTH): low becomes high.
+  - **FFT Bandpass:** a brick-wall band (FREQUENCY, BANDWIDTH 0.1 to 8 octaves); outside it, more than 40 dB down.
+  - **FFT Stretch:** slows the sound without changing its pitch (SPEED, TEMPO, CHAOS).
+  - **FFT Scatter:** delays each frequency by its own random amount (LENGTH up to 1.5 s, FEEDBACK, RATE).
+  - **FFT Cascade:** delays frequencies by how far they are from CENTRE, so the sound slides up or down (LENGTH, FEEDBACK).
+  - **FFT Smear:** holds each frequency and lets it fade (LENGTH up to 2 s; CHAOS for a diffuse wash).
+  - **FFT Reverb:** each frequency rings on (TIME 0.2 to 20 s; TONE: the highs die faster or ring longer).
+  - **FFT Compress:** pushes every frequency towards one level, like a compressor with hundreds of bands (AMOUNT; TONE from pink to white).
+  - **FFT Corrupt:** left of centre takes out the quietest frequencies, right the loudest; nothing at the centre (DECAY: low is glitchy).
+  - **FFT Lofi:** the sound of a low-bitrate file: FACTOR keeps fewer and fewer frequencies (half way, a quarter; all the way, just the loudest), RANDOMISE picks some at random, SLOW holds the choice.
+  - **FFT Spread:** smears each frequency over its neighbours (AMOUNT).
+- **FFT SIZE (the mode keys): 512, 1024, 2048 or 4096.** Bigger sounds smoother but reacts more slowly. 2048 to start with.
+- **Latency:**
+  - **Each spectral slot delays the sound by its FFT size:** 2048 is about 43 ms at 48 kHz, and two spectral slots add up.
+  - **PR7-G tells your DAW,** which lines everything up when it plays back. Latency changes when you add or remove a spectral slot, which some DAWs answer with a short gap (the original warns about the same).
+  - **Playing live through it, you'll feel the delay.** Use 512 or 1024 there.
+  - **Lined up inside CIPHER:** the dry sound for MIX, a slot's MIX and CLEAN BASS is delayed to match, so mixing never makes the sound hollow.
+  - **No spectral slot, no delay.**
+- **What's ours:** every spectral effect's workings, ranges and curves are our design, built to do what the manual says (it describes the effects in a line or two each). Specifically:
+  - frequencies are tracked between frames so moved or held notes stay smooth;
+  - Corrupt judges quiet and loud against the loudest frequency, over 60 dB;
+  - the delayed effects remember 1.5 s.
+- **CPU:** one spectral slot is a few percent of a core; ten at 4096 together about a quarter of one here.
+- **I couldn't hear any of it here.** Tell me what sounds wrong and how.
+- **Tests:**
+  - **delay:** a click comes out exactly one frame later; the latency is reported (and added up for two slots); MIX with the delayed dry sound loses nothing;
+  - **moving frequencies:** Shift (1 kHz to 1.2 kHz, SCALE x2), Mirror (800 Hz to 1.25 kHz), Rotate, Twist (inside the band only), Bandpass's brick wall;
+  - **ringing on:** Smear, Reverb (longer with TIME), Scatter and Cascade continue after the note stops; Bandpass doesn't;
+  - **the rest:** Stretch keeps the pitch; Compress pulls a loud and a quiet note together; Corrupt removes the quiet one or the loud one; Lofi drops the quiet one; Spread reaches the neighbouring frequencies.
+- **Still to come, stage 5:** macros and factory rigs.
+
 ## 0.74.0
 
 - **This release also carries 0.73.0 (CIPHER stage 2), which was never published:** GitHub's macOS build machine never started, so the release step was skipped. Stage 2 added 19 effects to CIPHER's slots:
