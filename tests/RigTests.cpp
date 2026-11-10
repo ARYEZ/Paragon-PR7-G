@@ -933,3 +933,10 @@ TEST_CASE ("Bank O, CIPHER's rigs: each changes the sound, stays finite, and the
         CHECK (std::abs (levels[n] - median) < 6.0f);
     }
 }
+
+TEST_CASE ("Bank P, a tenth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (15, { "Push", "It", "I'm", "With", "Stupid", "Bled", "For", "Days", "Love", "Dump", "I", "Am", "Otsego", "Undead",
+                          "The", "Trance", "Is", "Motion", "Sweat", "Of", "Bud", "Fix", "Wisconsin", "Death", "Trip", "Stem",
+                          "December", "Static", "X" });
+}

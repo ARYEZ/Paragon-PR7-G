@@ -2,6 +2,42 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.77.0
+
+- **A tenth album bank, bank P: 15 rigs inspired by the guitar sounds on Static-X's *Wisconsin Death Trip*** (1999). **Cleans, effects and leads**: the riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. Several use CIPHER, which suits the album's industrial, machine-like sound. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **P01 Evil Disco Chop** | CIPHER's sequencer chops your riff on the sixteenths (two on, two off) | "Push It" |
+  | **P02 Ring Noise Lead** | A boosted lead, ring-modulated and bitcrushed: industrial noise | "I'm with Stupid" |
+  | **P03 Sixteenth Synth Pulse** | A resonant filter plucked open every sixteenth, like a sequenced synth | "Bled for Days" |
+  | **P04 Robot Riff Voice** | Your riff through CIPHER's vocoder | "I Am" |
+  | **P05 Machine Tremolo Clean** | A hard sixteenth tremolo on a clean, a plate | "Love Dump" |
+  | **P06 Graveyard Drone Swell** | Volume swells (the pedal) into a reverse reverb and a shimmer | "Otsego Undead" |
+  | **P07 Hypno Flange Riff** | A hypnotic flange on the riff | "The Trance Is the Motion" |
+  | **P08 Glitched Riff Sequence** | Your riff cut and re-sequenced on the sixteenths | "Sweat of the Bud" |
+  | **P09 Quasar Squeal Accent** | An octave squeal on the pedal for accents | "Fix" |
+  | **P10 Haunted Radio Clean** | A clean through an old phone line, with static | "Wisconsin Death Trip" (its eerie samples) |
+  | **P11 Spectral Wash Clean** | Every frequency held and fading, into a spectral reverb | "Stem" |
+  | **P12 Frozen Echo Clean** | A cold, clear clean, a dotted-eighth echo and a hall | "December" |
+  | **P13 Pitch Dive Riser** | CIPHER's pitch shifter falling from an octave up to an octave down each bar | The album's samples and noises |
+  | **P14 Fast Phase Riff** | A fast phaser on the riff | The album's industrial textures |
+  | **P15 Synth Octave Lead** | An octave above, boosted, chorused wide, an echo | Koichi Fukuda's leads and programming |
+
+  - **What's documented:**
+    - produced by Ulrich Wild in about eight weeks;
+    - Wayne Static's guitars recorded through his Marshall Valvestate VS100 head (Wild says so in an interview);
+    - Koichi Fukuda on lead guitar and programming;
+    - the band's own term for its sound, "evil disco": heavy riffs locked to samples and machine-like drums.
+  - **The sounds are our reading.** I found nothing published on the album's guitar effects, so every rig and song link is my guess. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **With the pedal:**
+    - **P06** swells from the heel;
+    - **P09** is your note at the heel and the squeal at the toe.
+
+    The pedal starts half way, so rock it to the heel first.
+- **The PRESETS page** has a Bank P button beside Bank O.
+- **Tests:** bank P goes through the shared album-bank checks (names free of song titles, each rig doing what its tags say, levels within 6 dB).
+
 ## 0.76.0
 
 - **CIPHER stage 5, the last: MACROS and a bank of factory rigs.** CIPHER now has everything in the Infiltrator 2 manual we planned in five stages.
