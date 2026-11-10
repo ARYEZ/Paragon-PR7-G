@@ -940,3 +940,10 @@ TEST_CASE ("Bank P, a tenth album's guitar sounds: cleans, effects and leads tha
                           "The", "Trance", "Is", "Motion", "Sweat", "Of", "Bud", "Fix", "Wisconsin", "Death", "Trip", "Stem",
                           "December", "Static", "X" });
 }
+
+TEST_CASE ("Bank Q, an eleventh album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (16, { "Chokehold", "The", "Summoning", "Granite", "Aqua", "Regia", "Vore", "Ascensionism", "Are", "You",
+                          "Really", "Okay?", "Okay", "Apparition", "DYWTYLM", "Rain", "Take", "Me", "Back", "To", "Eden", "Euclid",
+                          "Sleep", "Token" });
+}
