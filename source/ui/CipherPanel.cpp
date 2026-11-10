@@ -33,7 +33,9 @@ namespace
     juce::String shortName (Cipher::Type type)
     {
         const char* names[] = { "-", "LAD LP", "LAD BP", "LAD HP", "DIG LP", "DIG BP", "DIG HP", "101 LP", "101 BP", "101 HP",
-                                "M20 LP", "M20 BP", "M20 HP", "NOTCH", "DUAL", "FORM", "BELL", "LO SH", "HI SH", "GAIN", "PAN" };
+                                "M20 LP", "M20 BP", "M20 HP", "NOTCH", "DUAL", "FORM", "BELL", "LO SH", "HI SH", "GAIN", "PAN",
+                                "COMB", "PHASER", "PITCH", "FSHIFT", "RING", "FM", "DIST", "DECIM", "DELAY", "VERB", "REFLCT",
+                                "VOCODR", "LOOP", "STRTCH", "VARI", "SLOW", "REV", "GATE", "COMP" };
         return names[juce::jlimit (0, (int) std::size (names) - 1, (int) type)];
     }
 }
@@ -93,7 +95,7 @@ public:
         const auto moved = owner.processor.getCipher().getMovedMain (slot);
         const auto labels = Cipher::labelsFor (type);
         if (type != Cipher::Type::off)
-            g.drawText (juce::String (labels.main) + " " + Cipher::mainText (type, moved), title, juce::Justification::centredRight, false);
+            g.drawText (juce::String (labels.main) + " " + Cipher::mainText (type, moved, juce::roundToInt (owner.raw (owner.slotId ("Option")))), title, juce::Justification::centredRight, false);
 
         // The grid.
         for (int i = 1; i < 16; ++i)
@@ -365,7 +367,11 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
     {
         auto& key = optionKeys[(size_t) i];
         key.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
-        key.onClick = [this, i] { setChoice (slotId ("Option"), i); };
+        key.onClick = [this, i]
+        {
+            const auto type = shownType();
+            setChoice (slotId ("Option"), Cipher::labelsFor (type).modes != nullptr ? Cipher::optionFor (type, i) : i);
+        };
         addAndMakeVisible (key);
     }
     const char* styles[] = { "BOTH", "UP", "DOWN" };
@@ -538,10 +544,12 @@ void CipherPanel::timerCallback()
     for (int i = 0; i < (int) optionKeys.size(); ++i)
     {
         auto& key = optionKeys[(size_t) i];
-        const auto show = ! master && (labels.hasSlope || (labels.isPan && i < 3));
+        const auto modes = labels.modes;
+        const auto show = ! master && (modes != nullptr ? i < modes->size() : (labels.hasSlope && i < 4));
         key.setVisible (show);
-        key.setButtonText (labels.isPan ? Cipher::panModeNames[juce::jmin (i, 2)] : Cipher::slopeNames[i]);
-        key.setToggleState (labels.isPan ? i == (option >= 3 ? 0 : option) : i == option, juce::dontSendNotification);
+        if (show)
+            key.setButtonText (modes != nullptr ? (*modes)[i] : Cipher::slopeNames[i]);
+        key.setToggleState (modes != nullptr ? i == Cipher::modeOf (type, option) : i == option, juce::dontSendNotification);
     }
     for (int i = 0; i < (int) styleKeys.size(); ++i)
         styleKeys[(size_t) i].setToggleState (i == style, juce::dontSendNotification);
@@ -553,6 +561,13 @@ void CipherPanel::timerCallback()
         const auto synced = raw (slotId ("Sync")) > 0.5f;
         rateKnob.slider.setEnabled (! synced);
         speedList.box.setEnabled (synced);
+    }
+
+    // A new type can bring different keys: lay them out again.
+    if ((int) type != laidOutType)
+    {
+        laidOutType = (int) type;
+        resized();
     }
 
     // The editor's playhead moves with the envelope.
@@ -629,13 +644,15 @@ void CipherPanel::resized()
     {
         placeChoice (typeList, row2, 40, 150);
         optionLabel = row2.removeFromLeft (46).toFloat();
-        for (auto& key : optionKeys)
+        const auto labels = Cipher::labelsFor (shownType());
+        const auto keyCount = labels.modes != nullptr ? labels.modes->size() : labels.hasSlope ? 4 : 0;
+        for (int i = 0; i < (int) optionKeys.size(); ++i)
         {
-            key.setBounds (row2.removeFromLeft (Cipher::labelsFor (shownType()).isPan ? 70 : 38));
+            if (i >= keyCount)
+                continue;
+            optionKeys[(size_t) i].setBounds (row2.removeFromLeft (labels.modes != nullptr ? 76 : 38));
             row2.removeFromLeft (4);
         }
-        row2.removeFromLeft (10);
-        placeKey (slotOn, row2, 40);
 
         styleLabel = row3.removeFromLeft (62).toFloat();
         for (auto& key : styleKeys)
@@ -647,6 +664,7 @@ void CipherPanel::resized()
         placeKey (syncKey, row3, 40);
         placeChoice (speedList, row3, 48, 110);
         placeChoice (shapeList, row3, 48, 110);
+        placeKey (slotOn, row3, 40);
 
         layoutRow (area, { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob });
     }
@@ -707,18 +725,18 @@ void CipherPanel::paint (juce::Graphics& g)
         drawChoice (shapeList);
         drawKey (slotOn);
         drawKey (syncKey);
-        if (labels.hasSlope || labels.isPan)
-            stamped (g, labels.isPan ? "MODE" : "SLOPE", optionLabel, 9.0f, juce::Justification::centredRight);
+        if (labels.hasSlope || labels.modes != nullptr)
+            stamped (g, labels.modes != nullptr ? "MODE" : "SLOPE", optionLabel, 9.0f, juce::Justification::centredRight);
         stamped (g, "ENV MOD", styleLabel, 9.0f, juce::Justification::centredRight);
 
         const auto value = [this] (const char* part) { return raw (slotId (part)); };
-        drawKnob (mainKnob, labels.main[0] != 0 ? labels.main : "MAIN", Cipher::mainText (type, value ("Main")));
+        drawKnob (mainKnob, labels.main[0] != 0 ? labels.main : "MAIN", Cipher::mainText (type, value ("Main"), juce::roundToInt (value ("Option"))));
         drawKnob (p1Knob, labels.p1[0] != 0 ? labels.p1 : "-", Cipher::p1Text (type, value ("P1")));
         drawKnob (p2Knob, labels.p2[0] != 0 ? labels.p2 : "-", Cipher::p2Text (type, value ("P2")));
         drawKnob (envKnob, "ENV AMT", juce::String (juce::roundToInt (value ("EnvAmount") * 100.0f)) + "%");
         drawKnob (rateKnob, "RATE", juce::String (value ("Rate"), 2) + " Hz");
         drawKnob (glideKnob, "GLIDE", juce::String (juce::roundToInt (value ("Glide"))) + " ms");
-        drawKnob (stereoKnob, "STEREO", juce::String (juce::roundToInt (value ("Stereo") * 100.0f)) + "%");
+        drawKnob (stereoKnob, labels.stereo, Cipher::stereoText (type, value ("Stereo")));
         drawKnob (gainKnob, "GAIN", juce::String (value ("Gain"), 1) + " dB");
         drawKnob (mixKnob, "MIX", juce::String (juce::roundToInt (value ("Mix") * 100.0f)) + "%");
     }

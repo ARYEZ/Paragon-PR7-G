@@ -2,6 +2,56 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.73.0
+
+- **CIPHER stage 2: the time effects and the Gate and Compress utilities**, 19 new effects for its slots (inspired by Devious Machines' Infiltrator 2, from its manual). Each has its knobs named on the rack, and the envelope moves its main knob as with the filters.
+  - **Comb:** a short delay with lots of feedback. SPEED (as a pitch), RESONANCE (the feedback), BRIGHTNESS.
+  - **Phaser:** FREQUENCY, FEEDBACK, SPREAD; modes **TURBO** (the most notches), **DUO** (two), **INVERSE**.
+  - **Pitch Shift:** a lo-fi granular shifter, as the manual describes it. SHIFT (+-24 semitones), GRAIN FREQ (low: echoey; high: tighter), JITTER (grains of varying length, wider stereo).
+  - **Freq Shift:** moves every frequency by the same number of hertz (SHIFT, +-2 kHz).
+  - **Ring Mod:** FREQUENCY, AMOUNT, CHARACTER (a purer sine to the left).
+  - **FM:** FREQUENCY, CHARACTER (a pure sine at the centre, a saw to the left, a square to the right), AMOUNT.
+  - **Distort:** the master drive's six curves as an effect (pick one with the MODE keys). DRIVE, HP before it, LP after it.
+  - **Decimate:** a lower sample rate (FREQUENCY) and DIRT (how much of the aliasing and steps get through).
+  - **Delay:**
+    - **SYNC** (1/32 to 1 bar) or **FREE** (1 ms to 2 s); FEEDBACK; TONE (darker or brighter repeats);
+    - the time glides, so moving it bends the echoes like tape;
+    - **KIND** (the STEREO knob): STEREO, WIDE, PING-PONG, or the left echo at 1/4, 1/3, 1/2 or 3/4 of the right's time.
+  - **Reverb:** TIME (0.2 to 20 s), TONE, HPF. Three types:
+    - **REVERB:** a smooth room or hall;
+    - **LO-FI:** turning TIME re-pitches what's ringing, as the manual says, and the tail is crushed;
+    - **VOID:** a long diffuser, so it swells in slowly, and darker.
+  - **Reflect:** early reflections for slapback or the start of a reverb. SIZE (1 to 60 m), ABSORB, FEEDBACK.
+  - **Vocoder:** your guitar's tone shapes an internal oscillator. FREQUENCY (its pitch), FORMANT, RESONANCE, and CHARACTER on the STEREO knob (sawtooth, square, narrow pulse), as in the manual.
+  - **Loop:** repeats the last part of the sound. FREE (FREQUENCY: stutters to buzzing pitches) or SYNC (1 bar down to 1/64); TEMPO (how often a new part is taken); SMOOTH (the crossfade at the join).
+  - **Stretch:** slows a part of the sound without changing its pitch. SPEED, TEMPO, GRAIN RATE.
+  - **Varispeed:** slows it like tape, so the pitch drops. SPEED, TEMPO; **FORWARD**, **FWD-REV** (backwards on the left half of the knob, forwards on the right) and **REVERSE**.
+  - **Slow** and **Reverse:** full speed, 1/2, 1/4, 1/8 or 1/16, forwards or backwards. TEMPO.
+  - **Gate:** THRESHOLD, HOLD, RELEASE, and HPF on the STEREO knob (the gate listens only to the higher sounds).
+  - **Compress:** the master's four compressors in a slot (COMPRESS is the main knob, so an envelope can pump it; MIX gives parallel compression).
+  - **TEMPO** follows the song's beats while it plays.
+- **On the rack:**
+  - the MODE keys show each effect's modes (the Distort's six curves, the Delay's SYNC and FREE...);
+  - the STEREO knob takes the effect's name where it does something else (KIND, CHARACTER, HPF);
+  - SLOT (on/off) moved to the second row.
+- **What's ours.** The manual says what each effect does, not how. Every range, curve and size is our design, specifically:
+  - the Reverb's network, the Reflect's echo pattern, and the Vocoder's 16 bands (100 Hz to 8 kHz);
+  - the grain shapes, and how far each knob goes;
+  - the Delay's echoes come on top of your sound (MIX turns them down), our reading of a delay in a chain;
+  - Reverse and Varispeed play sound already heard, so right after you start they're silent until there's something recorded to play.
+- **Slots set up in 0.72.0 sound the same.** Pan's modes now use the same mode keys as the new effects.
+- **Memory:** each slot keeps 4 seconds of sound for these effects (about 15 MB in all).
+- **CPU:** ten of the heaviest effects together take about 6% of one core here.
+- **I couldn't hear any of it here.** Tell me what sounds wrong and how.
+- **Still to come:**
+  - **stage 3:** the sequencer, audio and MIDI retriggering, the audio envelope follower, and pitch snap;
+  - **stage 4:** the spectral effects;
+  - **stage 5:** macros and factory rigs.
+- **Tests**, measuring what each effect does to the sound:
+  - **spectrum:** the Comb's peaks, the Phaser's notches (TURBO more than DUO), the frequency shifter (1 kHz to 1.1 kHz with the other side 40 dB down), the ring mod's sum and difference, FM's sidebands, Pitch Shift up and down an octave, Distort's harmonics and HP, Decimate's alias;
+  - **time:** the Delay's echo at 1/8 and its repeat, PING-PONG's sides, FREE's 100 ms, Reflect's early echoes, each Reverb type ringing longer with TIME;
+  - **the rest:** the Vocoder (silence stays silent; the carrier's harmonics come out), the Loop repeating, Stretch keeping the pitch, Varispeed and Slow an octave down, Reverse keeping a steady note, Gate muting below its threshold, and Compress squeezing.
+
 ## 0.72.0
 
 - **A new block: CIPHER, an envelope-controlled filter and multi-effect** (stage 1 of 5), inspired by Devious Machines' Infiltrator 2 (from the manual you sent). It's the last block in the signal chain, after HAVOK, with its own unit in the rack. It starts switched off: press **FX ON**.

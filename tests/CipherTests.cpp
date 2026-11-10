@@ -482,7 +482,11 @@ TEST_CASE ("CIPHER: CPU with all ten slots busy (prints the share of a core)", "
     for (int i = 0; i < Cipher::numSlots; ++i)
     {
         cipher.setEnvelope (i, Cipher::shape (3));
-        s.slots[(size_t) i].type = (Cipher::Type) (1 + (i * 2) % 18);
+        // The heaviest effects: reverb, vocoder, phaser, pitch, stretch and the rest.
+        const Cipher::Type heavy[] = { Cipher::Type::reverb, Cipher::Type::vocoder, Cipher::Type::phaser, Cipher::Type::pitchShift,
+                                       Cipher::Type::stretch, Cipher::Type::delay, Cipher::Type::comb, Cipher::Type::freqShift,
+                                       Cipher::Type::oneOhOneLp, Cipher::Type::distort };
+        s.slots[(size_t) i].type = heavy[i];
         s.slots[(size_t) i].p1 = 0.7f;
     }
     s.master.driveOn = s.master.compOn = true;
@@ -491,4 +495,242 @@ TEST_CASE ("CIPHER: CPU with all ten slots busy (prints the share of a core)", "
     run (cipher, s, 220.0, 10.0);
     const auto seconds = (juce::Time::getMillisecondCounterHiRes() - started) / 1000.0;
     std::printf ("CIPHER, ten busy slots: %.1f%% of a core\n", seconds / 10.0 * 100.0);
+}
+
+//==============================================================================
+// Stage 2: the time effects.
+namespace
+{
+    // The level of `hz` in a stretch of the output (a Goertzel), as a linear amplitude.
+    float toneLevel (const juce::AudioBuffer<float>& b, int channel, double hz, double from, double to)
+    {
+        double re = 0.0, im = 0.0;
+        const auto a = (int) (from * sampleRate), z = juce::jmin (b.getNumSamples(), (int) (to * sampleRate));
+        for (int i = a; i < z; ++i)
+        {
+            const auto phase = juce::MathConstants<double>::twoPi * hz * i / sampleRate;
+            re += b.getSample (channel, i) * std::cos (phase);
+            im += b.getSample (channel, i) * std::sin (phase);
+        }
+        return (float) (2.0 * std::sqrt (re * re + im * im) / juce::jmax (1, z - a));
+    }
+
+    // The strongest level within 7% of `hz` (granular effects spread a note into nearby lines).
+    float bandLevel (const juce::AudioBuffer<float>& b, int channel, double hz, double from, double to)
+    {
+        float best = 0.0f;
+        for (double f = hz * 0.93; f <= hz * 1.07; f += 2.0)
+            best = juce::jmax (best, toneLevel (b, channel, f, from, to));
+        return best;
+    }
+
+    juce::AudioBuffer<float> runTone (const Cipher::Settings& s, double hz, double seconds, float level = 0.25f)
+    {
+        Cipher cipher;
+        cipher.prepare (sampleRate, blockSize);
+        return run (cipher, s, hz, seconds, level);
+    }
+
+    // A click at the start, then silence: for echoes and tails.
+    juce::AudioBuffer<float> runClick (const Cipher::Settings& s, double seconds)
+    {
+        Cipher cipher;
+        cipher.prepare (sampleRate, blockSize);
+        const auto length = (int) (seconds * sampleRate);
+        juce::AudioBuffer<float> out (2, length);
+        out.clear();
+        for (int i = 0; i < 48; ++i)
+            out.setSample (0, i, 0.5f), out.setSample (1, i, 0.5f);
+        for (int start = 0; start < length; start += blockSize)
+        {
+            juce::dsp::AudioBlock<float> block (out.getArrayOfWritePointers(), 2, (size_t) start, (size_t) juce::jmin (blockSize, length - start));
+            cipher.process (block, s);
+        }
+        return out;
+    }
+}
+
+TEST_CASE ("CIPHER stage 2: Comb, Phaser, Freq Shift, Ring Mod and FM change the spectrum as the manual says", "[effects][cipher]")
+{
+    // Comb at 500 Hz with resonance: 500 and 1000 Hz ring louder than 750.
+    const auto comb = oneSlot (Cipher::Type::comb, std::log (500.0f / 20.0f) / std::log (250.0f), 0.8f, 1.0f);
+    CHECK (gainAt (comb, 1000.0) > gainAt (comb, 750.0) + 10.0f);
+    CHECK (gainAt (comb, 500.0) > gainAt (comb, 750.0) + 10.0f);
+
+    // Phaser: a deep notch somewhere between 200 Hz and 5 kHz; DUO has fewer notches than TURBO.
+    const auto notches = [] (int mode)
+    {
+        auto s = oneSlot (Cipher::Type::phaser, at (1000.0f), 0.0f, 0.5f, Cipher::optionFor (Cipher::Type::phaser, mode));
+        int count = 0;
+        float previous = 0.0f;
+        bool falling = false;
+        for (double hz = 100.0; hz < 10000.0; hz *= 1.08)
+        {
+            const auto g = gainAt (s, hz);
+            if (falling && g > previous && previous < -12.0f)
+                ++count;
+            falling = g < previous;
+            previous = g;
+        }
+        return count;
+    };
+    const auto turbo = notches (0), duo = notches (1);
+    CAPTURE (turbo, duo);
+    CHECK (duo >= 1);
+    CHECK (turbo > duo);
+
+    // Freq Shift +100 Hz: 1 kHz comes out at 1.1 kHz, and not at 900 Hz.
+    const auto shiftMain = 0.5f + std::sqrt (100.0f / 2000.0f) * 0.5f;
+    CHECK_THAT (Cipher::shiftHz (shiftMain), WithinAbs (100.0, 0.5));
+    const auto shifted = runTone (oneSlot (Cipher::Type::freqShift, shiftMain), 1000.0, 0.5);
+    CHECK (dB (toneLevel (shifted, 0, 1100.0, 0.2, 0.5) / toneLevel (shifted, 0, 900.0, 0.2, 0.5)) > 40.0f);
+    CHECK (dB (toneLevel (shifted, 0, 1100.0, 0.2, 0.5) / toneLevel (shifted, 0, 1000.0, 0.2, 0.5)) > 30.0f);
+
+    // Ring Mod at 300 Hz, full AMOUNT: 1 kHz becomes 700 and 1300 Hz.
+    const auto ring = runTone (oneSlot (Cipher::Type::ringMod, at (300.0f), 1.0f, 0.0f), 1000.0, 0.5);
+    CHECK (toneLevel (ring, 0, 700.0, 0.2, 0.5) > 4.0f * toneLevel (ring, 0, 1000.0, 0.2, 0.5));
+    CHECK (toneLevel (ring, 0, 1300.0, 0.2, 0.5) > 4.0f * toneLevel (ring, 0, 1000.0, 0.2, 0.5));
+
+    // FM: sidebands at the note plus and minus the modulator.
+    const auto fmMain = std::log (200.0f / 0.5f) / std::log (10000.0f);   // a 200 Hz modulator
+    const auto fm = runTone (oneSlot (Cipher::Type::fm, fmMain, 0.5f, 0.6f), 1000.0, 0.5);
+    CHECK (toneLevel (fm, 0, 1200.0, 0.2, 0.5) > 0.1f * toneLevel (fm, 0, 1000.0, 0.2, 0.5));
+    CHECK (toneLevel (runTone (oneSlot (Cipher::Type::fm, fmMain, 0.5f, 0.0f), 1000.0, 0.5), 0, 1200.0, 0.2, 0.5) < 0.001f);
+}
+
+TEST_CASE ("CIPHER stage 2: Pitch Shift, Distort and Decimate", "[effects][cipher]")
+{
+    // Pitch Shift +12: a 220 Hz note comes out mostly at 440.
+    const auto up = runTone (oneSlot (Cipher::Type::pitchShift, 0.5f + 12.0f / 48.0f, 0.5f, 0.0f), 220.0, 0.8);
+    CHECK (bandLevel (up, 0, 440.0, 0.3, 0.8) > 3.0f * bandLevel (up, 0, 220.0, 0.3, 0.8));
+    // -12: at 110.
+    const auto down = runTone (oneSlot (Cipher::Type::pitchShift, 0.5f - 12.0f / 48.0f, 0.5f, 0.0f), 220.0, 0.8);
+    CHECK (bandLevel (down, 0, 110.0, 0.3, 0.8) > 3.0f * bandLevel (down, 0, 220.0, 0.3, 0.8));
+
+    // Distort: harmonics, and HP takes the lows away before the drive.
+    for (int mode = 0; mode < Cipher::driveModeNames.size(); ++mode)
+    {
+        auto s = oneSlot (Cipher::Type::distort, 0.6f, 0.0f, 1.0f, Cipher::optionFor (Cipher::Type::distort, mode));
+        const auto out = runTone (s, 300.0, 0.5, 0.3f);
+        const auto harmonics = toneLevel (out, 0, 600.0, 0.2, 0.5) + toneLevel (out, 0, 900.0, 0.2, 0.5);
+        CAPTURE (Cipher::driveModeNames[mode], dB (harmonics / toneLevel (out, 0, 300.0, 0.2, 0.5)));
+        CHECK (harmonics > 0.03f * toneLevel (out, 0, 300.0, 0.2, 0.5));
+    }
+    CHECK (gainAt (oneSlot (Cipher::Type::distort, 0.3f, 1.0f, 1.0f), 60.0) < gainAt (oneSlot (Cipher::Type::distort, 0.3f, 0.0f, 1.0f), 60.0) - 15.0f);
+
+    // Decimate to 3 kHz: a 1 kHz tone gets a 2 kHz alias with DIRT up; far less with it down.
+    const auto rateMain = std::log (3000.0f / 100.0f) / std::log (480.0f);
+    const auto dirty = runTone (oneSlot (Cipher::Type::decimate, rateMain, 1.0f), 1000.0, 0.5);
+    const auto clean = runTone (oneSlot (Cipher::Type::decimate, rateMain, 0.0f), 1000.0, 0.5);
+    CHECK (toneLevel (dirty, 0, 2000.0, 0.2, 0.5) > 0.2f * toneLevel (dirty, 0, 1000.0, 0.2, 0.5));
+    CHECK (toneLevel (clean, 0, 2000.0, 0.2, 0.5) < 0.5f * toneLevel (dirty, 0, 2000.0, 0.2, 0.5));
+}
+
+TEST_CASE ("CIPHER stage 2: Delay, Reflect and Reverb", "[effects][cipher]")
+{
+    // Delay synced to 1/8 at 120 BPM: an echo 250 ms after the click; FEEDBACK repeats it.
+    const auto eighth = 1.0f - (float) Cipher::speedNames.indexOf ("1/8") / 13.0f + 3.0f / 13.0f;   // 16 - step = index of 1/8
+    auto delay = oneSlot (Cipher::Type::delay, eighth, 0.5f, 0.5f);
+    REQUIRE (Cipher::mainText (Cipher::Type::delay, eighth, delay.slots[0].option) == "1/8");
+    const auto echoes = runClick (delay, 1.0);
+    CHECK (rms (echoes, 0, 0.245, 0.255) > 0.05f);
+    CHECK (rms (echoes, 0, 0.495, 0.505) > 0.02f);   // the repeat
+    CHECK (rms (echoes, 0, 0.1, 0.2) < 0.001f);      // nothing between
+
+    // PING-PONG: the first echo on the left, the next on the right.
+    delay.slots[0].stereo = 1.0f;
+    REQUIRE (Cipher::stereoText (Cipher::Type::delay, 1.0f) == "PING-PONG");
+    const auto pingPong = runClick (delay, 1.0);
+    CHECK (rms (pingPong, 0, 0.245, 0.255) > 4.0f * rms (pingPong, 1, 0.245, 0.255) + 1.0e-6f);
+    CHECK (rms (pingPong, 1, 0.495, 0.505) > 4.0f * rms (pingPong, 0, 0.495, 0.505) + 1.0e-6f);
+
+    // FREE: the time in milliseconds (100 ms here).
+    auto free = oneSlot (Cipher::Type::delay, std::log (100.0f) / std::log (2000.0f), 0.0f, 0.5f, Cipher::optionFor (Cipher::Type::delay, 1));
+    const auto freeEcho = runClick (free, 0.5);
+    CHECK (rms (freeEcho, 0, 0.098, 0.106) > 0.05f);
+
+    // Reflect: early echoes within the first tenth of a second, then quiet.
+    const auto reflections = runClick (oneSlot (Cipher::Type::reflect, 0.5f, 0.3f, 0.0f), 1.0);
+    CHECK (rms (reflections, 0, 0.005, 0.12) > 0.005f);
+    CHECK (rms (reflections, 0, 0.5, 1.0) < 0.0005f);
+
+    // Reverb: a longer TIME rings longer.
+    const auto tail = [] (float main, int mode)
+    {
+        const auto out = runClick (oneSlot (Cipher::Type::reverb, main, 0.7f, 0.0f, Cipher::optionFor (Cipher::Type::reverb, mode)), 3.0);
+        return dB (rms (out, 0, 1.5, 2.5));
+    };
+    for (int mode = 0; mode < 3; ++mode)
+    {
+        CAPTURE (Cipher::reverbModeNames[mode], tail (0.2f, mode), tail (0.7f, mode));
+        CHECK (tail (0.7f, mode) > tail (0.2f, mode) + 20.0f);
+    }
+}
+
+TEST_CASE ("CIPHER stage 2: Vocoder, Loop, Stretch, Varispeed, Slow and Reverse", "[effects][cipher]")
+{
+    // Vocoder: silence in, silence out; a voice in, the carrier's pitch out (110 Hz here).
+    const auto vocMain = std::log (110.0f / 30.0f) / std::log (33.0f);
+    CHECK (rms (runTone (oneSlot (Cipher::Type::vocoder, vocMain), 300.0, 0.5, 0.0f), 0, 0.1, 0.5) == 0.0f);
+    const auto voiced = runTone (oneSlot (Cipher::Type::vocoder, vocMain, 0.5f, 0.2f), 800.0, 0.6);
+    CHECK (toneLevel (voiced, 0, 770.0, 0.3, 0.6) > 3.0f * toneLevel (voiced, 0, 800.0, 0.3, 0.6));   // the 7th harmonic of 110, near the voice
+
+    // Loop (FREE, 10 Hz): the output repeats every 100 ms while the input moves on (a rising sweep in).
+    {
+        Cipher cipher;
+        cipher.prepare (sampleRate, blockSize);
+        auto s = oneSlot (Cipher::Type::loop, std::log (10.0f) / std::log (1000.0f), 0.0f, 0.0f);
+        s.songBeats = -1.0;
+        const auto length = (int) (0.5 * sampleRate);
+        juce::AudioBuffer<float> out (2, length);
+        double phase = 0.0;
+        for (int i = 0; i < length; ++i)
+        {
+            phase += juce::MathConstants<double>::twoPi * (200.0 + 2000.0 * i / length) / sampleRate;
+            out.setSample (0, i, 0.3f * (float) std::sin (phase));
+            out.setSample (1, i, 0.3f * (float) std::sin (phase));
+        }
+        for (int start = 0; start < length; start += blockSize)
+        {
+            juce::dsp::AudioBlock<float> block (out.getArrayOfWritePointers(), 2, (size_t) start, (size_t) juce::jmin (blockSize, length - start));
+            cipher.process (block, s);
+        }
+        const auto period = (int) (0.1 * sampleRate);
+        double difference = 0.0;
+        for (int i = (int) (0.25 * sampleRate); i < (int) (0.25 * sampleRate) + 2000; ++i)
+            difference += std::abs (out.getSample (0, i) - out.getSample (0, i + period));
+        CHECK (difference / 2000.0 < 0.01);
+    }
+
+    // Stretch keeps the pitch while slowing: a 440 Hz note stays at 440.
+    const auto stretched = runTone (oneSlot (Cipher::Type::stretch, 0.3f, 0.0f, 0.5f), 440.0, 1.0);
+    CHECK (bandLevel (stretched, 0, 440.0, 0.3, 1.0) > 4.0f * bandLevel (stretched, 0, 220.0, 0.3, 1.0));
+    CHECK (rms (stretched, 0, 0.3, 1.0) > 0.25f * 0.4f);
+
+    // Varispeed at half speed: a 440 Hz note comes out at 220 (tape-style); Slow at 1/2 does the same.
+    const auto half = (0.5f - 0.05f) / 0.95f;
+    const auto vari = runTone (oneSlot (Cipher::Type::varispeed, half, 0.0f), 440.0, 1.0);
+    CHECK (toneLevel (vari, 0, 220.0, 0.3, 1.0) > 4.0f * toneLevel (vari, 0, 440.0, 0.3, 1.0));
+    const auto slowed = runTone (oneSlot (Cipher::Type::slow, 0.25f, 0.0f), 440.0, 1.0);   // the second step: 1/2
+    REQUIRE (Cipher::mainText (Cipher::Type::slow, 0.25f) == "1/2");
+    CHECK (toneLevel (slowed, 0, 220.0, 0.3, 1.0) > 4.0f * toneLevel (slowed, 0, 440.0, 0.3, 1.0));
+    // Reverse at full speed keeps the pitch (a steady note backwards is the same
+    // note). A new part every 1/8, so there's sound to play backwards.
+    const auto backwards = runTone (oneSlot (Cipher::Type::reverse, 0.0f, 0.5f), 440.0, 1.0);
+    CHECK (toneLevel (backwards, 0, 440.0, 0.3, 1.0) > 0.5f * 0.25f);
+}
+
+TEST_CASE ("CIPHER stage 2: Gate and Compress", "[effects][cipher]")
+{
+    // Gate at -30 dB: a -20 dB note passes, a -40 dB note is muted.
+    const auto gate = oneSlot (Cipher::Type::gate, 50.0f / 80.0f, 0.1f, 0.1f);
+    CHECK_THAT (gainAt (gate, 1000.0), WithinAbs (0.0, 0.1));   // 0.25 peak is -12 dB: over
+    CHECK (rms (runTone (gate, 1000.0, 0.5, 0.01f), 0, 0.3, 0.5) < 1.0e-5f);   // -40 dB: under
+
+    // Compress squeezes a loud and a quiet note together; MIX 0 leaves it alone.
+    auto comp = oneSlot (Cipher::Type::compress, 0.7f);
+    const auto level = [&comp] (float in) { return dB (rms (runTone (comp, 800.0, 0.6, in), 0, 0.4, 0.6)); };
+    CHECK (level (0.5f) - level (0.05f) < 14.0f);
+    comp.slots[0].mix = 0.0f;
+    CHECK_THAT (level (0.5f) - level (0.05f), WithinAbs (20.0, 0.1));
 }

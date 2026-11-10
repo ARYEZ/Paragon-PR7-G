@@ -80,7 +80,7 @@ private:
     // A slot's controls.
     Key slotOn, syncKey;
     Choice typeList, speedList, shapeList;
-    std::array<juce::TextButton, 4> optionKeys;      // 6 12 18 24, or PAN BALANCE ROTATE
+    std::array<juce::TextButton, 6> optionKeys;      // 6 12 18 24, or the effect's modes (PAN BALANCE ROTATE...)
     std::array<juce::TextButton, 3> styleKeys;       // BOTH UP DOWN
     Knob mainKnob, p1Knob, p2Knob, envKnob, rateKnob, glideKnob, stereoKnob, gainKnob, mixKnob;
     // The master's.
@@ -92,4 +92,5 @@ private:
     juce::Rectangle<float> optionLabel, styleLabel, onLabel;
     mutable std::vector<juce::Rectangle<float>> glasses;
     juce::String shownState;
+    int laidOutType = -1;   // the type the keys were last laid out for
 };

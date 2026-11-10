@@ -32,15 +32,38 @@ namespace effects
 
         // Saved by number in rigs and projects: only ever add to the end.
         enum class Type { off, ladderLp, ladderBp, ladderHp, digitalLp, digitalBp, digitalHp, oneOhOneLp, oneOhOneBp, oneOhOneHp,
-                          model20Lp, model20Bp, model20Hp, notch, dualFilter, formant, eqBell, eqLowShelf, eqHighShelf, gain, pan };
+                          model20Lp, model20Bp, model20Hp, notch, dualFilter, formant, eqBell, eqLowShelf, eqHighShelf, gain, pan,
+                          // Stage 2 (0.73.0): the time effects and the Gate and Compress utilities.
+                          comb, phaser, pitchShift, freqShift, ringMod, fm, distort, decimate, delay, reverb, reflect, vocoder,
+                          loop, stretch, varispeed, slow, reverse, gate, compress };
         static inline const juce::StringArray typeNames { "Off", "Ladder LP", "Ladder BP", "Ladder HP", "Digital LP", "Digital BP", "Digital HP",
                                                           "101 LP", "101 BP", "101 HP", "Model-20 LP", "Model-20 BP", "Model-20 HP",
                                                           "Notch", "Dual Filter", "Formant", "EQ Bell", "EQ Low Shelf", "EQ High Shelf",
-                                                          "Gain", "Pan" };
-        // OPTION: a filter's steepness (Ladder, Digital and Model-20), or Pan's mode.
-        static inline const juce::StringArray optionNames { "6 dB / Pan", "12 dB / Balance", "18 dB / Rotate", "24 dB" };
+                                                          "Gain", "Pan",
+                                                          "Comb", "Phaser", "Pitch Shift", "Freq Shift", "Ring Mod", "FM", "Distort",
+                                                          "Decimate", "Delay", "Reverb", "Reflect", "Vocoder", "Loop", "Stretch",
+                                                          "Varispeed", "Slow", "Reverse", "Gate", "Compress" };
+        static bool isTimeEffect (Type t) noexcept { return t >= Type::comb; }
+        // OPTION: a filter's steepness (Ladder, Digital and Model-20), or an
+        // effect's mode (Pan, Phaser, Distort, Delay, Reverb, Loop, Varispeed,
+        // Compress). Saved by number: only add to the end.
+        static inline const juce::StringArray optionNames { "6 dB / Pan", "12 dB / Balance", "18 dB / Rotate", "24 dB", "Option 5", "Option 6" };
         static inline const juce::StringArray slopeNames { "6", "12", "18", "24" };
         static inline const juce::StringArray panModeNames { "PAN", "BALANCE", "ROTATE" };
+        static inline const juce::StringArray phaserModeNames { "TURBO", "DUO", "INVERSE" };
+        static inline const juce::StringArray delayModeNames { "SYNC", "FREE" };
+        static inline const juce::StringArray reverbModeNames { "REVERB", "LO-FI", "VOID" };
+        static inline const juce::StringArray loopModeNames { "FREE", "SYNC" };
+        static inline const juce::StringArray varispeedModeNames { "FORWARD", "FWD-REV", "REVERSE" };
+        static inline const juce::StringArray compModeNames { "SQUASH", "MAXIMIZER", "MULTIBAND", "OVERKILL" };
+        static inline const juce::StringArray driveModeNames { "OVERDRIVE", "TUBE", "FUZZ", "HARD CLIP", "FOLDBACK", "RECTIFY" };
+        // The Delay's STEREO knob picks its kind (the manual's list; the fractions put the left echo at that part of the right's time).
+        static inline const juce::StringArray delayStereoNames { "1/4", "1/3", "1/2", "STEREO", "3/4", "WIDE", "PING-PONG" };
+        static int delayStereoKind (float stereo) noexcept { return juce::jlimit (0, 6, juce::roundToInt ((stereo + 1.0f) * 3.0f)); }
+        // The synced lengths the main knob or a knob steps through.
+        static inline const juce::StringArray noteNames { "1 bar", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64" };
+        static int noteStep (float knob01, int steps) noexcept { return juce::jlimit (0, steps - 1, juce::roundToInt (juce::jlimit (0.0f, 1.0f, knob01) * (float) (steps - 1))); }
+        static inline const juce::StringArray slowNames { "FULL", "1/2", "1/4", "1/8", "1/16" };
         enum class Style { both, up, down };
         static inline const juce::StringArray styleNames { "Both", "Up", "Down" };
         // The LFO's synced speeds: how long one pass of the envelope takes.
@@ -54,9 +77,20 @@ namespace effects
         static inline const juce::StringArray compNames { "Squash", "Maximizer", "Multiband", "Overkill" };
         static inline const juce::StringArray mixLawNames { "-6 dB", "-3 dB", "0 dB" };
 
-        // What each type's knobs are called (empty: the knob does nothing for this type).
-        struct Labels { const char* main; const char* p1; const char* p2; bool hasSlope; bool isPan; };
+        // What each type's knobs are called (empty: the knob does nothing for
+        // this type); `stereo` renames the STEREO knob where the effect uses it
+        // for something else (the Vocoder's CHARACTER, as the manual says).
+        struct Labels
+        {
+            const char* main; const char* p1; const char* p2; bool hasSlope;
+            const char* stereo = "STEREO";
+            const juce::StringArray* modes = nullptr;   // the effect's modes, on OPTION
+            bool isPan() const noexcept { return modes == &panModeNames; }
+        };
         static Labels labelsFor (Type) noexcept;
+        // OPTION's default (3, a filter's 24 dB) is every effect's first mode.
+        static int modeOf (Type, int option) noexcept;
+        static int optionFor (Type, int mode) noexcept;
         static bool isFilter (Type t) noexcept { return t >= Type::ladderLp && t <= Type::formant; }
 
         //======================================================================
@@ -142,9 +176,17 @@ namespace effects
         static float eqGainDb (float p01) noexcept { return (juce::jlimit (0.0f, 1.0f, p01) - 0.5f) * 36.0f; }   // +-18 dB
         static float eqQ (float p01) noexcept { return 0.3f * std::pow (40.0f, juce::jlimit (0.0f, 1.0f, p01)); }  // 0.3 to 12
         static float driveGainDb (float drive01) noexcept { return juce::jlimit (0.0f, 1.0f, drive01) * 36.0f; }
-        static juce::String mainText (Type, float main01);
+        static juce::String mainText (Type, float main01, int option = 3);
         static juce::String p1Text (Type, float p01);
         static juce::String p2Text (Type, float p01);
+        static juce::String stereoText (Type, float stereo);
+        // The time effects' knobs, shared by the engine and the readouts.
+        static float semitones (float main01) noexcept { return std::round ((main01 - 0.5f) * 48.0f * 10.0f) / 10.0f; }   // Pitch Shift: +-24
+        static float shiftHz (float main01) noexcept;            // Freq Shift: +-2 kHz, finer near the centre
+        static float freeDelayMs (float main01) noexcept { return std::pow (2000.0f, juce::jlimit (0.0f, 1.0f, main01)); }   // 1 ms to 2 s
+        static float reverbSeconds (float main01) noexcept { return 0.2f * std::pow (100.0f, juce::jlimit (0.0f, 1.0f, main01)); }   // 0.2 to 20 s
+        static float loopHz (float main01) noexcept { return std::pow (1000.0f, juce::jlimit (0.0f, 1.0f, main01)); }   // 1 Hz to 1 kHz
+        static float gateThresholdDb (float main01) noexcept { return -80.0f + 80.0f * juce::jlimit (0.0f, 1.0f, main01); }
 
         static constexpr int tableSize = 512;
         static constexpr int tick = 16;   // samples between control updates (the envelope, filter coefficients)
@@ -164,5 +206,11 @@ namespace effects
         juce::AudioBuffer<float> dry, low;   // the input (for MIX and CLEAN BASS)
 
         void processSlot (int index, juce::dsp::AudioBlock<float>&, const Slot&, const Settings&);
+        // A time effect over [start, start + count), with this tick's main knob per side.
+        void processTime (int index, juce::dsp::AudioBlock<float>&, int start, int count, const Slot&, const Settings&,
+                          const float* mainPerSide);
+        struct TimeState;
+        std::array<std::unique_ptr<TimeState>, numSlots> timeStates;
+        int maxBlock = 512;
     };
 }
