@@ -2,6 +2,38 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.80.0
+
+- **A thirteenth album bank, bank S: 15 rigs inspired by the guitar sounds on Muse's *Origin of Symmetry*** (2001). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's a record of fuzz, pitch-shifting and grand spaces, so the rigs lean on fuzz (COSMONAUT), QUASAR's octave and harmony programs on the pedal, a wah into fuzz, GLITCH's kill switch, CIPHER's synth filters, a church-organ pad and a megaphone. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **S01 Fuzz Arpeggio Lead** | A thick fuzz, a short echo, a room | "Plug In Baby" |
+  | **S02 Synth Arpeggio Pulse** | CIPHER's resonant filter plucked every sixteenth, chorus, echo | "Bliss" |
+  | **S03 Two-Octave Fuzz Scream** | The pedal takes your note up two octaves, fuzzed | "New Born" |
+  | **S04 Endless Sustain Swell** | Volume swells (the pedal), squeezed and boosted, into a long echo | The sustainer in Matt Bellamy's guitar |
+  | **S05 Western Twang Echo** | Tremolo, tape slapback and a spring | "Darkshines" |
+  | **S06 Megaphone Croon** | A narrow, pushed megaphone, a plate | "Feeling Good" |
+  | **S07 Cathedral Organ Pad** | Octaves above and below, a slow rotary, a cathedral | "Megalomania" (its church organ) |
+  | **S08 Kill Switch Fuzz Stutter** | The fuzz chopped on the sixteenths | The album's stop-start riffs |
+  | **S09 Swept Synth Fuzz Lead** | CIPHER's ladder filter sweeping open with each note, fuzzed | "Space Dementia" |
+  | **S10 Sub Fuzz Riff Layer** | An octave below your riff, fuzzed | "Hyper Music" |
+  | **S11 Grand Shimmer Clean** | A shimmer rising out of each note, a hall | The album's piano-led grandeur |
+  | **S12 Gentle Ripple Clean** | A soft dimension chorus and a plate | "Screenager" |
+  | **S13 Epic Dotted Echo Lead** | Boosted, dotted-eighth echoes, a hall | "Citizen Erased" |
+  | **S14 Harmony Fifths Lead** | The pedal brings in a fourth and a fifth above, boosted | "Micro Cuts" |
+  | **S15 Probe Wah Fuzz** | The pedal is a wah into a thick fuzz | The wah probe in Matt Bellamy's guitar |
+
+  - **What's documented:**
+    - John Leckie and David Bottrill produced it;
+    - Matt Bellamy played a custom Manson guitar with a fuzz built in, the first of his Mansons;
+    - gear lists also put a sustainer, a wah probe and piezo pickups in that guitar, and a pitch-shifting pedal, an echo and a synth pedal on his board;
+    - "Megalomania" has a church organ.
+  - **The sounds are our reading.** The gear lists come mostly from fan sites and disagree on details. Every rig and song link is my guess. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **The pedal:** S03 and S14 bring the pitch in at the toe (the heel is your note); S04 swells from the heel, so rock it back first; S15's pedal is the wah.
+- **The PRESETS page** has a Bank S button.
+- **Tests:** bank S goes through the shared album-bank checks (names free of song titles, each rig doing what its tags say, levels within 6 dB).
+
 ## 0.79.0
 
 - **A twelfth album bank, bank R: 15 rigs inspired by the guitar sounds on Deftones' *White Pony*** (2000). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's a dreamy, shadowy record, so the rigs lean on chorus, flanger, phaser, tape echo, reverse echoes, shimmer, CIPHER and HAVOK's scratches. Inside the plugin each rig is named for its sound; here is what inspired each one:

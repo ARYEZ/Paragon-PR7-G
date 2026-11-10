@@ -954,3 +954,10 @@ TEST_CASE ("Bank R, a twelfth album's guitar sounds: cleans, effects and leads t
                           "Party", "Korea", "Passenger", "Change", "In", "The", "House", "Of", "Flies", "Pink", "Maggit",
                           "Back", "To", "School", "Mini", "Boy's", "Republic", "White", "Pony", "Deftones" });
 }
+
+TEST_CASE ("Bank S, a thirteenth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (18, { "New", "Born", "Bliss", "Space", "Dementia", "Hyper", "Music", "Plug", "In", "Baby", "Citizen",
+                          "Erased", "Micro", "Cuts", "Screenager", "Darkshines", "Feeling", "Good", "Megalomania", "Futurism",
+                          "Origin", "Of", "Symmetry", "Muse" });
+}

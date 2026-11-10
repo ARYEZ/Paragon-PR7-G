@@ -92,6 +92,7 @@ namespace
     constexpr int Q = 16;                // bank Q: an album's guitar sounds (Sleep Token, Take Me Back to Eden)
     constexpr float eighthTriplet = 8;   // DELAY / MOD sync: 1/8 triplet
     constexpr int R = 17;                // bank R: an album's guitar sounds (Deftones, White Pony)
+    constexpr int S = 18;                // bank S: an album's guitar sounds (Muse, Origin of Symmetry)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1983,6 +1984,127 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, uniVibe }, { modRate, 1.0f }, { modDepth, 0.75f }, { modMix, 0.5f },
             { delayOn, 1 }, { delayType, analogDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbMix, 0.18f } }),
+        //======================================================================
+        // Bank S: an album's guitar sounds, inspired by Muse's Origin of
+        // Symmetry (2001; the owner's thirteenth album bank). Cleans, effects
+        // and leads: the heavy riffs are the amp capture's job. Documented:
+        // John Leckie and David Bottrill produced it; Matt Bellamy played a
+        // custom Manson with a fuzz built in (the first of his Mansons);
+        // gear lists put a pitch-shifting pedal, a fuzz and a wah probe in
+        // his rig, and the album has a church organ and a piano. The lists
+        // disagree on the details, so these are our reading.
+
+        // An arpeggio fuzz lead: a thick fuzz, a short echo, a room.
+        make ("Fuzz Arpeggio Lead", S, 1, "Album,Lead,Drive", {
+            { rigLevel, -9 },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, sixteenth }, { delayFeedback, 0.2f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // A synth arpeggio: CIPHER's resonant filter plucked every sixteenth, a chorus, an echo.
+        withCipher (make ("Synth Arpeggio Pulse", S, 2, "Album,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 7 },
+            { "cipher1Type", 7 }, { "cipher1Main", 0.38f }, { "cipher1P1", 0.7f }, { "cipher1P2", 0.25f },
+            { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 14 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f } }),
+            { { 1, 7 } }),
+
+        // A two-octave scream: the pedal takes your note up two octaves, fuzzed.
+        make ("Two-Octave Fuzz Scream", S, 3, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -8 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpTwoOctaves }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 5 }, { driveTone, 6 }, { driveLevel, 5 } }),
+
+        // An endless sustain: volume swells (from the heel), boosted, into a long echo.
+        make ("Endless Sustain Swell", S, 4, "Album,Lead,Ambient,Expression", {
+            { rigLevel, -4 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -30 }, { compRatio, 6 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        // A western twang: a tremolo, a tape slapback and a spring.
+        make ("Western Twang Echo", S, 5, "Album,Clean,Modulation,Delay", {
+            { rigLevel, 8.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, tremolo }, { modSync, eighth }, { modDepth, 0.5f },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, syncOff }, { delayTime, 140 }, { delayFeedback, 0.2f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, spring }, { reverbSize, 0.6f }, { reverbMix, 0.3f } }),
+
+        // A crooner through a megaphone: narrow and pushed, a plate.
+        make ("Megaphone Croon", S, 6, "Album,FX,Lo-Fi", {
+            { rigLevel, 2 },
+            { lofiOn, 1 }, { lofiType, megaphone }, { lofiAmount, 6 }, { lofiNoise, 1 }, { lofiMix, 1 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A church organ: octaves above and below your notes, a slow rotary, a cathedral.
+        make ("Cathedral Organ Pad", S, 7, "Album,FX,Pitch,Octave,Ambient", {
+            { rigLevel, -2.5f },
+            { octOn, 1 }, { octSubOne, 0.6f }, { octDry, 0.8f }, { octUp, 0.6f },
+            { modOn, 1 }, { modType, rotary }, { modRate, 0.6f }, { modDepth, 0.5f }, { modMix, 0.5f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+
+        // A kill-switch stutter: the fuzz chopped on the sixteenths (on the song's grid when your DAW plays).
+        make ("Kill Switch Fuzz Stutter", S, 8, "Album,FX,Glitch,Drive", {
+            { rigLevel, -6 },
+            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 0 }, { glitchMix, 1 },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 5 } }),
+
+        // A synth lead: CIPHER's ladder filter sweeping open with each note, fuzzed.
+        withCipher (make ("Swept Synth Fuzz Lead", S, 9, "Album,Lead,Filter,Drive", {
+            { rigLevel, -3.5f },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 5 }, { driveTone, 6 }, { driveLevel, 5 },
+            { cipherOn, 1 }, { "cipher1Type", 1 }, { "cipher1Main", 0.3f }, { "cipher1P1", 0.6f },
+            { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 6 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+            { { 1, 7 } }),
+
+        // A fuzz-bass layer: an octave below your riff, fuzzed.
+        make ("Sub Fuzz Riff Layer", S, 10, "Album,FX,Pitch,Sub,Drive", {
+            { rigLevel, -11 },
+            { octOn, 1 }, { octSubOne, 0.8f }, { octDry, 0.9f }, { octUp, 0 },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 5 }, { driveTone, 5 }, { driveLevel, 5 } }),
+
+        // A grand, airy clean: a shimmer rising out of each note, a hall.
+        make ("Grand Shimmer Clean", S, 11, "Album,Clean,Ambient", {
+            { rigLevel, 0 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.28f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        // A gentle ripple: a soft dimension chorus and a plate.
+        make ("Gentle Ripple Clean", S, 12, "Album,Clean,Modulation", {
+            { rigLevel, 6 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modRate, 0.4f }, { modDepth, 0.5f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        // An epic lead: boosted, dotted-eighth echoes, a hall.
+        make ("Epic Dotted Echo Lead", S, 13, "Album,Lead,Delay", {
+            { rigLevel, -9 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.22f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.2f } }),
+
+        // A harmony lead: the pedal brings in a fourth and a fifth above, boosted.
+        make ("Harmony Fifths Lead", S, 14, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -8 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUp4thUp5th }, { fpMix, 0.8f },
+            { expressionTarget, pedalWhammyWah },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, quarter }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
+
+        // A probing wah: the pedal is a wah into a thick fuzz.
+        make ("Probe Wah Fuzz", S, 15, "Album,Lead,Wah,Drive,Expression", {
+            { rigLevel, -7 },
+            { expressionTarget, pedalWah },
+            { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 5 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
     };
 }
 
