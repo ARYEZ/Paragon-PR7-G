@@ -2,6 +2,159 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.71.0
+
+- **A ninth album bank, bank N: 15 rigs inspired by the guitar sounds on 30 Seconds to Mars' self-titled debut** (2002). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **N01 Pulsing Synth Riff** | Your riff chopped on the sixteenths, loud to near silent, like a gated synth | "Capricorn (A Brand New Name)" (riffs under pounding synths) |
+  | **N02 Horizon Delay Clean** | A clean with a dotted-eighth echo bouncing side to side, a hall | "Edge of the Earth" |
+  | **N03 Planetary Drone Lead** | A lead with an octave below and above your note, boosted, a long echo | "Fallen" (first called "Jupiter") |
+  | **N04 Countdown Phase Riff** | A slow, deep phaser over your amp | "Oblivion" |
+  | **N05 Dark Ritual Flange** | A slow, deep, resonant flange in a dark room | "Buddha for Mary" (reviewers call it the record's darkest song) |
+  | **N06 Reflective Shimmer Clean** | A shimmer rising out of each note, a hall | "Echelon" (reviewers call it the reflective one) |
+  | **N07 Orbit Pan Clean** | Your note circling slowly from side to side, a plate | "Welcome to the Universe" |
+  | **N08 Piano Partner Clean** | A soft clean with an octave above, to sit with a piano | "The Mission" (Bob Ezrin's piano) |
+  | **N09 Starfield Swell** | Volume swells (the pedal) into a long echo and a cathedral | "End of the Beginning" |
+  | **N10 Long-Haul Echo Lead** | A boosted lead with a long tape echo that keeps going | "93 Million Miles" |
+  | **N11 Wide Thrust Riff** | Your riff as two guitars, one each side | "Year Zero" |
+  | **N12 Robot Choir Lead** | The talk box shaping your lead into vowels (the pedal opens the mouth) | The record's synth voices |
+  | **N13 Distant Transmission** | Your guitar through a radio, with static and an echo | The record's space theme |
+  | **N14 Envelope Synth Lead** | An envelope filter that opens with how hard you pick, for a synth-like lead | Jared Leto playing guitar and synth |
+  | **N15 Weightless Texture** | Your notes scattered into floating fragments in a big space | The record's space-rock atmosphere |
+
+  - **What's documented:**
+    - produced by Bob Ezrin and Brian Virtue with the band, recorded in rural Wyoming in 2001 and early 2002;
+    - a space-themed concept record: reviews hear heavy riffs under pounding synths, and one calls it Tool's take on Pink Floyd's *The Dark Side of the Moon*;
+    - Jared Leto on guitar and synth, Solon Bixler on extra guitar; Ezrin's piano on "The Mission" and "Welcome to the Universe";
+    - "Fallen" began as a demo called "Jupiter"; reviewers call "Buddha for Mary" the darkest song and "Echelon" the reflective one.
+  - **The sounds are our reading.** I found nothing published on the album's guitar effects or gear, so every rig is my idea of how a guitar could sit in each song, and most song links are guesses. **I couldn't listen to the album or the rigs here.** Tell me which are off and how, or which songs have the parts you're after.
+  - **With the pedal:** **N09 swells from the heel.** **N12** is a talk box on the pedal (heel "oo", toe "ee").
+- **Tests:**
+  - bank N goes through the shared album-bank checks;
+  - "Pulsing Synth Riff" checks the note really is chopped (more than 15 dB between loud and quiet moments);
+  - "Planetary Drone Lead" checks the octave below is there.
+- **The PRESETS page** has a Bank N button beside Bank M.
+
+## 0.70.0
+
+- **The noise gate is now called BASTION** (it was SENTRY). TC Electronic already sells a noise gate pedal called the Sentry, and we keep other makers' product names off our effects.
+  - **Only the name changes.** It sounds and works exactly as before: it listens to your clean guitar and cuts after the amp, cab and EQ, so echoes and reverb ring on. GATE, HOLD, RELEASE and KEY are where they were, on the COMP / GATE panel.
+  - **Your rigs and projects keep their settings.** Rigs and projects store each setting under a fixed internal ID, and those IDs keep the old name, so nothing has to be converted.
+  - **In your DAW's automation list** the controls now read "Bastion Gate", "Bastion Hold", "Bastion Release" and "Bastion Key". Automation you already recorded still works, because the DAW finds a control by its ID, not its name.
+  - **The name check:** before picking BASTION I searched for noise gate pedals and plugins with each candidate name and found none called Bastion. That was a web search, not a trademark search, so it's a good sign but not a guarantee.
+
+## 0.69.0
+
+- **An eighth album bank, bank M: 15 rigs inspired by the guitar sounds on Cold's *13 Ways to Bleed on Stage*** (2000). **Cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **M01 Haunted Arpeggio Clean** | A haunted clean arpeggio: a slow wide chorus, an eighth echo, a dark plate | "Just Got Wicked" |
+  | **M02 Dark Chorus Clean** | A dark, lush dual-chorus clean, a hall | "She Said" |
+  | **M03 Sparse Verse Clean** | A sparse, dry verse clean, firm and close | "No One" |
+  | **M04 Doom Phase Lead** | A doomy lead: boosted, a slow phaser, a dark echo | "End of the World" |
+  | **M05 Whisper Tremolo Clean** | A soft, trembling clean, a plate | "Confession" |
+  | **M06 Warped Tape Clean** | A tape-worn clean through a wobbling cassette | "It's All Good" |
+  | **M07 Spinning Calliope Clean** | An octave above your note through a fast rotating speaker, like a circus organ | "Send in the Clowns" |
+  | **M08 Narcotic Haze** | A drowsy haze: a slow chorus, a reverse reverb swelling in behind each note | "Same Drug" |
+  | **M09 Bitter Lead** | A bitter, singing lead: boosted, a dotted-eighth echo, a plate | "Anti-Love Song" |
+  | **M10 Hex Flange Riff** | A deep, resonant flange over your amp | "Witch" |
+  | **M11 Industrial Grit Chop** | Stutters on the song's grid with a bitcrushed edge, as programming might cut up a guitar | The album's programmed, industrial touches ("Sick of Man") |
+  | **M12 Space Echo Pad** | A rising shimmer and a long echo in a big space | "Outerspace" |
+  | **M13 Wounded Swell** | Volume swells (the pedal) into a tape echo and a big hall | "Bleed" |
+  | **M14 Bell Tone Clean** | A bell-like clean to sit with piano: an octave above, bright and even, a plate | Scooter Ward's piano and keys |
+  | **M15 Twin Guitar Spread** | Your part as two guitars, one each side | Kelly Hayes and Terry Balsamo's two guitars |
+
+  - **What's documented (credits and reviews):**
+    - Kelly Hayes on guitar, with Terry Balsamo brought in for this album;
+    - Scooter Ward gave up guitar to concentrate on vocals, keyboards and piano;
+    - Chris Vrenna is among those credited (producer credits differ between sources);
+    - reviewers hear it as cleaner-sounding than the band's debut.
+  - **Almost everything else is our reading,** as much as any bank so far: I found nothing published on the album's guitar effects, so every song link is my guess at where each sound fits. **I couldn't listen to the album or the rigs here.** Tell me which are off and how, or which songs have the parts you're after.
+  - **M13 swells from the heel.**
+  - **M11 follows the tempo,** tapped or the DAW's.
+- **The PRESETS page's bank list** has room for one more row (banks N and O); after that it needs another change of layout.
+- **Tests:** bank M goes through the shared album-bank checks.
+
+## 0.68.0
+
+- **Fixed: shifting two octaves up wasn't clean.** At or near two octaves up, the pitch shifter could leave your original note leaking through at about -21 dB, with the shifted note weak. It only happened there; an octave and smaller were always fine.
+  - **What it affected:** QUASAR's **14 Up 2 Octaves** program (bank E's notes suggested it for a higher squeal), the FILTER / PITCH shifter's INTERVAL at +24, and anything else asking for a full two-octave rise.
+  - **Why:** going up two octaves, the shifter races through its buffer three samples per sample. When it jumped back to find a matching waveform, it could land so close to the end that it ran out of room halfway through its 8 ms cross-fade. It was then held there, playing the guitar at its own pitch.
+  - **The fix:** a jump now always leaves room for a full cross-fade. This only changes anything above about +16 semitones (or below about two octaves down), so octaves, fifths, dives, the shimmer delay, HAVOK and GLITCH sound exactly as before.
+  - **A new test** checks the shifter from two octaves down to two up, steady or gliding into the shift: the shifted note must be at least 20 dB above any of the original left over. It fails on 0.67.0 at two octaves up and passes now.
+- **A seventh album bank, bank L: 15 rigs inspired by the guitar sounds on Rage Against the Machine's *Evil Empire*** (1996). Mostly **effects and leads**, with a clean: the rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **L01 Two-Octave Stack Lead** | Your line two octaves up, doubled wide as if multi-tracked, boosted | "Year of tha Boomerang" (its lead: heavily multi-tracked Whammy parts two octaves up) |
+  | **L02 Parked Wah Scratch** | The wah parked fully down (a fixed, nasal peak) with the end of every sixteenth cut, as if flicking the pickup selector: rub the muted strings | "Bulls on Parade" (the scratch solo: the pickup selector as a kill switch, the wah fully down) |
+  | **L03 Two-Octave Pedal Shriek** | QUASAR two octaves up on the pedal: heel your note, toe the shriek | The album's Whammy squeals |
+  | **L04 Octave Harmony Riff** | An octave above and below your riff at once | The album's Whammy octave harmonies |
+  | **L05 Toggle Kill Stutter** | The kill-switch stutter alone, every sixteenth, in time | The kill-switch trick (no one song) |
+  | **L06 Graphic Boost Lead** | A solo lifted by an EQ pedal: the mids pushed, the level up | Morello's EQ pedal used as a solo boost |
+  | **L07 Slow Phase Riff** | A riff through a slow phaser | The phaser on his short pedal list |
+  | **L08 Jet Flange Riff** | A jet flange on a riff | The flanger on his board |
+  | **L09 Runaway Echo Swirl** | Short repeats fed back until they run away, for noises between riffs | His delay used for noises (no one song) |
+  | **L10 Scratched Chord Slap** | A scratched chord doubled by a short slap | "People of the Sun" (built on a repeated scratch across a power chord) |
+  | **L11 Wah Sweep Lead** | A wah lead on the expression pedal | "Down Rodeo" |
+  | **L12 Siren Dive** | QUASAR two octaves down on the pedal: heel your note, toe a siren dive | "Snakecharmer" |
+  | **L13 Whole-Step Pedal Bend** | QUASAR a tone up on the pedal, for bends no string could make | "Tire Me" |
+  | **L14 Muted Clean Pulse** | A dry, firm, muted clean | "Wind Below" |
+  | **L15 Radio Static Riff** | Your guitar as if through a talk-radio broadcast, with static | "Vietnow" (its talk-radio theme) |
+
+  - **What's documented:**
+    - Morello's own words: the same few pedals from the start, "a wah, a Whammy, a delay, and a phaser", plus an EQ pedal as a solo boost and a flanger (gear guides name a Crybaby, a DigiTech WH-1, a Boss DD-2, a DOD FX40B and an Ibanez flanger);
+    - the "Year of tha Boomerang" lead: multi-tracked Whammy parts two octaves up;
+    - the "Bulls on Parade" scratch: the pickup selector as a kill switch while rubbing the strings, the wah fully down;
+    - "People of the Sun": built on a repeated scratch across a power chord;
+    - the Whammy makes his squeals and octave harmonies.
+  - **The rest is our reading:** L11-L15's song links are my guesses. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **With the pedal:** rock it to the heel before playing **L03, L12 and L13** (QUASAR programs). It starts half way, which is part of the way up or down. **L11** is a wah on the pedal.
+  - **Bank E's "Wah Scratch Chop"** is the pedal-wah version of the "Bulls on Parade" scratch; L02 parks the wah as on the record.
+- **Tests:**
+  - bank L goes through the shared album-bank checks;
+  - "Two-Octave Stack Lead" checks a 220 Hz note comes out at 880 Hz with the original gone;
+  - each QUASAR pedal rig is your note at the heel and the interval at the toe (this is the test that found the two-octave fault).
+
+## 0.67.0
+
+- **A sixth album bank, bank K: 15 rigs inspired by the guitar sounds on Tool's *Ænima*** (1996). **Cleans, effects and leads**: the rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **K01 Flanged Delay Clean** | A clean through a slow flanger into a digital delay, as a compact flanger and delay on a board | "Forty Six & 2" (the clearest example of the album's turn to pedals) |
+  | **K02 Swirl Flange Riff** | A riff swirling through a deeper, resonant flange, over your amp | "Forty Six & 2" (a heavier reading) |
+  | **K03 Clean Repeat Echo** | A clean with a quarter-note digital echo, a little room | "Pushit" (the other clear example) |
+  | **K04 Shaver Buzz Drone** | A buzzing hum, as if a shaver were held to the strings: HAVOK's ring modulator held on low (X tunes it) | "Pushit" (its humming intro, said to be an Epilady shaver) |
+  | **K05 Bowed Sustain Swell** | A bowed, endless note: swell it with the pedal (a volume pedal), squeezed to sustain, a long echo, a hall | "Third Eye" (its opening, said to be an EBow) |
+  | **K06 Long Haze Clean** | A long, hazy clean for slow builds: a dotted echo and a cathedral, ducked | "Third Eye" (its long build) |
+  | **K07 Bass Head Lead** | A biting, gritty lead, boosted into your amp, a slap, a room | "Eulogy" |
+  | **K08 Tense Verse Clean** | A tense, dry verse clean: firm compression, a short slap | "Stinkfist" |
+  | **K09 Arpeggio Chorus Clean** | Clean arpeggios with a gentle chorus, an eighth echo, a plate | "H." |
+  | **K10 Rumble Noise Wash** | A wash of rumbling noise: grains from your playing through a noisy radio, a big space | "(-) Ions" |
+  | **K11 Crackle Phone Line** | Your guitar thin and crackling, as on an answering machine | "Message to Harry Manback" |
+  | **K12 Skipping Record** | A skipping record: eighth-note slices caught and repeated unevenly, on the song's grid | "Useful Idiot" |
+  | **K13 Doom Fuzz Lead** | A heavy, doomy fuzz lead with a dark echo | "Ænema" |
+  | **K14 Rotating Waltz Clean** | An octave below your note through a slow rotating speaker, like a fairground organ | "Intermission" |
+  | **K15 March Tremolo Chop** | A hard tremolo cutting every sixteenth, in time with the song, over your heavy amp | "Die Eier von Satan" |
+
+  - **What's documented:**
+    - on this album Adam Jones (with Justin Chancellor) turned to effects pedals for variation, with "Forty Six & 2" and "Pushit" the clearest examples (Andertons);
+    - his board from then lists a Boss DD-3 delay and a Boss BF-2 flanger (Equipboard, from his tech's board video);
+    - a mid-'70s Marshall Super Bass was the sole amp through this album.
+  - **Said, not confirmed:** forum posts quoting an old interview say the hum at the start of "Pushit" was an Epilady shaver on the strings (K04), and that "Third Eye" opens with an EBow (K05).
+  - **The rest is our reading:** the song links for K06-K15 are my guesses at where each sound fits. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **With the pad and pedal:**
+    - **K05 swells from the heel.**
+    - **K04's buzz** is tuned by HAVOK's X.
+    - **K12 and K15 follow the tempo,** tapped or the DAW's.
+- **Tests:**
+  - bank K goes through the shared album-bank checks;
+  - "March Tremolo Chop" checks that across a held note the level swings by more than 20 dB, sixteenths apart.
+
 ## 0.66.0
 
 - **A fifth album bank, bank J: 15 rigs inspired by the guitar sounds on Sevendust's *Next*** (2005), the album PR7-V's bank Q is built on. **Cleans, effects and leads**: the drop-tuned rhythm is your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:

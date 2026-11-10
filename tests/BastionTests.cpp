@@ -1,10 +1,10 @@
-// SENTRY, the noise gate inspired by the Fortin Zuul+: GATE, HOLD, RELEASE
+// BASTION, the noise gate inspired by the Fortin Zuul+: GATE, HOLD, RELEASE
 // and the key, checked on the levels it lets through.
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "dsp/effects/Sentry.h"
+#include "dsp/effects/Bastion.h"
 
 using Catch::Matchers::WithinAbs;
 
@@ -16,10 +16,10 @@ namespace
     int ms (double milliseconds) { return (int) std::lround (milliseconds * 0.001 * sampleRate); }
     float dB (float gain) { return 20.0f * std::log10 (juce::jmax (1.0e-9f, gain)); }
 
-    // Runs SENTRY over `length` samples: the key is the clean guitar (a
+    // Runs BASTION over `length` samples: the key is the clean guitar (a
     // 220 Hz note at -20 dB while `playing` says so), the gated sound is a
     // steady 1.0 (so the output is the gain it applies, sample by sample).
-    std::vector<float> run (effects::Sentry& sentry, const effects::Sentry::Settings& settings, int length,
+    std::vector<float> run (effects::Bastion& bastion, const effects::Bastion::Settings& settings, int length,
                             const std::function<bool (int)>& playing, float keyLevelDb = -20.0f)
     {
         std::vector<float> gains;
@@ -34,32 +34,32 @@ namespace
                 key[(size_t) i] = playing (n) ? amplitude * (float) std::sin (juce::MathConstants<double>::twoPi * 220.0 * n / sampleRate) : 0.0f;
                 sound[(size_t) i] = 1.0f;
             }
-            sentry.pushKey (key.data(), count);
-            sentry.process (sound.data(), count, settings);
+            bastion.pushKey (key.data(), count);
+            bastion.process (sound.data(), count, settings);
             gains.insert (gains.end(), sound.begin(), sound.begin() + count);
         }
         return gains;
     }
 
-    effects::Sentry prepared()
+    effects::Bastion prepared()
     {
-        effects::Sentry sentry;
-        sentry.prepare (sampleRate, blockSize, 8192);
-        return sentry;
+        effects::Bastion bastion;
+        bastion.prepare (sampleRate, blockSize, 8192);
+        return bastion;
     }
 }
 
-TEST_CASE ("SENTRY: open while you play, HOLD then a RELEASE fade when you stop", "[effects][sentry]")
+TEST_CASE ("BASTION: open while you play, HOLD then a RELEASE fade when you stop", "[effects][bastion]")
 {
-    auto sentry = prepared();
-    effects::Sentry::Settings settings;
+    auto bastion = prepared();
+    effects::Bastion::Settings settings;
     settings.on = true;
     settings.thresholdDb = -50.0f;
     settings.holdMs = 50.0f;
     settings.releaseMs = 200.0f;
 
     const auto stop = ms (300);
-    const auto gains = run (sentry, settings, ms (700), [stop] (int n) { return n < stop; });
+    const auto gains = run (bastion, settings, ms (700), [stop] (int n) { return n < stop; });
 
     // While playing: fully open.
     for (int n = ms (5); n < stop; ++n)
@@ -85,9 +85,9 @@ TEST_CASE ("SENTRY: open while you play, HOLD then a RELEASE fade when you stop"
     CHECK (gains[(size_t) (fadeStart + ms (210))] == 0.0f);   // closed: silence
 }
 
-TEST_CASE ("SENTRY: HOLD carries it through a short pause; without HOLD it starts to close", "[effects][sentry]")
+TEST_CASE ("BASTION: HOLD carries it through a short pause; without HOLD it starts to close", "[effects][bastion]")
 {
-    effects::Sentry::Settings settings;
+    effects::Bastion::Settings settings;
     settings.on = true;
     settings.thresholdDb = -50.0f;
     settings.releaseMs = 100.0f;
@@ -107,10 +107,10 @@ TEST_CASE ("SENTRY: HOLD carries it through a short pause; without HOLD it start
     CHECK (withoutHold.back() == 1.0f);   // open again for the second note
 }
 
-TEST_CASE ("SENTRY: it opens fast enough to keep the pick attack, and has hysteresis", "[effects][sentry]")
+TEST_CASE ("BASTION: it opens fast enough to keep the pick attack, and has hysteresis", "[effects][bastion]")
 {
-    auto sentry = prepared();
-    effects::Sentry::Settings settings;
+    auto bastion = prepared();
+    effects::Bastion::Settings settings;
     settings.on = true;
     settings.thresholdDb = -50.0f;
     settings.holdMs = 0.0f;
@@ -118,7 +118,7 @@ TEST_CASE ("SENTRY: it opens fast enough to keep the pick attack, and has hyster
 
     // Closed, then a note: fully open within a millisecond of it starting.
     const auto start = ms (300);
-    const auto gains = run (sentry, settings, ms (400), [start] (int n) { return n >= start; });
+    const auto gains = run (bastion, settings, ms (400), [start] (int n) { return n >= start; });
     CHECK (gains[(size_t) (start - 1)] == 0.0f);
     CHECK (gains[(size_t) (start + ms (1.5))] == 1.0f);
 
@@ -147,19 +147,19 @@ TEST_CASE ("SENTRY: it opens fast enough to keep the pick attack, and has hyster
     CHECK (quieter (6.0f) == 0.0f);
 }
 
-TEST_CASE ("SENTRY: KEY Clean listens to the guitar, Self to the sound it cuts", "[effects][sentry]")
+TEST_CASE ("BASTION: KEY Clean listens to the guitar, Self to the sound it cuts", "[effects][bastion]")
 {
     // The amp's hiss at -40 dB, well over GATE (-55 dB), and a silent guitar.
-    effects::Sentry::Settings settings;
+    effects::Bastion::Settings settings;
     settings.on = true;
     settings.thresholdDb = -55.0f;
     settings.holdMs = 20.0f;
     settings.releaseMs = 100.0f;
     const auto hiss = juce::Decibels::decibelsToGain (-40.0f);
 
-    const auto hissOut = [&] (effects::Sentry::Key key)
+    const auto hissOut = [&] (effects::Bastion::Key key)
     {
-        auto sentry = prepared();
+        auto bastion = prepared();
         settings.key = key;
         juce::Random random (7);
         std::vector<float> silentKey ((size_t) blockSize, 0.0f), sound ((size_t) blockSize);
@@ -169,8 +169,8 @@ TEST_CASE ("SENTRY: KEY Clean listens to the guitar, Self to the sound it cuts",
         {
             for (auto& s : sound)
                 s = hiss * (random.nextFloat() * 2.0f - 1.0f);
-            sentry.pushKey (silentKey.data(), blockSize);
-            sentry.process (sound.data(), blockSize, settings);
+            bastion.pushKey (silentKey.data(), blockSize);
+            bastion.process (sound.data(), blockSize, settings);
             if (start >= ms (300))
                 for (auto s : sound)
                 {
@@ -180,36 +180,36 @@ TEST_CASE ("SENTRY: KEY Clean listens to the guitar, Self to the sound it cuts",
         }
         return (float) std::sqrt (sum / counted);
     };
-    CHECK (hissOut (effects::Sentry::Key::clean) == 0.0f);              // the guitar is silent: closed
-    CHECK (dB (hissOut (effects::Sentry::Key::self) / hiss) > -6.0f);   // the hiss itself holds it open
+    CHECK (hissOut (effects::Bastion::Key::clean) == 0.0f);              // the guitar is silent: closed
+    CHECK (dB (hissOut (effects::Bastion::Key::self) / hiss) > -6.0f);   // the hiss itself holds it open
 }
 
-TEST_CASE ("SENTRY: the key is delayed by the amp's latency, so it opens with the amp's sound", "[effects][sentry]")
+TEST_CASE ("BASTION: the key is delayed by the amp's latency, so it opens with the amp's sound", "[effects][bastion]")
 {
-    auto sentry = prepared();
-    sentry.setKeyDelay (ms (10));   // say the amp is 10 ms late
-    effects::Sentry::Settings settings;
+    auto bastion = prepared();
+    bastion.setKeyDelay (ms (10));   // say the amp is 10 ms late
+    effects::Bastion::Settings settings;
     settings.on = true;
     settings.thresholdDb = -50.0f;
     settings.releaseMs = 50.0f;
     const auto start = ms (200);
-    const auto gains = run (sentry, settings, ms (300), [start] (int n) { return n >= start; });
+    const auto gains = run (bastion, settings, ms (300), [start] (int n) { return n >= start; });
     CHECK (gains[(size_t) (start + ms (8))] == 0.0f);    // the guitar has started, the amp's sound hasn't
     CHECK (gains[(size_t) (start + ms (12))] == 1.0f);   // now it has: open
 }
 
-TEST_CASE ("SENTRY: switched off it lets everything through, without a click", "[effects][sentry]")
+TEST_CASE ("BASTION: switched off it lets everything through, without a click", "[effects][bastion]")
 {
-    auto sentry = prepared();
-    effects::Sentry::Settings settings;
+    auto bastion = prepared();
+    effects::Bastion::Settings settings;
     settings.on = true;
     settings.thresholdDb = -50.0f;
     settings.releaseMs = 20.0f;
-    auto gains = run (sentry, settings, ms (200), [] (int) { return false; });
+    auto gains = run (bastion, settings, ms (200), [] (int) { return false; });
     REQUIRE (gains.back() == 0.0f);
 
     settings.on = false;
-    gains = run (sentry, settings, ms (10), [] (int) { return false; });
+    gains = run (bastion, settings, ms (10), [] (int) { return false; });
     CHECK (gains.front() < 0.1f);   // a short ramp, not a jump
     CHECK (gains.back() == 1.0f);
 }

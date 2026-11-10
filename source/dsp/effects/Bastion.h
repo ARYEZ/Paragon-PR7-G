@@ -4,7 +4,7 @@
 
 namespace effects
 {
-    // SENTRY: the noise gate, inspired by the Fortin Zuul+ (the owner sent
+    // BASTION: the noise gate, inspired by the Fortin Zuul+ (the owner sent
     // its manual). Like the pedal in its "4 cable method", it listens to the
     // clean guitar (its KEY IN: straight from the input, before PITCH, the
     // drive and the amp, so boosts and gain don't change when it opens) and
@@ -18,7 +18,7 @@ namespace effects
     // SELF (no key cable: it listens to what it cuts, the "2 cable method").
     // The manual gives no numbers: the ranges, the 0.5 ms opening, the 4 dB
     // hysteresis and the detector's 10 ms fall are our choices.
-    class Sentry
+    class Bastion
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.

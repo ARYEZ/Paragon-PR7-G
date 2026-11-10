@@ -224,9 +224,10 @@ namespace ParamIDs
     // Version 35: what the scratch programs (61-68) scratch: one of our own sounds.
     inline constexpr auto havokScratchSound = "havokScratchSound";
 
-    // Version 36: SENTRY, the noise gate (inspired by the Fortin Zuul+). Its
+    // Version 36: BASTION, the noise gate (inspired by the Fortin Zuul+). Its
     // GATE is gateThreshold (above); these are the pedal's HOLD and RELEASE
     // and its key (Clean: the guitar, Self: what it cuts).
+    // Named SENTRY until 0.70.0: the IDs keep that name, as saved IDs never change.
     inline constexpr auto sentryHold    = "sentryHold";      // ms
     inline constexpr auto sentryRelease = "sentryRelease";   // ms
     inline constexpr auto sentryKey     = "sentryKey";
