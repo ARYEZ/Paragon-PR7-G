@@ -2,6 +2,7 @@
 
 #include "dsp/effects/CompGate.h"
 #include "dsp/effects/Bastion.h"
+#include "dsp/effects/Cipher.h"
 #include "dsp/effects/Delay.h"
 #include "dsp/effects/Drive.h"
 #include "dsp/effects/FilterPitch.h"
@@ -347,5 +348,47 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::sentryHold, "Bastion Hold", skewed (0.0f, 500.0f, 50.0f, 1.0f), 20.0f, 36, asMs));
     layout.add (makeFloat (ParamIDs::sentryRelease, "Bastion Release", skewed (5.0f, 2000.0f, 150.0f, 1.0f), 120.0f, 36, asTime));
     layout.add (makeChoice (ParamIDs::sentryKey, "Bastion Key", 36, effects::Bastion::keyNames, 0));
+
+    // Added in PR7-G 0.72.0: CIPHER (stage 1). Every slot starts empty (Off)
+    // with its knobs in the middle and a flat envelope, so choosing a filter
+    // gives a steady, moderate setting until an envelope is drawn.
+    constexpr int v37 = 37;
+    using effects::Cipher;
+    layout.add (makeSwitch (ParamIDs::cipherOn, "Cipher On", v37, false));
+    for (int slot = 1; slot <= Cipher::numSlots; ++slot)
+    {
+        const auto id = [slot] (const char* part) { return ParamIDs::cipherSlot (slot, part); };
+        const auto name = "Cipher " + juce::String (slot) + " ";
+        const ToText asSigned = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + "%"; };
+        layout.add (makeSwitch (id ("On").toRawUTF8(), name + "On", v37, true));
+        layout.add (makeChoice (id ("Type").toRawUTF8(), name + "Type", v37, Cipher::typeNames, 0));
+        layout.add (makeFloat (id ("Main").toRawUTF8(), name + "Main", { 0.0f, 1.0f, 0.001f }, 0.5f, v37, asPercent));
+        layout.add (makeFloat (id ("P1").toRawUTF8(), name + "Knob 1", { 0.0f, 1.0f, 0.001f }, 0.5f, v37, asPercent));
+        layout.add (makeFloat (id ("P2").toRawUTF8(), name + "Knob 2", { 0.0f, 1.0f, 0.001f }, 0.5f, v37, asPercent));
+        layout.add (makeChoice (id ("Option").toRawUTF8(), name + "Steepness / Pan Mode", v37, Cipher::optionNames, 3));
+        layout.add (makeFloat (id ("EnvAmount").toRawUTF8(), name + "Env Amount", { -1.0f, 1.0f, 0.001f }, 0.5f, v37, asSigned));
+        layout.add (makeChoice (id ("Style").toRawUTF8(), name + "Env Style", v37, Cipher::styleNames, 0));
+        layout.add (makeSwitch (id ("Sync").toRawUTF8(), name + "Sync", v37, true));
+        layout.add (makeChoice (id ("Speed").toRawUTF8(), name + "Speed", v37, Cipher::speedNames, 3));
+        layout.add (makeFloat (id ("Rate").toRawUTF8(), name + "Rate", skewed (0.01f, 40.0f, 1.0f, 0.01f), 1.0f, v37, asHz));
+        layout.add (makeFloat (id ("Glide").toRawUTF8(), name + "Glide", skewed (0.0f, 1000.0f, 100.0f, 1.0f), 0.0f, v37, asMs));
+        layout.add (makeFloat (id ("Stereo").toRawUTF8(), name + "Stereo", { -1.0f, 1.0f, 0.001f }, 0.0f, v37, asSigned));
+        layout.add (makeFloat (id ("Gain").toRawUTF8(), name + "Gain", { -24.0f, 24.0f, 0.1f }, 0.0f, v37, asDb));
+        layout.add (makeFloat (id ("Mix").toRawUTF8(), name + "Mix", { 0.0f, 1.0f, 0.01f }, 1.0f, v37, asPercent));
+    }
+    layout.add (makeSwitch (ParamIDs::cipherDriveOn, "Cipher Drive On", v37, false));
+    layout.add (makeChoice (ParamIDs::cipherDriveType, "Cipher Drive Type", v37, Cipher::driveNames, 0));
+    layout.add (makeFloat (ParamIDs::cipherDrive, "Cipher Drive", { 0.0f, 1.0f, 0.001f }, 0.3f, v37, asPercent));
+    layout.add (makeFloat (ParamIDs::cipherTone, "Cipher Tone", { 0.0f, 1.0f, 0.001f }, 0.5f, v37, asPercent));
+    layout.add (makeSwitch (ParamIDs::cipherDriveAfter, "Cipher Effects Then Drive", v37, true));
+    layout.add (makeSwitch (ParamIDs::cipherCompOn, "Cipher Compressor On", v37, false));
+    layout.add (makeChoice (ParamIDs::cipherComp, "Cipher Compressor", v37, Cipher::compNames, 0));
+    layout.add (makeFloat (ParamIDs::cipherCompress, "Cipher Compress", { 0.0f, 1.0f, 0.001f }, 0.3f, v37, asPercent));
+    layout.add (makeSwitch (ParamIDs::cipherCleanBassOn, "Cipher Clean Bass On", v37, false));
+    layout.add (makeFloat (ParamIDs::cipherCleanBassHz, "Cipher Clean Bass", skewed (20.0f, 500.0f, 120.0f, 1.0f), 120.0f, v37, asHz));
+    layout.add (makeSwitch (ParamIDs::cipherCleanBassListen, "Cipher Clean Bass Listen", v37, false));
+    layout.add (makeFloat (ParamIDs::cipherGain, "Cipher Output Gain", { -24.0f, 24.0f, 0.1f }, 0.0f, v37, asDb));
+    layout.add (makeFloat (ParamIDs::cipherMix, "Cipher Mix", { 0.0f, 1.0f, 0.01f }, 1.0f, v37, asPercent));
+    layout.add (makeChoice (ParamIDs::cipherMixLaw, "Cipher Mix Law", v37, Cipher::mixLawNames, 1));
     return layout;
 }

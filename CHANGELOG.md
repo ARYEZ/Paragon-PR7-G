@@ -2,6 +2,66 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.72.0
+
+- **A new block: CIPHER, an envelope-controlled filter and multi-effect** (stage 1 of 5), inspired by Devious Machines' Infiltrator 2 (from the manual you sent). It's the last block in the signal chain, after HAVOK, with its own unit in the rack. It starts switched off: press **FX ON**.
+  - **Ten slots in a row.** The keys along the top pick a slot (each key shows that slot's effect) or **MASTER**. Each slot has:
+    - **TYPE**: the effect;
+    - the **main knob** (cutoff, frequency, vowel, gain or position) and up to two more knobs (resonance, drive, width, Q...);
+    - its own **envelope**, drawn on the rack's display, which moves the main knob.
+  - **The envelope editor** (the display):
+    - double-click to add a point, drag a point to move it, double-click a point to remove it;
+    - drag the small dot between two points up or down to bend that line;
+    - points snap to a grid of 16 across (hold SHIFT to move them freely);
+    - **SHAPE** loads one of eight starting shapes;
+    - a white line shows where the envelope is playing, and the title shows the main knob's value as it moves.
+  - **How the envelope plays:**
+    - **SYNC** on: once per **SPEED** (8 bars to 1/32, with dotted and triplet), locked to the song's position while it plays, as the original's PHASE LOCK does;
+    - SYNC off: at **RATE** in hertz;
+    - **ENV AMT**: how far it moves the main knob (left of centre moves it the other way);
+    - **ENV MOD**: BOTH ways, only UP, or only DOWN;
+    - **GLIDE** smooths steps, **STEREO** moves the left and right sides apart;
+    - each slot also has **GAIN** and **MIX** (with the sound coming into that slot).
+  - **The effects in stage 1:**
+    - **Ladder** LP, BP and HP: a gentle curve with a resonant point; steepness 6, 12, 18 or 24 dB;
+    - **Digital** LP, BP and HP: steeper and cleaner, a softer resonance; 6 to 24 dB;
+    - **101** LP, BP and HP: the classic 24 dB filter with a resonance that sings (it whistles at the top) and DRIVE;
+    - **Model-20** LP, BP and HP: a growling resonance and DRIVE; its steeper settings add a second resonant point lower down (the manual's "multiple resonant points");
+    - **Notch** (with WIDTH), **Dual Filter** (two resonant edges, BANDWIDTH spreads them), **Formant** (VOWEL A-E-I-O-U, Q, SHIFT +-500 Hz);
+    - **EQ**: Bell, Low Shelf, High Shelf (FREQUENCY, GAIN +-18 dB, Q);
+    - **Gain** (envelope it for tremolo, ducking or chopping) and **Pan** (POSITION and WIDTH; PAN, BALANCE or ROTATE).
+  - **MASTER:**
+    - a **DRIVE** (Overdrive, Tube, Fuzz, Hard Clip, Foldback, Rectify; DRIVE and TONE), before the slots or after them (**FX > DRIVE**);
+    - a **compressor**: **Squash** (fast and hard), **Maximizer** (smooth, with a limiter that keeps peaks under -0.5 dBFS), **Multiband** (three bands) or **Overkill** (three bands pulled up and down to one level, noise and all);
+    - **CLEAN BASS**: below its frequency the sound passes untouched (**LISTEN** to hear just that part);
+    - the output **GAIN** and **MIX**, with **MIX LAW** (-6, -3 or 0 dB at half way, as in the original's settings).
+  - **What's ours, not the original's.** The manual describes what each part does, not how it sounds, so every filter curve, resonance, drive shape, compressor setting and range is our design to do what the manual says. Specifically:
+    - the drive types' names (the manual names only Overdrive);
+    - the compressors' thresholds, ratios and crossovers (200 Hz and 2.5 kHz);
+    - the Maximizer doesn't look 3 ms ahead as the original does, so CIPHER adds no latency;
+    - the formant vowels are typical speech-science values.
+  - **I couldn't hear any of it here.** Tell me what sounds wrong and how.
+  - **Saved with your rigs and projects:**
+    - every knob is a normal parameter, so your DAW can automate it;
+    - the drawn envelopes are saved with rigs and projects too;
+    - undo takes back a drawing, one step per drag.
+  - **Still to come:**
+    - **stage 2:** the time effects (comb, phaser, pitch, frequency shifter, ring mod, FM, distort, decimator, delay, reverb, reflect, vocoder, loop, stretch, varispeed, slow, reverse) and the utilities Gate and Compress;
+    - **stage 3:** the 32-step sequencer, audio and MIDI retriggering, and the audio envelope follower;
+    - **stage 4:** the spectral effects;
+    - **stage 5:** macros and factory rigs.
+- **Tests:** for every filter, what it does to the sound:
+  - the low-passes pass the lows and cut above the cutoff, each steeper setting cutting more;
+  - the high-passes and band-passes keep the right part of the sound;
+  - resonance peaks at the cutoff, the Ladder's gentler than the 101's;
+  - DRIVE adds harmonics;
+  - the notch's depth, the Formant's vowels, and the EQ's gain to within half a dB;
+  - Gain and Pan, the envelope sweeping a filter, the song lock, ENV MOD, GLIDE and STEREO;
+  - each compressor squeezing loud and quiet together, and the Maximizer's ceiling;
+  - CLEAN BASS and the mix laws;
+  - extreme settings staying finite;
+  - envelopes surviving rigs, projects and undo, and the panel following the slot you pick.
+
 ## 0.71.0
 
 - **A ninth album bank, bank N: 15 rigs inspired by the guitar sounds on 30 Seconds to Mars' self-titled debut** (2002). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:

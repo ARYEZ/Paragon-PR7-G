@@ -1,0 +1,168 @@
+#pragma once
+
+#include "EffectUtils.h"
+
+#include <array>
+#include <atomic>
+#include <vector>
+
+namespace effects
+{
+    // CIPHER: an envelope-controlled filter and multi-effect, the block after
+    // HAVOK, inspired by Devious Machines' Infiltrator 2 (the owner sent its
+    // manual). Our own design, built from the manual's descriptions: ten
+    // slots in series, each with an effect, a main knob, two parameter
+    // knobs, an envelope that moves the main knob (played by its own LFO,
+    // synced to the song or free), ENV MOD STYLE (both ways, only up, only
+    // down), GLIDE, STEREO, GAIN and MIX; then the master section: a drive
+    // before or after the slots, a compressor (Squash, Maximizer, Multiband,
+    // Overkill), CLEAN BASS and the output GAIN and MIX.
+    //
+    // Stage 1 (0.72.0): the filters (Ladder, Digital, 101 and Model-20, each
+    // LP, BP and HP; Notch, Dual Filter and Formant), the EQ (bell and the
+    // two shelves) and the utilities Gain and Pan. The manual gives no
+    // curves, ranges or circuits: every frequency, curve, resonance law and
+    // drive shape here is ours, chosen to do what the manual says each one
+    // does. Later stages add the time effects, the sequencer and
+    // retriggering, the spectral effects and the macros.
+    class Cipher
+    {
+    public:
+        static constexpr int numSlots = 10;
+
+        // Saved by number in rigs and projects: only ever add to the end.
+        enum class Type { off, ladderLp, ladderBp, ladderHp, digitalLp, digitalBp, digitalHp, oneOhOneLp, oneOhOneBp, oneOhOneHp,
+                          model20Lp, model20Bp, model20Hp, notch, dualFilter, formant, eqBell, eqLowShelf, eqHighShelf, gain, pan };
+        static inline const juce::StringArray typeNames { "Off", "Ladder LP", "Ladder BP", "Ladder HP", "Digital LP", "Digital BP", "Digital HP",
+                                                          "101 LP", "101 BP", "101 HP", "Model-20 LP", "Model-20 BP", "Model-20 HP",
+                                                          "Notch", "Dual Filter", "Formant", "EQ Bell", "EQ Low Shelf", "EQ High Shelf",
+                                                          "Gain", "Pan" };
+        // OPTION: a filter's steepness (Ladder, Digital and Model-20), or Pan's mode.
+        static inline const juce::StringArray optionNames { "6 dB / Pan", "12 dB / Balance", "18 dB / Rotate", "24 dB" };
+        static inline const juce::StringArray slopeNames { "6", "12", "18", "24" };
+        static inline const juce::StringArray panModeNames { "PAN", "BALANCE", "ROTATE" };
+        enum class Style { both, up, down };
+        static inline const juce::StringArray styleNames { "Both", "Up", "Down" };
+        // The LFO's synced speeds: how long one pass of the envelope takes.
+        static inline const juce::StringArray speedNames { "8 bars", "4 bars", "2 bars", "1 bar", "1/2 dotted", "1/2", "1/2 triplet",
+                                                           "1/4 dotted", "1/4", "1/4 triplet", "1/8 dotted", "1/8", "1/8 triplet",
+                                                           "1/16 dotted", "1/16", "1/16 triplet", "1/32" };
+        static double speedBeats (int speed) noexcept;
+        // The master drive's types (ours: the manual names only "Overdrive") and compressors (the manual's four).
+        static inline const juce::StringArray driveNames { "Overdrive", "Tube", "Fuzz", "Hard Clip", "Foldback", "Rectify" };
+        enum class Comp { squash, maximizer, multiband, overkill };
+        static inline const juce::StringArray compNames { "Squash", "Maximizer", "Multiband", "Overkill" };
+        static inline const juce::StringArray mixLawNames { "-6 dB", "-3 dB", "0 dB" };
+
+        // What each type's knobs are called (empty: the knob does nothing for this type).
+        struct Labels { const char* main; const char* p1; const char* p2; bool hasSlope; bool isPan; };
+        static Labels labelsFor (Type) noexcept;
+        static bool isFilter (Type t) noexcept { return t >= Type::ladderLp && t <= Type::formant; }
+
+        //======================================================================
+        // The envelope: points from left (x 0) to right (x 1), each 0 (bottom)
+        // to 1 (top), with a CURVE for the line to the next point (-1 to 1:
+        // 0 straight, positive bowing up, negative down).
+        struct Point { float x = 0.0f, y = 0.5f, curve = 0.0f; };
+        using Envelope = std::vector<Point>;
+        static constexpr int maxPoints = 64;
+        static float envelopeAt (const Envelope&, float x) noexcept;
+        // Keeps points in order, inside 0-1, at most maxPoints, at least one.
+        static Envelope tidy (Envelope);
+        // The shapes above the editor (ours, after the manual's pictures).
+        static inline const juce::StringArray shapeNames { "Flat", "Ramp Up", "Ramp Down", "Triangle", "Hump", "Square", "Steps", "Pluck" };
+        static Envelope shape (int index);
+        // As saved in rigs and projects: "x y curve;..." to 4 decimals.
+        static juce::String toText (const Envelope&);
+        static Envelope fromText (const juce::String&);
+
+        //======================================================================
+        struct Slot
+        {
+            bool on = true;
+            Type type = Type::off;
+            float main = 0.5f, p1 = 0.0f, p2 = 0.0f;   // 0 to 1
+            int option = 3;                             // 24 dB for a filter, PAN for Pan
+            float envAmount = 0.5f;                     // -1 to 1: how far the envelope moves the main knob
+            Style style = Style::both;
+            bool sync = true;
+            int speed = 3;                              // 1 bar
+            float rateHz = 1.0f;
+            float glideMs = 0.0f;
+            float stereo = 0.0f;                        // -1 to 1: left and right moved apart
+            float gainDb = 0.0f;
+            float mix = 1.0f;
+        };
+
+        struct Master
+        {
+            bool driveOn = false;
+            int driveType = 0;
+            float drive = 0.3f, tone = 0.5f;            // 0 to 1
+            bool driveAfter = true;                     // Effects -> Drive (true) or Drive -> Effects
+            bool compOn = false;
+            Comp comp = Comp::squash;
+            float compress = 0.3f;                      // 0 to 1
+            bool cleanBassOn = false;
+            float cleanBassHz = 120.0f;
+            bool cleanBassListen = false;
+            float gainDb = 0.0f;
+            float mix = 1.0f;
+            int mixLaw = 1;                             // -3 dB
+        };
+
+        struct Settings
+        {
+            bool on = false;
+            std::array<Slot, numSlots> slots;
+            Master master;
+            double bpm = 120.0;
+            double songBeats = -1.0;   // the song position at the block's start; -1 when not playing
+        };
+
+        Cipher();
+        ~Cipher();
+
+        void prepare (double sampleRate, int maxBlockSize);
+        void reset();
+
+        // Message thread: a slot's envelope (sampled into a table the audio thread reads).
+        void setEnvelope (int slot, const Envelope&);
+        const Envelope& getEnvelope (int slot) const { return envelopes[(size_t) juce::jlimit (0, numSlots - 1, slot)]; }
+
+        void process (juce::dsp::AudioBlock<float> stereo, const Settings&);
+
+        // For the panel: where each slot's envelope is (0-1) and the main knob as moved (0-1).
+        float getPhase (int slot) const noexcept { return phases[(size_t) slot].load(); }
+        float getMovedMain (int slot) const noexcept { return moved[(size_t) slot].load(); }
+
+        // The knobs' real values, shared by the engine and the panel's readouts.
+        static float cutoffHz (float main01) noexcept { return 20.0f * std::pow (1000.0f, juce::jlimit (0.0f, 1.0f, main01)); }
+        static float gainUtilityDb (float main01) noexcept;   // the Gain utility's main knob: -60 (silent) to +12 dB, 0 dB at 0.8
+        static float eqGainDb (float p01) noexcept { return (juce::jlimit (0.0f, 1.0f, p01) - 0.5f) * 36.0f; }   // +-18 dB
+        static float eqQ (float p01) noexcept { return 0.3f * std::pow (40.0f, juce::jlimit (0.0f, 1.0f, p01)); }  // 0.3 to 12
+        static float driveGainDb (float drive01) noexcept { return juce::jlimit (0.0f, 1.0f, drive01) * 36.0f; }
+        static juce::String mainText (Type, float main01);
+        static juce::String p1Text (Type, float p01);
+        static juce::String p2Text (Type, float p01);
+
+        static constexpr int tableSize = 512;
+        static constexpr int tick = 16;   // samples between control updates (the envelope, filter coefficients)
+
+    private:
+        struct SlotState;
+        struct MasterState;
+        std::array<std::unique_ptr<SlotState>, numSlots> slotStates;
+        std::unique_ptr<MasterState> master;
+
+        std::array<Envelope, numSlots> envelopes;   // message thread's copy
+        std::array<std::array<std::atomic<float>, tableSize>, numSlots> tables;
+        std::array<std::atomic<float>, numSlots> phases, moved;
+
+        double sampleRate = 48000.0;
+        BypassFade fade;
+        juce::AudioBuffer<float> dry, low;   // the input (for MIX and CLEAN BASS)
+
+        void processSlot (int index, juce::dsp::AudioBlock<float>&, const Slot&, const Settings&);
+    };
+}

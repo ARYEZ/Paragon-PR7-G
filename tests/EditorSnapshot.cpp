@@ -5,6 +5,7 @@
 #include "PluginProcessor.h"
 #include "ui/EffectPanel.h"
 #include "ui/Finish.h"
+#include "ui/CipherPanel.h"
 
 namespace
 {
@@ -122,6 +123,11 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
         if (auto* p = processor.getParameters().getParameter (setting.upToFirstOccurrenceOf ("=", false, false)))
             p->setValueNotifyingHost (p->convertTo0to1 (setting.fromFirstOccurrenceOf ("=", false, false).getFloatValue()));
 
+    // PARAGON_SNAPSHOT_CIPHER=1:4,2:6 loads CIPHER shapes into slots (slot:shape, 1-based slots).
+    for (const auto& setting : juce::StringArray::fromTokens (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHER", {}), ",", {}))
+        processor.setCipherEnvelope (setting.upToFirstOccurrenceOf (":", false, false).getIntValue() - 1,
+                                     effects::Cipher::shape (setting.fromFirstOccurrenceOf (":", false, false).getIntValue()));
+
     // PARAGON_SNAPSHOT_RUN=seconds: run the audio that long first (silence),
     // so things that move with the sound, like Cyclone's rotors, are going.
     if (const auto run = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RUN", {}).getDoubleValue(); run > 0.0)
@@ -152,10 +158,14 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     if (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_PAGE", {}) == "settings")
         if (auto* tab = dynamic_cast<juce::Button*> (findById (*editor, "settingsTab")))
             tab->onClick();
-    // PARAGON_SNAPSHOT_BLOCK=n opens block n's knobs (0 = pitch, 1 = comp ... 7 = glitch, 8 = mod, 9 = mod 2 ... 12 = lo-fi, 13 = HAVOK) in place of the graphic EQ.
+    // PARAGON_SNAPSHOT_BLOCK=n opens block n's knobs (0 = pitch, 1 = comp ... 7 = glitch, 8 = mod, 9 = mod 2 ... 12 = lo-fi, 13 = HAVOK, 14 = CIPHER) in place of the graphic EQ.
     if (const auto block = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_BLOCK", {}); block.isNotEmpty())
         if (auto* chain = findType<SignalChain> (*editor))
             chain->onSelect (block.getIntValue());
+    // PARAGON_SNAPSHOT_CIPHERSLOT=n: CIPHER's slot n (1-10) or 11 for MASTER.
+    if (const auto slot = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHERSLOT", {}); slot.isNotEmpty())
+        if (auto* panel = findType<CipherPanel> (*editor))
+            panel->showSlot (slot.getIntValue() - 1);
     // PARAGON_SNAPSHOT_RACK_PAGE=n: the open block's page n (MOD's 1 is Cyclone's TONE).
     if (const auto page = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_RACK_PAGE", {}); page.isNotEmpty())
     {

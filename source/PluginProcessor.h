@@ -9,6 +9,7 @@
 #include "dsp/TapTempo.h"
 #include "dsp/effects/CompGate.h"
 #include "dsp/effects/Bastion.h"
+#include "dsp/effects/Cipher.h"
 #include "dsp/effects/Delay.h"
 #include "dsp/effects/Drive.h"
 #include "dsp/effects/FilterPitch.h"
@@ -195,6 +196,14 @@ public:
     // Copies a MIDI pad's moves into the parameters now instead of on the next timer tick. For tests.
     void flushMidiPad() { syncMidiPadToParameters(); }
 
+    // CIPHER: the engine (for the panel's playheads) and each slot's envelope
+    // (message thread). Setting one is an edit: it marks the rig changed and
+    // makes an undo step.
+    const effects::Cipher& getCipher() const noexcept { return cipher; }
+    const effects::Cipher::Envelope& getCipherEnvelope (int slot) const { return cipher.getEnvelope (slot); }
+    // `finished`: false while a drag is still going (one undo step for the whole drag).
+    void setCipherEnvelope (int slot, const effects::Cipher::Envelope&, bool finished = true);
+
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int numSamples);
     void readHostTempo();
@@ -217,7 +226,8 @@ private:
         bool operator== (const Snapshot& other) const
         {
             return rig.parameters == other.rig.parameters && rig.ampModelPath == other.rig.ampModelPath
-                && rig.cabIrPath == other.rig.cabIrPath && current == other.current;
+                && rig.cabIrPath == other.rig.cabIrPath && rig.cipherEnvelopes == other.rig.cipherEnvelopes
+                && current == other.current;
         }
     };
     Snapshot takeSnapshot() const;
@@ -259,7 +269,11 @@ private:
     effects::Delay delay;
     effects::Reverb reverb;
     effects::LoFi loFi;   // after the reverb
-    effects::Havok havok; // last: the touch pad, after LO-FI
+    effects::Havok havok; // the touch pad, after LO-FI
+    effects::Cipher cipher;   // last: the envelope filter and multi-effect, after HAVOK
+    // CIPHER's parameters, looked up once (there are 150 for the slots).
+    std::array<std::array<std::atomic<float>*, 15>, effects::Cipher::numSlots> cipherSlotParams {};
+    effects::Cipher::Settings readCipherSettings (double songBeats) const;
     effects::Glitch glitch;
     effects::PitchBlock pitchBlock;
     effects::TalkBox talkBox;   // FILTER / PITCH's Talk Box type, after the cab   // first: TUNING, OCTAVER and FREEZE, before the wah   // after the EQ (POST), or after FILTER / PITCH (PRE)

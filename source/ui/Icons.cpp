@@ -361,6 +361,21 @@ namespace Icons
                 break;
             }
 
+            case Type::cipher:
+            {
+                // An envelope drawn over a grid: points joined by a line that
+                // rises, bows and steps down (the slot's envelope editor).
+                p.addRoundedRectangle (0.06f, 0.14f, 0.88f, 0.72f, 0.08f);
+                p.startNewSubPath (0.14f, 0.74f);
+                p.quadraticTo (0.24f, 0.26f, 0.42f, 0.28f);
+                p.lineTo (0.58f, 0.52f);
+                p.lineTo (0.58f, 0.66f);
+                p.lineTo (0.86f, 0.66f);
+                p.addEllipse (0.38f, 0.24f, 0.08f, 0.08f);
+                p.addEllipse (0.54f, 0.48f, 0.08f, 0.08f);
+                break;
+            }
+
             case Type::flame:
                 // The mockup's "All Rigs" icon.
                 p.startNewSubPath (0.5f, 0.05f);

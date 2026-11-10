@@ -19,6 +19,7 @@ namespace
     const juce::Identifier tappedBpmKey { "tappedBpm" };
     const juce::Identifier expressionCcKey { "expressionCc" };
     const juce::Identifier tunerReferenceKey { "tunerReferenceHz" };
+    const juce::Identifier cipherEnvelopeKey { "CipherEnvelope" };
 
     juce::String describeModel (const AmpStage::ModelInfo& info)
     {
@@ -41,6 +42,10 @@ ParagonX1AudioProcessor::ParagonX1AudioProcessor()
       parameters (*this, nullptr, "ParagonX1", createParameterLayout())
 {
     inputGainDb = parameters.getRawParameterValue (ParamIDs::inputGain);
+    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+        for (int part = 0; part < ParamIDs::cipherSlotParts.size(); ++part)
+            cipherSlotParams[(size_t) slot][(size_t) part]
+                = parameters.getRawParameterValue (ParamIDs::cipherSlot (slot + 1, ParamIDs::cipherSlotParts[part].toRawUTF8()));
     outputGainDb = parameters.getRawParameterValue (ParamIDs::outputGain);
     ampOn = parameters.getRawParameterValue (ParamIDs::ampOn);
     ampNormalise = parameters.getRawParameterValue (ParamIDs::ampNormalise);
@@ -110,6 +115,7 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     reverb.prepare (sampleRate, preparedBlockSize);
     loFi.prepare (sampleRate, preparedBlockSize);
     havok.prepare (sampleRate, preparedBlockSize);
+    cipher.prepare (sampleRate, preparedBlockSize);
     glitch.prepare (sampleRate, preparedBlockSize);
     pitchBlock.prepare (sampleRate, preparedBlockSize);
     talkBox.prepare (sampleRate, preparedBlockSize);
@@ -126,6 +132,60 @@ void ParagonX1AudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 juce::AudioProcessorParameter* ParagonX1AudioProcessor::getBypassParameter() const
 {
     return parameters.getParameter (ParamIDs::bypass);
+}
+
+effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double songBeats) const
+{
+    using effects::Cipher;
+    Cipher::Settings settings;
+    settings.on = isOn (ParamIDs::cipherOn);
+    settings.bpm = getTempoBpm();
+    settings.songBeats = songBeats;
+    for (size_t slot = 0; slot < (size_t) Cipher::numSlots; ++slot)
+    {
+        const auto& p = cipherSlotParams[slot];
+        const auto v = [&p] (int part) { return p[(size_t) part]->load(); };
+        auto& s = settings.slots[slot];
+        s.on = v (0) > 0.5f;
+        s.type = (Cipher::Type) juce::roundToInt (v (1));
+        s.main = v (2);
+        s.p1 = v (3);
+        s.p2 = v (4);
+        s.option = juce::roundToInt (v (5));
+        s.envAmount = v (6);
+        s.style = (Cipher::Style) juce::roundToInt (v (7));
+        s.sync = v (8) > 0.5f;
+        s.speed = juce::roundToInt (v (9));
+        s.rateHz = v (10);
+        s.glideMs = v (11);
+        s.stereo = v (12);
+        s.gainDb = v (13);
+        s.mix = v (14);
+    }
+    auto& m = settings.master;
+    m.driveOn = isOn (ParamIDs::cipherDriveOn);
+    m.driveType = (int) param (ParamIDs::cipherDriveType);
+    m.drive = param (ParamIDs::cipherDrive);
+    m.tone = param (ParamIDs::cipherTone);
+    m.driveAfter = isOn (ParamIDs::cipherDriveAfter);
+    m.compOn = isOn (ParamIDs::cipherCompOn);
+    m.comp = (Cipher::Comp) (int) param (ParamIDs::cipherComp);
+    m.compress = param (ParamIDs::cipherCompress);
+    m.cleanBassOn = isOn (ParamIDs::cipherCleanBassOn);
+    m.cleanBassHz = param (ParamIDs::cipherCleanBassHz);
+    m.cleanBassListen = isOn (ParamIDs::cipherCleanBassListen);
+    m.gainDb = param (ParamIDs::cipherGain);
+    m.mix = param (ParamIDs::cipherMix);
+    m.mixLaw = (int) param (ParamIDs::cipherMixLaw);
+    return settings;
+}
+
+void ParagonX1AudioProcessor::setCipherEnvelope (int slot, const effects::Cipher::Envelope& points, bool finished)
+{
+    cipher.setEnvelope (slot, points);
+    markModified();
+    if (finished)
+        requestCheckpoint();
 }
 
 float ParagonX1AudioProcessor::param (const char* id) const
@@ -467,6 +527,9 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                   padValue (2, ParamIDs::havokTouch) > 0.5f, isOn (ParamIDs::havokHold),
                                   (int) param (ParamIDs::havokScratchSound), getTempoBpm(), songBeats });
 
+    // CIPHER last of all, after HAVOK.
+    cipher.process (stereoBlock, readCipherSettings (songBeats));
+
     // The master OUTPUT knob plus the rig's own RIG LEVEL, and the
     // expression pedal when it's a VOLUME pedal. Squaring the position gives
     // the "audio taper" of a real volume pedal: half way down is about
@@ -770,6 +833,10 @@ Rig ParagonX1AudioProcessor::captureRig() const
 
     rig.ampModelPath = getAmpStatus().file.getFullPathName();
     rig.cabIrPath = getCabStatus().file.getFullPathName();
+    const auto flat = effects::Cipher::toText (effects::Cipher::shape (0));
+    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+        if (const auto text = effects::Cipher::toText (cipher.getEnvelope (slot)); text != flat)
+            rig.cipherEnvelopes[slot] = text;
     return rig;
 }
 
@@ -789,6 +856,13 @@ void ParagonX1AudioProcessor::applyRig (const Rig& rig)
                                   ? ranged->convertTo0to1 (ranged->getNormalisableRange().snapToLegalValue (found->second))
                                   : ranged->getDefaultValue();
         ranged->setValueNotifyingHost (normalised);
+    }
+
+    // CIPHER's envelopes: the rig's, or flat for the slots it doesn't mention.
+    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+    {
+        const auto found = rig.cipherEnvelopes.find (slot);
+        cipher.setEnvelope (slot, found != rig.cipherEnvelopes.end() ? effects::Cipher::fromText (found->second) : effects::Cipher::shape (0));
     }
 
     if (! rig.keepAmpAndCab)
@@ -953,6 +1027,13 @@ void ParagonX1AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     state.setProperty (tappedBpmKey, tappedBpm.load(), nullptr);
     state.setProperty (expressionCcKey, expressionCc.load(), nullptr);
     state.setProperty (tunerReferenceKey, tunerReferenceHz.load(), nullptr);
+    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+    {
+        juce::ValueTree envelope (cipherEnvelopeKey);
+        envelope.setProperty ("slot", slot + 1, nullptr);
+        envelope.setProperty ("points", effects::Cipher::toText (cipher.getEnvelope (slot)), nullptr);
+        state.appendChild (envelope, nullptr);
+    }
 
     if (auto xml = state.createXml())
         copyXmlToBinary (*xml, destData);
@@ -999,6 +1080,17 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
             state.appendChild (parameter, nullptr);
         }
     }
+    // CIPHER's envelopes (not parameters): read, then taken out of the state.
+    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+        cipher.setEnvelope (slot, effects::Cipher::shape (0));
+    for (int i = state.getNumChildren(); --i >= 0;)
+        if (const auto child = state.getChild (i); child.hasType (cipherEnvelopeKey))
+        {
+            const auto slot = (int) child.getProperty ("slot", 0);
+            if (slot >= 1 && slot <= effects::Cipher::numSlots)
+                cipher.setEnvelope (slot - 1, effects::Cipher::fromText (child.getProperty ("points").toString()));
+            state.removeChild (i, nullptr);
+        }
     parameters.replaceState (state);
 
     const auto restore = [] (const juce::var& path, auto load, auto clear)

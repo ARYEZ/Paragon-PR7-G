@@ -44,6 +44,13 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     gain-reduction meter.
   - **Lo-Fi** (last in the chain; no footswitch): telephone, AM radio, megaphone, cassette (wow, flutter, hiss)
     or bitcrusher, for intros and breakdowns. AMOUNT, NOISE, MIX and LEVEL.
+  - **CIPHER** (after HAVOK, the very last block; no footswitch): an envelope-controlled filter and multi-effect,
+    inspired by Devious Machines' Infiltrator 2. Ten slots in a row, each with an effect (Ladder, Digital, 101 and
+    Model-20 filters in LP, BP and HP, Notch, Dual Filter, Formant, a bell or shelf EQ, Gain, Pan), its knobs and an
+    **envelope** you draw on the rack's display, which moves the main knob once per LFO cycle (synced to the song, or
+    in hertz), with ENV MOD STYLE, GLIDE, STEREO, GAIN and MIX. The MASTER page has a drive (before or after the
+    slots), four compressors (Squash, Maximizer, Multiband, Overkill), CLEAN BASS and the output GAIN and MIX.
+    Built in stages: the time effects, the sequencer and retriggering, the spectral effects and macros are to come.
   - **Pitch** (first in the signal chain; no footswitch): **TUNING** retunes the whole guitar (-12 to +12 semitones: D
     standard, B, a capo...), the **OCTAVER** blends two octaves down, one down, the dry guitar and one up (POG-style,
     chords track too), and **FREEZE** holds what you just played as an endless pad you can play over (with LEVEL,

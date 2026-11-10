@@ -232,11 +232,36 @@ namespace ParamIDs
     inline constexpr auto sentryRelease = "sentryRelease";   // ms
     inline constexpr auto sentryKey     = "sentryKey";
 
+    // Version 37: CIPHER, the envelope-controlled filter and multi-effect
+    // (inspired by Devious Machines' Infiltrator 2), after HAVOK. Ten slots,
+    // each `cipherSlot (n, part)` with n 1-10 and part one of cipherSlotParts;
+    // then the master section. The envelopes themselves aren't parameters:
+    // they're saved in rigs and projects as points (Rig::cipherEnvelopes).
+    inline constexpr auto cipherOn             = "cipherOn";
+    inline const juce::StringArray cipherSlotParts { "On", "Type", "Main", "P1", "P2", "Option", "EnvAmount", "Style", "Sync",
+                                                     "Speed", "Rate", "Glide", "Stereo", "Gain", "Mix" };
+    inline juce::String cipherSlot (int slot, const char* part) { return "cipher" + juce::String (slot) + part; }
+    inline constexpr auto cipherDriveOn        = "cipherDriveOn";
+    inline constexpr auto cipherDriveType      = "cipherDriveType";
+    inline constexpr auto cipherDrive          = "cipherDrive";
+    inline constexpr auto cipherTone           = "cipherTone";
+    inline constexpr auto cipherDriveAfter     = "cipherDriveAfter";     // Effects -> Drive (on) or Drive -> Effects
+    inline constexpr auto cipherCompOn         = "cipherCompOn";
+    inline constexpr auto cipherComp           = "cipherComp";
+    inline constexpr auto cipherCompress       = "cipherCompress";
+    inline constexpr auto cipherCleanBassOn    = "cipherCleanBassOn";
+    inline constexpr auto cipherCleanBassHz    = "cipherCleanBassHz";
+    inline constexpr auto cipherCleanBassListen = "cipherCleanBassListen";
+    inline constexpr auto cipherGain           = "cipherGain";
+    inline constexpr auto cipherMix            = "cipherMix";
+    inline constexpr auto cipherMixLaw         = "cipherMixLaw";
+
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real
     // pedal's is: it's where your foot is, not part of the sound. What the
     // pedal is assigned to, and its range, are saved with each rig.
-    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression, havokTouch };
+    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression, havokTouch,
+                                               cipherCleanBassListen };
 }
 
 namespace ExpressionTargets

@@ -34,6 +34,11 @@ struct Rig
 
     juce::String ampModelPath, cabIrPath;
 
+    // CIPHER's envelopes, by slot (0-9), as text ("x y curve;..."), for the
+    // slots whose envelope isn't the flat default. Not parameters: a drawn
+    // shape is a list of points. Older plugins ignore them.
+    std::map<int, juce::String> cipherEnvelopes;
+
     // Factory rigs set only the effects: we can't ship other people's NAM
     // captures, so they keep whatever amp and cabinet the user has loaded.
     bool keepAmpAndCab = false;
