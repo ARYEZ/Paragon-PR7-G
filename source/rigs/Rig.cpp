@@ -16,6 +16,7 @@ namespace
 
     const juce::Identifier rigTag { "ParagonRig" };
     const juce::Identifier parameterTag { "Param" };
+    const juce::Identifier cipherEnvelopeTag { "CipherEnvelope" };
 }
 
 juce::String Rig::bankName (int bankIndex)
@@ -48,6 +49,20 @@ std::unique_ptr<juce::XmlElement> Rig::toXml() const
         auto* parameter = xml->createNewChildElement (parameterTag);
         parameter->setAttribute ("id", id);
         parameter->setAttribute ("value", value);
+    }
+    for (const auto& [slot, points] : cipherEnvelopes)
+    {
+        auto* envelope = xml->createNewChildElement (cipherEnvelopeTag);
+        envelope->setAttribute ("slot", slot + 1);
+        envelope->setAttribute ("points", points);
+    }
+    if (cipherSequence.isNotEmpty())
+        xml->createNewChildElement ("CipherSequence")->setAttribute ("steps", cipherSequence);
+    if (cipherMacros.isNotEmpty() || cipherMacroNames.isNotEmpty())
+    {
+        auto* macros = xml->createNewChildElement ("CipherMacros");
+        macros->setAttribute ("assignments", cipherMacros);
+        macros->setAttribute ("names", cipherMacroNames);
     }
     return xml;
 }
@@ -91,6 +106,16 @@ std::optional<Rig> Rig::fromXml (const juce::XmlElement& xml)
     for (const auto* parameter : xml.getChildWithTagNameIterator (parameterTag))
         if (const auto id = parameter->getStringAttribute ("id"); id.isNotEmpty())
             rig.parameters[id] = (float) parameter->getDoubleAttribute ("value");
+    for (const auto* envelope : xml.getChildWithTagNameIterator (cipherEnvelopeTag))
+        if (const auto slot = envelope->getIntAttribute ("slot", 0); slot >= 1 && slot <= 20)
+            rig.cipherEnvelopes[slot - 1] = envelope->getStringAttribute ("points");
+    if (const auto* sequence = xml.getChildByName ("CipherSequence"))
+        rig.cipherSequence = sequence->getStringAttribute ("steps");
+    if (const auto* macros = xml.getChildByName ("CipherMacros"))
+    {
+        rig.cipherMacros = macros->getStringAttribute ("assignments");
+        rig.cipherMacroNames = macros->getStringAttribute ("names");
+    }
 
     // Saved before the drive had a MODEL: it was the original overdrive,
     // model 0. Without this it would load as the newer default.

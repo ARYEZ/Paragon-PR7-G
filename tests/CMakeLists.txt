@@ -14,6 +14,7 @@ add_executable(ParagonX1Tests
     CycloneTests.cpp
     HavokTests.cpp
     BastionTests.cpp
+    CipherTests.cpp
     RigTests.cpp
     UiTests.cpp
     TunerTests.cpp

@@ -232,19 +232,70 @@ namespace ParamIDs
     inline constexpr auto sentryRelease = "sentryRelease";   // ms
     inline constexpr auto sentryKey     = "sentryKey";
 
+    // Version 37: CIPHER, the envelope-controlled filter and multi-effect
+    // (inspired by Devious Machines' Infiltrator 2), after HAVOK. Ten slots,
+    // each `cipherSlot (n, part)` with n 1-10 and part one of cipherSlotParts;
+    // then the master section. The envelopes themselves aren't parameters:
+    // they're saved in rigs and projects as points (Rig::cipherEnvelopes).
+    inline constexpr auto cipherOn             = "cipherOn";
+    inline const juce::StringArray cipherSlotParts { "On", "Type", "Main", "P1", "P2", "Option", "EnvAmount", "Style", "Sync",
+                                                     "Speed", "Rate", "Glide", "Stereo", "Gain", "Mix",
+                                                     // Version 38 (stage 3): retriggering and the second modulator.
+                                                     "RetrigAudio", "RetrigMidi", "RandomStart", "EnvLoop", "StartPos", "LoopStart",
+                                                     "LoopEnd", "ModSource", "ModDest", "ModAmount" };
+    inline juce::String cipherSlot (int slot, const char* part) { return "cipher" + juce::String (slot) + part; }
+    inline constexpr auto cipherDriveOn        = "cipherDriveOn";
+    inline constexpr auto cipherDriveType      = "cipherDriveType";
+    inline constexpr auto cipherDrive          = "cipherDrive";
+    inline constexpr auto cipherTone           = "cipherTone";
+    inline constexpr auto cipherDriveAfter     = "cipherDriveAfter";     // Effects -> Drive (on) or Drive -> Effects
+    inline constexpr auto cipherCompOn         = "cipherCompOn";
+    inline constexpr auto cipherComp           = "cipherComp";
+    inline constexpr auto cipherCompress       = "cipherCompress";
+    inline constexpr auto cipherCleanBassOn    = "cipherCleanBassOn";
+    inline constexpr auto cipherCleanBassHz    = "cipherCleanBassHz";
+    inline constexpr auto cipherCleanBassListen = "cipherCleanBassListen";
+    inline constexpr auto cipherGain           = "cipherGain";
+    inline constexpr auto cipherMix            = "cipherMix";
+    inline constexpr auto cipherMixLaw         = "cipherMixLaw";
+    // Version 38 (stage 3): the sequencer (its steps are saved like the
+    // envelopes, as Rig::cipherSequence), MIDI control, PITCH SNAP's scale,
+    // the AUDIO TRIGGER and the AUDIO FOLLOWER.
+    inline constexpr auto cipherSeqOn          = "cipherSeqOn";
+    inline constexpr auto cipherSeqSpeed       = "cipherSeqSpeed";
+    inline constexpr auto cipherSeqStart       = "cipherSeqStart";
+    inline constexpr auto cipherSeqEnd         = "cipherSeqEnd";
+    inline constexpr auto cipherMidiOn         = "cipherMidiOn";
+    inline constexpr auto cipherScale          = "cipherScale";
+    inline constexpr auto cipherScaleRoot      = "cipherScaleRoot";
+    inline constexpr auto cipherTrigLevel      = "cipherTrigLevel";
+    inline constexpr auto cipherTrigHpf        = "cipherTrigHpf";
+    inline constexpr auto cipherTrigHysteresis = "cipherTrigHysteresis";
+    inline constexpr auto cipherTrigHoldOff    = "cipherTrigHoldOff";
+    inline constexpr auto cipherFollowAttack   = "cipherFollowAttack";
+    inline constexpr auto cipherFollowHold     = "cipherFollowHold";
+    inline constexpr auto cipherFollowDecay    = "cipherFollowDecay";
+    inline constexpr auto cipherFollowGate     = "cipherFollowGate";
+    // Version 39 (stage 5): the eight MACRO knobs. What each moves (and how
+    // far, on what curve) and their names are saved like the envelopes
+    // (Rig::cipherMacros, Rig::cipherMacroNames).
+    inline constexpr int cipherNumMacros = 8;
+    inline juce::String cipherMacro (int macro) { return "cipherMacro" + juce::String (macro); }   // 1 to 8
+
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real
     // pedal's is: it's where your foot is, not part of the sound. What the
     // pedal is assigned to, and its range, are saved with each rig.
-    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression, havokTouch };
+    inline const juce::StringArray notInRigs { inputGain, outputGain, bypass, tunerOn, tunerMute, expression, havokTouch,
+                                               cipherCleanBassListen };
 }
 
 namespace ExpressionTargets
 {
     // Saved by number: only ever add to the end.
-    enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox, cycloneSpeed };
+    enum { off, volume, wah, morph, pitch, loFi, whammyWah, glitch, talkBox, cycloneSpeed, cipherMacro1 };
     inline const juce::StringArray names { "Off", "Volume", "Wah / Filter", "Morph FX", "Pitch Bend", "Lo-Fi", "Quasar", "Glitch", "Talk Box",
-                                           "Cyclone Speed" };
+                                           "Cyclone Speed", "Cipher Macro 1" };
 }
 
 namespace ParamRanges

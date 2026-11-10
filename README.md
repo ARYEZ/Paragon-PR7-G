@@ -44,6 +44,18 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     gain-reduction meter.
   - **Lo-Fi** (last in the chain; no footswitch): telephone, AM radio, megaphone, cassette (wow, flutter, hiss)
     or bitcrusher, for intros and breakdowns. AMOUNT, NOISE, MIX and LEVEL.
+  - **CIPHER** (after HAVOK, the very last block; no footswitch): an envelope-controlled filter and multi-effect,
+    inspired by Devious Machines' Infiltrator 2. Ten slots in a row, each with an effect (Ladder, Digital, 101 and
+    Model-20 filters in LP, BP and HP, Notch, Dual Filter, Formant, a bell or shelf EQ, Gain, Pan; since 0.73.0 also Comb,
+    Phaser, Pitch Shift, Freq Shift, Ring Mod, FM, Distort, Decimate, Delay, Reverb, Reflect, Vocoder, Loop, Stretch,
+    Varispeed, Slow, Reverse, Gate and Compress), its knobs and an
+    **envelope** you draw on the rack's display, which moves the main knob once per LFO cycle (synced to the song, or
+    in hertz), with ENV MOD STYLE, GLIDE, STEREO, GAIN and MIX. The MASTER page has a drive (before or after the
+    slots), four compressors (Squash, Maximizer, Multiband, Overkill), CLEAN BASS and the output GAIN and MIX.
+    Since 0.74.0: a 32-step **sequencer** and MIDI to switch slots, audio and MIDI **retriggering** with START and loop
+    markers, a second modulator (the **audio follower** or **Envelope 2**) and **pitch snap**. Since 0.75.0: 14 **spectral
+    (FFT) effects** (each adds its FFT size as latency, reported to the DAW). Since 0.76.0: eight **MACROS** (each moves
+    any knobs by its own depth and curve; the expression pedal can play MACRO 1) and bank **O**, 15 CIPHER rigs.
   - **Pitch** (first in the signal chain; no footswitch): **TUNING** retunes the whole guitar (-12 to +12 semitones: D
     standard, B, a capo...), the **OCTAVER** blends two octaves down, one down, the dry guitar and one up (POG-style,
     chords track too), and **FREEZE** holds what you just played as an endless pad you can play over (with LEVEL,
@@ -86,7 +98,7 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
 - All effects start switched off, so projects made with earlier versions sound the same.
 - **Rigs:** SAVE in the header saves the current sound as a rig; **<** and **>** step through rigs; a
   `*` after the name means it's changed since loading. The **PRESETS** tab browses, searches, files
-  (banks A-N), tags and favourites rigs. Factory rigs set the effects and keep your amp and cab.
+  (banks A-O), tags and favourites rigs. Factory rigs set the effects and keep your amp and cab.
   **E** holds rigs inspired by particular songs; **F** to **N** are album banks, 15 cleans,
   effects and leads each (the rhythm tone is your amp capture): **F** inspired by the guitar
   sounds on Spiritbox's *Eternal Blue*, **G** by those on Korn's self-titled debut, **H** by

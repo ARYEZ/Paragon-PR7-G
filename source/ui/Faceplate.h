@@ -43,6 +43,7 @@
 //   GRAPHIC EQ  the EQ's own response curve; LEVEL.
 //   LO-FI       its TYPE; a wave showing what AMOUNT and NOISE do; AMOUNT, MIX.
 //   HAVOK       its name only: its panel draws the touch pad and readout
+//   CIPHER      its name only: its panel draws the envelope editor
 //               in the display (the pad is played there).
 //   (the generic unit, name, icon and TYPE, is kept for any block added later)
 class Faceplate final : public juce::Component,
@@ -55,10 +56,10 @@ public:
 
     // Which kind of block: the ones with their own faceplates, or any other.
     enum class Unit { drive, amp, cabinet, pitch, dynamics, delay, reverb, modulation, modulation2,
-                      filterPitch, glitch, eq, loFi, havok, other };
+                      filterPitch, glitch, eq, loFi, havok, cipher, other };
     // What's drawn now (for tests).
     enum class Look { generic, drive, amp, cabinet, pitch, classic, daybreak, delay, reverb,
-                      modulation, filterPitch, glitch, eq, loFi, havok };
+                      modulation, filterPitch, glitch, eq, loFi, havok, cipher };
 
     // `onIds`: the block's on switches (comma separated); `typeId`: its TYPE
     // (or MODEL; or empty).
@@ -122,6 +123,7 @@ private:
     void paintEq (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintLoFi (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
     void paintHavok (juce::Graphics&, juce::Rectangle<float> header, juce::Rectangle<float> body);
+    void paintCipher (juce::Graphics&, juce::Rectangle<float> header);
     void paintInputMeter (juce::Graphics&, juce::Rectangle<float> area);
     void paintInputScreen (juce::Graphics&, juce::Rectangle<float> area, const juce::String& note);
 

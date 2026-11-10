@@ -218,6 +218,7 @@ Faceplate::Look Faceplate::getLook() const
         case Unit::eq:       return Look::eq;
         case Unit::loFi:     return Look::loFi;
         case Unit::havok:    return Look::havok;
+        case Unit::cipher:   return Look::cipher;
         case Unit::other:    break;
     }
     return Look::generic;
@@ -460,6 +461,7 @@ void Faceplate::paint (juce::Graphics& g)
         case Look::eq:       paintEq (g, header, content); break;
         case Look::loFi:     paintLoFi (g, header, content); break;
         case Look::havok:    paintHavok (g, header, content); break;
+        case Look::cipher:   paintCipher (g, header); break;
         case Look::generic: paintGeneric (g, header, content); break;
     }
 }
@@ -1379,4 +1381,10 @@ void Faceplate::paintHavok (juce::Graphics& g, juce::Rectangle<float> header, ju
 {
     // The name; HAVOK's panel draws the pad and its readout in the display.
     nameplate (g, header, "HAVOK", "TOUCH PAD MULTI-FX");
+}
+
+void Faceplate::paintCipher (juce::Graphics& g, juce::Rectangle<float> header)
+{
+    // The name; CIPHER's panel draws the envelope editor in the display.
+    nameplate (g, header, "CIPHER", "ENVELOPE FILTER MULTI-FX");
 }

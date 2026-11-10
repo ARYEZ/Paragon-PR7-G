@@ -1,6 +1,7 @@
 #include "FactoryRigs.h"
 
 #include "Parameters.h"
+#include "dsp/effects/Cipher.h"
 
 namespace
 {
@@ -17,6 +18,19 @@ namespace
         // parameter it doesn't mention to its default (every effect off).
         for (const auto& [id, value] : changes)
             rig.parameters[id] = value;
+        return rig;
+    }
+
+    // A CIPHER rig's drawn parts: envelope shapes by slot (1-based, Cipher::shape
+    // numbers), the sequencer's steps, the macros and their names.
+    Rig withCipher (Rig rig, std::initializer_list<std::pair<int, int>> shapes, const juce::String& sequence = {},
+                    const juce::String& macros = {}, const juce::String& names = {})
+    {
+        for (const auto& [slot, shape] : shapes)
+            rig.cipherEnvelopes[slot - 1] = effects::Cipher::toText (effects::Cipher::shape (shape));
+        rig.cipherSequence = sequence;
+        rig.cipherMacros = macros;
+        rig.cipherMacroNames = names;
         return rig;
     }
 
@@ -72,6 +86,8 @@ namespace
     constexpr float xpUpTwoOctaves = 13, xpUpSecond = 14, xpDownTwoOctaves = 18;   // QUASAR programs 14, 15 and 19
     constexpr int M = 12;                // bank M: an album's guitar sounds (Cold, 13 Ways to Bleed on Stage)
     constexpr int N = 13;                // bank N: an album's guitar sounds (30 Seconds to Mars, 30 Seconds to Mars)
+    constexpr int O = 14;                // bank O: CIPHER, the envelope filter and multi-effect
+    constexpr float pedalCipherMacro = 10;   // the expression pedal on CIPHER's MACRO 1
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1510,6 +1526,115 @@ std::vector<Rig> makeFactoryRigs()
             { rigLevel, 1 },
             { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 6 }, { glitchChaos, 4 }, { glitchMix, 0.6f },
             { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.45f } }),
+
+        //======================================================================
+        // Bank O: CIPHER (0.76.0), one idea each from its manual: a filter
+        // pulsing in time, a pick-triggered wah, the sequencer chopping,
+        // formants, tape tricks, beat repeats, a snapped arpeggio, spectral
+        // pads, the vocoder, ring mod and comb sweeps, a wobble, a radio sweep
+        // and a filtered ping-pong. Our own presets (the original's 600 are its
+        // makers'); each keeps your amp and cab.
+
+        // A resonant 101 filter pulsing in eighths; MACRO 1 (FILTER, also on the
+        // expression pedal) opens it.
+        withCipher (make ("Filter Pulse", O, 1, "Cipher,FX,Filter,Expression", {
+            { cipherOn, 1 }, { expressionTarget, pedalCipherMacro }, { rigLevel, 2 },
+            { "cipher1Type", 7 }, { "cipher1Main", 0.42f }, { "cipher1P1", 0.65f }, { "cipher1P2", 0.3f },
+            { "cipher1EnvAmount", 0.5f }, { "cipher1Speed", 11 }, { "cipher1Glide", 20 } }),
+            { { 1, 5 } }, {}, "1:cipher1Main:0.35:0", "FILTER"),
+
+        // A wah that each pick sets off: the envelope plucks the filter up and lets it fall.
+        withCipher (make ("Pick Wah", O, 2, "Cipher,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 3 },
+            { "cipher1Type", 7 }, { "cipher1Main", 0.38f }, { "cipher1P1", 0.7f }, { "cipher1P2", 0.2f },
+            { "cipher1EnvAmount", 0.55f }, { "cipher1Style", 1 }, { "cipher1Speed", 8 },
+            { "cipher1RetrigAudio", 1 }, { "cipher1EnvLoop", 0 }, { cipherTrigLevel, -30 } }),
+            { { 1, 7 } }),
+
+        // The sequencer chops the sound in a sixteenth pattern (a silent Gain slot on its lit steps).
+        withCipher (make ("Stutter Gate", O, 3, "Cipher,FX,Glitch", {
+            { cipherOn, 1 }, { cipherSeqOn, 1 }, { cipherSeqSpeed, 2 }, { rigLevel, 3 },
+            { "cipher1Type", 19 }, { "cipher1Main", 0.0f }, { "cipher1EnvAmount", 0 } }),
+            {}, "0000cc88,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"),
+
+        // A talking formant: the vowel sweeps A-E-I-O-U and back each bar.
+        withCipher (make ("Talking Formant", O, 4, "Cipher,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 11 },
+            { "cipher1Type", 15 }, { "cipher1Main", 0.5f }, { "cipher1P1", 0.6f }, { "cipher1EnvAmount", 1.0f }, { "cipher1Speed", 3 } }),
+            { { 1, 3 } }),
+
+        // Half-time tape: each quarter note's sound played back at half speed, an octave down, under the dry.
+        make ("Half-Time Tape", O, 5, "Cipher,FX,Pitch", {
+            { cipherOn, 1 }, { rigLevel, 2 },
+            { "cipher1Type", 36 }, { "cipher1Main", 0.25f }, { "cipher1P1", 0.4f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.6f } }),
+
+        // Beat repeats: the last sixteenth looped, a new one every quarter, on the sequencer's beats.
+        withCipher (make ("Beat Repeat Chop", O, 6, "Cipher,FX,Glitch", {
+            { cipherOn, 1 }, { cipherSeqOn, 1 }, { cipherSeqSpeed, 2 }, { rigLevel, 1 },
+            { "cipher1Type", 33 }, { "cipher1Option", 0 }, { "cipher1Main", 0.667f }, { "cipher1P1", 0.4f }, { "cipher1P2", 0.2f },
+            { "cipher1EnvAmount", 0 } }),
+            {}, "0000f0f0,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"),
+
+        // An arpeggio: the pitch shifter stepping through the envelope's steps,
+        // snapped to A minor pentatonic, beside the dry note.
+        withCipher (make ("Pentatonic Arp", O, 7, "Cipher,FX,Pitch", {
+            { cipherOn, 1 }, { cipherScale, 4 }, { cipherScaleRoot, 9 }, { rigLevel, 6 },
+            { "cipher1Type", 23 }, { "cipher1Main", 0.5f }, { "cipher1P1", 0.7f }, { "cipher1Style", 3 },
+            { "cipher1EnvAmount", 0.5f }, { "cipher1Speed", 8 }, { "cipher1Mix", 0.6f } }),
+            { { 1, 6 } }),
+
+        // A frozen spectral pad: each frequency held and fading, into a spectral reverb.
+        make ("Spectral Freeze Pad", O, 8, "Cipher,FX,Ambient", {
+            { cipherOn, 1 }, { rigLevel, -8 },
+            { "cipher1Type", 48 }, { "cipher1Main", 0.85f }, { "cipher1P1", 0.4f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.7f },
+            { "cipher2Type", 49 }, { "cipher2Main", 0.6f }, { "cipher2EnvAmount", 0 } }),
+
+        // A robot choir: your playing shapes the vocoder's oscillator.
+        make ("Robot Choir", O, 9, "Cipher,FX", {
+            { cipherOn, 1 }, { rigLevel, 9 },
+            { "cipher1Type", 32 }, { "cipher1Main", 0.4f }, { "cipher1P2", 0.3f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.85f } }),
+
+        // A ring-mod siren: the modulator rising and falling every two bars.
+        withCipher (make ("Ring Siren", O, 10, "Cipher,FX", {
+            { cipherOn, 1 }, { rigLevel, 3 },
+            { "cipher1Type", 25 }, { "cipher1Main", 0.55f }, { "cipher1P1", 0.8f }, { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 2 } }),
+            { { 1, 3 } }),
+
+        // A comb riser: the comb climbing over two bars, gliding.
+        withCipher (make ("Comb Riser", O, 11, "Cipher,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 0 },
+            { "cipher1Type", 21 }, { "cipher1Main", 0.35f }, { "cipher1P1", 0.85f }, { "cipher1P2", 0.6f },
+            { "cipher1EnvAmount", 0.8f }, { "cipher1Speed", 2 }, { "cipher1Glide", 50 } }),
+            { { 1, 1 } }),
+
+        // A wide phaser swirl, its two sides apart.
+        withCipher (make ("Phaser Swirl", O, 12, "Cipher,FX,Modulation", {
+            { cipherOn, 1 }, { rigLevel, 3 },
+            { "cipher1Type", 22 }, { "cipher1Main", 0.45f }, { "cipher1P1", 0.6f }, { "cipher1P2", 0.6f },
+            { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 3 }, { "cipher1Stereo", 0.6f } }),
+            { { 1, 4 } }),
+
+        // A wobble: the dual filter jumping in triplet eighths, glided into a wobble.
+        withCipher (make ("Wobble Filter", O, 13, "Cipher,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, -5 },
+            { "cipher1Type", 14 }, { "cipher1Main", 0.38f }, { "cipher1P1", 0.6f }, { "cipher1P2", 0.3f },
+            { "cipher1EnvAmount", 0.8f }, { "cipher1Speed", 12 }, { "cipher1Glide", 60 } }),
+            { { 1, 5 } }),
+
+        // A lo-fi radio being tuned: a narrow spectral band sweeping, then a lower sample rate.
+        withCipher (make ("Lo-Fi Radio Sweep", O, 14, "Cipher,FX,Lo-Fi", {
+            { cipherOn, 1 }, { rigLevel, 4 },
+            { "cipher1Type", 44 }, { "cipher1Main", 0.55f }, { "cipher1P1", 0.2f }, { "cipher1EnvAmount", 0.5f }, { "cipher1Speed", 2 },
+            { "cipher2Type", 28 }, { "cipher2Main", 0.65f }, { "cipher2P1", 0.6f }, { "cipher2EnvAmount", 0 } }),
+            { { 1, 3 } }),
+
+        // A filtered ping-pong: a high-pass sweeping each bar into eighth echoes bouncing side to side.
+        withCipher (make ("Ping-Pong Filter Echo", O, 15, "Cipher,FX,Delay", {
+            { cipherOn, 1 }, { rigLevel, 1 },
+            { "cipher1Type", 6 }, { "cipher1Main", 0.3f }, { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 3 },
+            { "cipher2Type", 29 }, { "cipher2Main", 0.385f }, { "cipher2P1", 0.45f }, { "cipher2Stereo", 1.0f }, { "cipher2EnvAmount", 0 },
+            { "cipher2Mix", 0.8f } }),
+            { { 1, 3 } }),
     };
 }
 

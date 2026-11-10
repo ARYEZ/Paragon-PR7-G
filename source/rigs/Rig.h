@@ -16,7 +16,7 @@
 // RIG LEVEL for balancing rigs against each other instead.
 struct Rig
 {
-    static constexpr int numBanks = 14;          // A to D, E for the song-inspired rigs, F on for album banks
+    static constexpr int numBanks = 15;          // A to D, E for the song-inspired rigs, F to N album banks, O CIPHER
     static constexpr int maxNumber = 99;
 
     juce::String name { "New Rig" };
@@ -34,12 +34,22 @@ struct Rig
 
     juce::String ampModelPath, cabIrPath;
 
+    // CIPHER's envelopes, by slot (0-9), as text ("x y curve;..."), for the
+    // slots whose envelope isn't the flat default. Not parameters: a drawn
+    // shape is a list of points. Older plugins ignore them.
+    std::map<int, juce::String> cipherEnvelopes;   // 0-9 the slots' envelopes, 10-19 their ENVELOPE 2
+    // CIPHER's sequencer steps (Cipher::sequenceToText); empty when no step is lit.
+    juce::String cipherSequence;
+    // CIPHER's macros: what each moves ("macro:parameterId:depth:curve;..."),
+    // and their names ("name|name|...", empty for the defaults).
+    juce::String cipherMacros, cipherMacroNames;
+
     // Factory rigs set only the effects: we can't ship other people's NAM
     // captures, so they keep whatever amp and cabinet the user has loaded.
     bool keepAmpAndCab = false;
 
     juce::String getSlotName() const;           // e.g. "A01"
-    static juce::String bankName (int bank);    // "A".."N"
+    static juce::String bankName (int bank);    // "A".."O"
 
     std::unique_ptr<juce::XmlElement> toXml() const;
     // Returns nothing if the XML isn't a rig.

@@ -2,6 +2,237 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.76.0
+
+- **CIPHER stage 5, the last: MACROS and a bank of factory rigs.** CIPHER now has everything in the Infiltrator 2 manual we planned in five stages.
+  - **MACROS (the new MACRO page):** eight knobs, each moving any number of others at once, as the manual describes.
+    - **To set one up:** pick a macro with its key, pick a knob under **TARGET**, and press **ADD**. Each line has its own **DEPTH** (how far its knob moves at the macro's top, either way) and **CURVE** (straight, early or late).
+    - **The display** lists what the picked macro moves, with a bar showing how far each knob is moved right now. Click a line to edit it; **REMOVE** and **CLEAR** take lines out.
+    - **What a macro can move** (the manual's list): each slot's main knob, knobs 1 and 2, ENV AMOUNT, RATE, MOD AMOUNT, GLIDE, STEREO, GAIN and MIX, and the master's DRIVE, TONE, COMPRESS, output GAIN and MIX.
+    - **NAME:** rename a macro (up to 16 letters); the name shows on its key and knob.
+    - **Your knobs keep their own settings.** A macro moves them only while the sound is made, so turning it back to 0 puts everything back where it was.
+    - **Your DAW can automate the macros**, and they're saved with rigs and projects, as are the assignments and names. Undo covers them.
+    - **New for guitar:** the expression pedal can play **MACRO 1** (EXPRESSION ASSIGN: **Cipher Macro 1**). One rock of the pedal can open a filter, bring in a delay and push the drive at once.
+  - **Bank O: 15 CIPHER rigs**, one idea each:
+
+    | Rig | What it does |
+    |---|---|
+    | O01 Filter Pulse | A resonant filter pulsing in eighths; MACRO 1 (FILTER, also on the expression pedal) opens it |
+    | O02 Pick Wah | Each pick sets off a quick wah sweep (audio retrigger) |
+    | O03 Stutter Gate | The sequencer chops your playing in a sixteenth pattern |
+    | O04 Talking Formant | The vowel sweeps A-E-I-O-U and back each bar |
+    | O05 Half-Time Tape | Each quarter note played back at half speed, an octave down, under the dry |
+    | O06 Beat Repeat Chop | The last sixteenth looped on the sequencer's beats |
+    | O07 Pentatonic Arp | The pitch shifter stepping through an arpeggio, snapped to A minor pentatonic |
+    | O08 Spectral Freeze Pad | Every frequency held and fading, into a spectral reverb |
+    | O09 Robot Choir | Your playing shapes the vocoder's oscillator |
+    | O10 Ring Siren | A ring modulator rising and falling every two bars |
+    | O11 Comb Riser | A comb filter climbing over two bars |
+    | O12 Phaser Swirl | A wide phaser, its two sides apart |
+    | O13 Wobble Filter | A dual filter jumping in triplet eighths, glided into a wobble |
+    | O14 Lo-Fi Radio Sweep | A narrow spectral band sweeping, like tuning a radio, then a lower sample rate |
+    | O15 Ping-Pong Filter Echo | A high-pass sweep into eighth echoes bouncing side to side |
+
+    These are **our presets**: the original's 600 belong to its makers. Each keeps your amp and cab. A test plays every one, checks it changes the sound, and keeps them all within 6 dB of each other.
+- **What's ours:** the macro curve's law (x to the power 2^-2c), DEPTH as a share of each knob's whole travel, the 64-line limit, and the rigs.
+- **I couldn't hear any of it here.** Tell me what sounds wrong, and which rigs need work.
+- **Tests:**
+  - a macro taking a Gain slot down exactly 6 dB, and the output GAIN up exactly 12 dB, while the knobs keep their settings;
+  - the curve law;
+  - the expression pedal playing MACRO 1;
+  - assignments and names kept in rigs and projects, and undo;
+  - bank O changing the sound and balanced.
+
+## 0.75.0
+
+- **CIPHER stage 4: the 14 spectral effects** (the Infiltrator 2 manual's "Spectral" list). Each slot can now take an **FFT** effect, which turns the sound into its frequencies, changes them, and turns them back:
+  - **FFT Shift:** SHIFT moves every frequency up or down (+-2 kHz); SCALE spreads them out or squeezes them (x0.25 to x4).
+  - **FFT Rotate:** shifts the whole spectrum and wraps it round (what goes off the top comes in at the bottom).
+  - **FFT Twist:** turns the spectrum round inside a band (FREQ, TWIST, BANDWIDTH).
+  - **FFT Mirror:** flips the spectrum inside a band (FREQ, BANDWIDTH): low becomes high.
+  - **FFT Bandpass:** a brick-wall band (FREQUENCY, BANDWIDTH 0.1 to 8 octaves); outside it, more than 40 dB down.
+  - **FFT Stretch:** slows the sound without changing its pitch (SPEED, TEMPO, CHAOS).
+  - **FFT Scatter:** delays each frequency by its own random amount (LENGTH up to 1.5 s, FEEDBACK, RATE).
+  - **FFT Cascade:** delays frequencies by how far they are from CENTRE, so the sound slides up or down (LENGTH, FEEDBACK).
+  - **FFT Smear:** holds each frequency and lets it fade (LENGTH up to 2 s; CHAOS for a diffuse wash).
+  - **FFT Reverb:** each frequency rings on (TIME 0.2 to 20 s; TONE: the highs die faster or ring longer).
+  - **FFT Compress:** pushes every frequency towards one level, like a compressor with hundreds of bands (AMOUNT; TONE from pink to white).
+  - **FFT Corrupt:** left of centre takes out the quietest frequencies, right the loudest; nothing at the centre (DECAY: low is glitchy).
+  - **FFT Lofi:** the sound of a low-bitrate file: FACTOR keeps fewer and fewer frequencies (half way, a quarter; all the way, just the loudest), RANDOMISE picks some at random, SLOW holds the choice.
+  - **FFT Spread:** smears each frequency over its neighbours (AMOUNT).
+- **FFT SIZE (the mode keys): 512, 1024, 2048 or 4096.** Bigger sounds smoother but reacts more slowly. 2048 to start with.
+- **Latency:**
+  - **Each spectral slot delays the sound by its FFT size:** 2048 is about 43 ms at 48 kHz, and two spectral slots add up.
+  - **PR7-G tells your DAW,** which lines everything up when it plays back. Latency changes when you add or remove a spectral slot, which some DAWs answer with a short gap (the original warns about the same).
+  - **Playing live through it, you'll feel the delay.** Use 512 or 1024 there.
+  - **Lined up inside CIPHER:** the dry sound for MIX, a slot's MIX and CLEAN BASS is delayed to match, so mixing never makes the sound hollow.
+  - **No spectral slot, no delay.**
+- **What's ours:** every spectral effect's workings, ranges and curves are our design, built to do what the manual says (it describes the effects in a line or two each). Specifically:
+  - frequencies are tracked between frames so moved or held notes stay smooth;
+  - Corrupt judges quiet and loud against the loudest frequency, over 60 dB;
+  - the delayed effects remember 1.5 s.
+- **CPU:** one spectral slot is a few percent of a core; ten at 4096 together about a quarter of one here.
+- **I couldn't hear any of it here.** Tell me what sounds wrong and how.
+- **Tests:**
+  - **delay:** a click comes out exactly one frame later; the latency is reported (and added up for two slots); MIX with the delayed dry sound loses nothing;
+  - **moving frequencies:** Shift (1 kHz to 1.2 kHz, SCALE x2), Mirror (800 Hz to 1.25 kHz), Rotate, Twist (inside the band only), Bandpass's brick wall;
+  - **ringing on:** Smear, Reverb (longer with TIME), Scatter and Cascade continue after the note stops; Bandpass doesn't;
+  - **the rest:** Stretch keeps the pitch; Compress pulls a loud and a quiet note together; Corrupt removes the quiet one or the loud one; Lofi drops the quiet one; Spread reaches the neighbouring frequencies.
+- **Still to come, stage 5:** macros and factory rigs.
+
+## 0.74.0
+
+- **This release also carries 0.73.0 (CIPHER stage 2), which was never published:** GitHub's macOS build machine never started, so the release step was skipped. Stage 2 added 19 effects to CIPHER's slots:
+  - **effects:** Comb, Phaser, Pitch Shift, Freq Shift, Ring Mod, FM, Distort and Decimate;
+  - **time effects:** Delay, Reverb, Reflect, Vocoder, Loop, Stretch, Varispeed, Slow and Reverse;
+  - **utilities:** Gate and Compress.
+
+  The full notes are under 0.73.0 in the CHANGELOG.
+- **CIPHER stage 3: the sequencer, retriggering, the second modulator and pitch snap** (from the Infiltrator 2 manual).
+  - **The sequencer (the new SEQ page):** 32 steps, a row for each slot; the display becomes the grid.
+    - Click or drag to light a slot's steps. With **SEQ ON**, a slot plays only on its lit steps; others pass the sound through (each slot fades in and out over 3 ms, so steps don't click).
+    - **STEP** sets each step's length (1/4 to 1/64). **LOOP** and **TO** set the part that repeats, 2 to 32 steps; it follows the song's position, as the manual says.
+    - Click a row's name to pick it, then **<** and **>** rotate its steps, **CLEAR** empties it, and **RANDOM** fills the loop at random.
+    - The sequencer starts **off**. The original's starts on, but with no steps lit that would silence every slot.
+  - **MIDI:** slots play while their note is held, in any octave: C for slot 1, C# for 2, and so on up to A for slot 10. With MIDI on, the notes are in charge rather than the sequencer.
+  - **RETRIG (on each slot):**
+    - **AUDIO:** a peak in your playing restarts the envelope;
+    - **MIDI|SEQ:** a MIDI note, or the slot coming on in the sequencer, restarts it;
+    - **RND:** each restart begins somewhere random;
+    - **LOOP:** after a restart the envelope goes round (only the loop region, if you've set one); off, it plays once and waits.
+
+    Drag the red **S** (START) along the top of the envelope, and the loop's edges along the bottom.
+  - **The AUDIO TRIGGER** (SEQ page): LEVEL, FILTER (listen through a high-pass, say to catch the pick and not the bass), HYSTERESIS and HOLD-OFF. Their defaults (6 dB, 40 ms) are the ones in the manual's picture.
+  - **The second modulator (on each slot):**
+    - **MOD:** the **Audio Follower** (how hard you play) or **Envelope 2**, a second drawn envelope (the **ENV 1 / ENV 2** keys pick which one you draw);
+    - **TO:** where it goes: the main knob, KNOB 1, KNOB 2, STEREO, GAIN or MIX;
+    - **MOD AMT:** how much.
+
+    The follower's ATTACK, HOLD, DECAY and GATE are on the SEQ page, with a meter. GLIDE smooths the follower too, as the manual says.
+  - **PITCH SNAP:** ENV MOD's new **SNAP** key snaps the main knob to the notes of a **SCALE** in a **KEY** (both on the SEQ page). It works on the filters, EQ, Comb, FM, Loop, Pitch Shift and Vocoder, and the display shows the filter's note.
+- **What's ours:**
+  - the audio trigger and the follower are shared by all ten slots (the manual shows one panel for each);
+  - the scale and key are shared too (the original sets them in each slot's envelope editor);
+  - MIDI is read once per block, so its timing is within one block, typically 2 to 10 ms.
+- **Rigs and projects** keep the sequence and every Envelope 2; rigs from 0.72.0 and 0.73.0 load and sound the same.
+- **Tests:**
+  - **the sequencer:** a slot silent on its lit steps and clean on the others, in time with the song; the loop region; the steps saved and reloaded;
+  - **MIDI:** a slot playing only while its own note is held;
+  - **retriggering:** the envelope waiting at START, restarting on a peak and on a note, playing once with LOOP off, staying in its loop region, and RANDOM START landing in different places;
+  - **the second modulator:** the follower reading -12 dB as 0.8 and moving the main knob then falling back; Envelope 2 on GAIN taking off 6 dB;
+  - **pitch snap:** onto A4, onto C major, onto a pentatonic interval, and a swept envelope landing only on notes;
+  - the sequence and Envelope 2 kept in rigs and projects.
+
+## 0.73.0
+
+- **CIPHER stage 2: the time effects and the Gate and Compress utilities**, 19 new effects for its slots (inspired by Devious Machines' Infiltrator 2, from its manual). Each has its knobs named on the rack, and the envelope moves its main knob as with the filters.
+  - **Comb:** a short delay with lots of feedback. SPEED (as a pitch), RESONANCE (the feedback), BRIGHTNESS.
+  - **Phaser:** FREQUENCY, FEEDBACK, SPREAD; modes **TURBO** (the most notches), **DUO** (two), **INVERSE**.
+  - **Pitch Shift:** a lo-fi granular shifter, as the manual describes it. SHIFT (+-24 semitones), GRAIN FREQ (low: echoey; high: tighter), JITTER (grains of varying length, wider stereo).
+  - **Freq Shift:** moves every frequency by the same number of hertz (SHIFT, +-2 kHz).
+  - **Ring Mod:** FREQUENCY, AMOUNT, CHARACTER (a purer sine to the left).
+  - **FM:** FREQUENCY, CHARACTER (a pure sine at the centre, a saw to the left, a square to the right), AMOUNT.
+  - **Distort:** the master drive's six curves as an effect (pick one with the MODE keys). DRIVE, HP before it, LP after it.
+  - **Decimate:** a lower sample rate (FREQUENCY) and DIRT (how much of the aliasing and steps get through).
+  - **Delay:**
+    - **SYNC** (1/32 to 1 bar) or **FREE** (1 ms to 2 s); FEEDBACK; TONE (darker or brighter repeats);
+    - the time glides, so moving it bends the echoes like tape;
+    - **KIND** (the STEREO knob): STEREO, WIDE, PING-PONG, or the left echo at 1/4, 1/3, 1/2 or 3/4 of the right's time.
+  - **Reverb:** TIME (0.2 to 20 s), TONE, HPF. Three types:
+    - **REVERB:** a smooth room or hall;
+    - **LO-FI:** turning TIME re-pitches what's ringing, as the manual says, and the tail is crushed;
+    - **VOID:** a long diffuser, so it swells in slowly, and darker.
+  - **Reflect:** early reflections for slapback or the start of a reverb. SIZE (1 to 60 m), ABSORB, FEEDBACK.
+  - **Vocoder:** your guitar's tone shapes an internal oscillator. FREQUENCY (its pitch), FORMANT, RESONANCE, and CHARACTER on the STEREO knob (sawtooth, square, narrow pulse), as in the manual.
+  - **Loop:** repeats the last part of the sound. FREE (FREQUENCY: stutters to buzzing pitches) or SYNC (1 bar down to 1/64); TEMPO (how often a new part is taken); SMOOTH (the crossfade at the join).
+  - **Stretch:** slows a part of the sound without changing its pitch. SPEED, TEMPO, GRAIN RATE.
+  - **Varispeed:** slows it like tape, so the pitch drops. SPEED, TEMPO; **FORWARD**, **FWD-REV** (backwards on the left half of the knob, forwards on the right) and **REVERSE**.
+  - **Slow** and **Reverse:** full speed, 1/2, 1/4, 1/8 or 1/16, forwards or backwards. TEMPO.
+  - **Gate:** THRESHOLD, HOLD, RELEASE, and HPF on the STEREO knob (the gate listens only to the higher sounds).
+  - **Compress:** the master's four compressors in a slot (COMPRESS is the main knob, so an envelope can pump it; MIX gives parallel compression).
+  - **TEMPO** follows the song's beats while it plays.
+- **On the rack:**
+  - the MODE keys show each effect's modes (the Distort's six curves, the Delay's SYNC and FREE...);
+  - the STEREO knob takes the effect's name where it does something else (KIND, CHARACTER, HPF);
+  - SLOT (on/off) moved to the second row.
+- **What's ours.** The manual says what each effect does, not how. Every range, curve and size is our design, specifically:
+  - the Reverb's network, the Reflect's echo pattern, and the Vocoder's 16 bands (100 Hz to 8 kHz);
+  - the grain shapes, and how far each knob goes;
+  - the Delay's echoes come on top of your sound (MIX turns them down), our reading of a delay in a chain;
+  - Reverse and Varispeed play sound already heard, so right after you start they're silent until there's something recorded to play.
+- **Slots set up in 0.72.0 sound the same.** Pan's modes now use the same mode keys as the new effects.
+- **Memory:** each slot keeps 4 seconds of sound for these effects (about 15 MB in all).
+- **CPU:** ten of the heaviest effects together take about 6% of one core here.
+- **I couldn't hear any of it here.** Tell me what sounds wrong and how.
+- **Still to come:**
+  - **stage 3:** the sequencer, audio and MIDI retriggering, the audio envelope follower, and pitch snap;
+  - **stage 4:** the spectral effects;
+  - **stage 5:** macros and factory rigs.
+- **Tests**, measuring what each effect does to the sound:
+  - **spectrum:** the Comb's peaks, the Phaser's notches (TURBO more than DUO), the frequency shifter (1 kHz to 1.1 kHz with the other side 40 dB down), the ring mod's sum and difference, FM's sidebands, Pitch Shift up and down an octave, Distort's harmonics and HP, Decimate's alias;
+  - **time:** the Delay's echo at 1/8 and its repeat, PING-PONG's sides, FREE's 100 ms, Reflect's early echoes, each Reverb type ringing longer with TIME;
+  - **the rest:** the Vocoder (silence stays silent; the carrier's harmonics come out), the Loop repeating, Stretch keeping the pitch, Varispeed and Slow an octave down, Reverse keeping a steady note, Gate muting below its threshold, and Compress squeezing.
+
+## 0.72.0
+
+- **A new block: CIPHER, an envelope-controlled filter and multi-effect** (stage 1 of 5), inspired by Devious Machines' Infiltrator 2 (from the manual you sent). It's the last block in the signal chain, after HAVOK, with its own unit in the rack. It starts switched off: press **FX ON**.
+  - **Ten slots in a row.** The keys along the top pick a slot (each key shows that slot's effect) or **MASTER**. Each slot has:
+    - **TYPE**: the effect;
+    - the **main knob** (cutoff, frequency, vowel, gain or position) and up to two more knobs (resonance, drive, width, Q...);
+    - its own **envelope**, drawn on the rack's display, which moves the main knob.
+  - **The envelope editor** (the display):
+    - double-click to add a point, drag a point to move it, double-click a point to remove it;
+    - drag the small dot between two points up or down to bend that line;
+    - points snap to a grid of 16 across (hold SHIFT to move them freely);
+    - **SHAPE** loads one of eight starting shapes;
+    - a white line shows where the envelope is playing, and the title shows the main knob's value as it moves.
+  - **How the envelope plays:**
+    - **SYNC** on: once per **SPEED** (8 bars to 1/32, with dotted and triplet), locked to the song's position while it plays, as the original's PHASE LOCK does;
+    - SYNC off: at **RATE** in hertz;
+    - **ENV AMT**: how far it moves the main knob (left of centre moves it the other way);
+    - **ENV MOD**: BOTH ways, only UP, or only DOWN;
+    - **GLIDE** smooths steps, **STEREO** moves the left and right sides apart;
+    - each slot also has **GAIN** and **MIX** (with the sound coming into that slot).
+  - **The effects in stage 1:**
+    - **Ladder** LP, BP and HP: a gentle curve with a resonant point; steepness 6, 12, 18 or 24 dB;
+    - **Digital** LP, BP and HP: steeper and cleaner, a softer resonance; 6 to 24 dB;
+    - **101** LP, BP and HP: the classic 24 dB filter with a resonance that sings (it whistles at the top) and DRIVE;
+    - **Model-20** LP, BP and HP: a growling resonance and DRIVE; its steeper settings add a second resonant point lower down (the manual's "multiple resonant points");
+    - **Notch** (with WIDTH), **Dual Filter** (two resonant edges, BANDWIDTH spreads them), **Formant** (VOWEL A-E-I-O-U, Q, SHIFT +-500 Hz);
+    - **EQ**: Bell, Low Shelf, High Shelf (FREQUENCY, GAIN +-18 dB, Q);
+    - **Gain** (envelope it for tremolo, ducking or chopping) and **Pan** (POSITION and WIDTH; PAN, BALANCE or ROTATE).
+  - **MASTER:**
+    - a **DRIVE** (Overdrive, Tube, Fuzz, Hard Clip, Foldback, Rectify; DRIVE and TONE), before the slots or after them (**FX > DRIVE**);
+    - a **compressor**: **Squash** (fast and hard), **Maximizer** (smooth, with a limiter that keeps peaks under -0.5 dBFS), **Multiband** (three bands) or **Overkill** (three bands pulled up and down to one level, noise and all);
+    - **CLEAN BASS**: below its frequency the sound passes untouched (**LISTEN** to hear just that part);
+    - the output **GAIN** and **MIX**, with **MIX LAW** (-6, -3 or 0 dB at half way, as in the original's settings).
+  - **What's ours, not the original's.** The manual describes what each part does, not how it sounds, so every filter curve, resonance, drive shape, compressor setting and range is our design to do what the manual says. Specifically:
+    - the drive types' names (the manual names only Overdrive);
+    - the compressors' thresholds, ratios and crossovers (200 Hz and 2.5 kHz);
+    - the Maximizer doesn't look 3 ms ahead as the original does, so CIPHER adds no latency;
+    - the formant vowels are typical speech-science values.
+  - **I couldn't hear any of it here.** Tell me what sounds wrong and how.
+  - **Saved with your rigs and projects:**
+    - every knob is a normal parameter, so your DAW can automate it;
+    - the drawn envelopes are saved with rigs and projects too;
+    - undo takes back a drawing, one step per drag.
+  - **Still to come:**
+    - **stage 2:** the time effects (comb, phaser, pitch, frequency shifter, ring mod, FM, distort, decimator, delay, reverb, reflect, vocoder, loop, stretch, varispeed, slow, reverse) and the utilities Gate and Compress;
+    - **stage 3:** the 32-step sequencer, audio and MIDI retriggering, and the audio envelope follower;
+    - **stage 4:** the spectral effects;
+    - **stage 5:** macros and factory rigs.
+- **Tests:** for every filter, what it does to the sound:
+  - the low-passes pass the lows and cut above the cutoff, each steeper setting cutting more;
+  - the high-passes and band-passes keep the right part of the sound;
+  - resonance peaks at the cutoff, the Ladder's gentler than the 101's;
+  - DRIVE adds harmonics;
+  - the notch's depth, the Formant's vowels, and the EQ's gain to within half a dB;
+  - Gain and Pan, the envelope sweeping a filter, the song lock, ENV MOD, GLIDE and STEREO;
+  - each compressor squeezing loud and quiet together, and the Maximizer's ceiling;
+  - CLEAN BASS and the mix laws;
+  - extreme settings staying finite;
+  - envelopes surviving rigs, projects and undo, and the panel following the slot you pick.
+
 ## 0.71.0
 
 - **A ninth album bank, bank N: 15 rigs inspired by the guitar sounds on 30 Seconds to Mars' self-titled debut** (2002). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
