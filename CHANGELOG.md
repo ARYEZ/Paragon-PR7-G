@@ -2,6 +2,37 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.79.0
+
+- **A twelfth album bank, bank R: 15 rigs inspired by the guitar sounds on Deftones' *White Pony*** (2000). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's a dreamy, shadowy record, so the rigs lean on chorus, flanger, phaser, tape echo, reverse echoes, shimmer, CIPHER and HAVOK's scratches. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **R01 Underwater Chorus Clean** | A slow, deep chorus, a soft echo and a hall | "Digital Bath" |
+  | **R02 Hypnotic Flange Clean** | A slow flanger and a plate on ringing chords | "Feiticeira" |
+  | **R03 Static Noise Wall** | Boosted, distorted again by CIPHER, then bit-crushed | "Elite" |
+  | **R04 Sedated Phase Echo** | A slow phaser into a wobbling tape echo | "Rx Queen" |
+  | **R05 Siren Octave Squeal** | The pedal takes your note up an octave, boosted | "Street Carp" |
+  | **R06 Hushed Tape Lullaby** | A clean through a worn cassette, a soft chorus | "Teenager" |
+  | **R07 Desert Wail Lead** | A boosted lead, a long echo and a hall | "Knife Party" |
+  | **R08 Grinding Ring Sweep** | CIPHER's ring modulator rising and falling over two bars | "Korea" |
+  | **R09 Night Drive Chorus Clean** | A wide chorus, echoes bouncing side to side, a hall | "Passenger" |
+  | **R10 Haunted Swell Clean** | Volume swells (the pedal) into a tape echo and a cathedral | "Change (In the House of Flies)" |
+  | **R11 Slow Build Reverse Wash** | Echoes played backwards, into a long hall | "Pink Maggit" |
+  | **R12 Turntable Cuts** | HAVOK's scratches on the six map keys: touch the pad between riffs | Frank Delgado's turntables |
+  | **R13 Sunken Freeze Pad** | Every frequency held (CIPHER), a tape echo, a hall | Frank Delgado's keys and samples |
+  | **R14 High Drone Shimmer** | A shimmer an octave up ringing over your chords | The seven-string's extra high drone string |
+  | **R15 Throbbing Vibe Clean** | A uni-vibe pulse, a short echo, a room | The album's woozy cleans |
+
+  - **What's documented:**
+    - Terry Date produced it with the band;
+    - Stephen Carpenter told Premier Guitar he played a standard-scale seven-string, tuned like his six-strings plus an extra high string that rings like a drone;
+    - Frank Delgado's keyboards, samples and turntables fill out the sound.
+  - **The sounds are our reading.** I found nothing reliable on the guitar effects: gear guides disagree with each other on the amps and pedals. Every rig and song link is my guess. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **R05 squeals from the toe** (the pedal at the heel is your note), and **R10 swells from the heel**, so rock it back first. **R12 plays only while you touch HAVOK's pad** (or a MIDI pad, CC 92).
+- **The PRESETS page** has a Bank R button.
+- **Tests:** bank R goes through the shared album-bank checks (names free of song titles, each rig doing what its tags say, levels within 6 dB).
+
 ## 0.78.0
 
 - **An eleventh album bank, bank Q: 15 rigs inspired by the guitar sounds on Sleep Token's *Take Me Back to Eden*** (2023), picked for its effects. **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's an atmospheric record, so the rigs lean on chorus, shimmer, reverse reverb, CIPHER and GLITCH. Inside the plugin each rig is named for its sound; here is what inspired each one:
