@@ -598,6 +598,7 @@ TEST_CASE ("HAVOK scratch: silent until touched, then scratching our own sounds 
 TEST_CASE ("HAVOK scratch: the stabs are where the scratch rigs start", "[havok][scratch][rigs]")
 {
     // The owner's pick: the nu-metal rigs scratch the stabs (STAB, and DROP D on B12), and so does H04.
+    // R12 too.
     REQUIRE (Havok::scratchSoundNames.size() == 8);
     CHECK (Havok::scratchSoundNames[4] == "STAB (DROP D)");
     CHECK (Havok::scratchSoundNames[7] == "GRIT (LOW NOTE)");
@@ -609,7 +610,7 @@ TEST_CASE ("HAVOK scratch: the stabs are where the scratch rigs start", "[havok]
             ++scratchRigs;
             CHECK (Havok::scratchSoundNames[(int) rig.parameters.at (ParamIDs::havokScratchSound)].startsWith ("STAB"));
         }
-    CHECK (scratchRigs == 4);   // B11-B13, and bank H's Turntable Answer (0.64.0)
+    CHECK (scratchRigs == 5);   // B11-B13, bank H's Turntable Answer (0.64.0) and bank R's Turntable Cuts (0.79.0)
 
     // Each sound is as loud as the others while scratched (within 2 dB of STAB).
     const auto scratched = [] (int sound)

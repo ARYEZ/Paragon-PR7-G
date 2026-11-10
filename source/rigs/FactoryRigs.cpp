@@ -91,6 +91,7 @@ namespace
     constexpr int P = 15;                // bank P: an album's guitar sounds (Static-X, Wisconsin Death Trip)
     constexpr int Q = 16;                // bank Q: an album's guitar sounds (Sleep Token, Take Me Back to Eden)
     constexpr float eighthTriplet = 8;   // DELAY / MOD sync: 1/8 triplet
+    constexpr int R = 17;                // bank R: an album's guitar sounds (Deftones, White Pony)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1860,6 +1861,128 @@ std::vector<Rig> makeFactoryRigs()
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
             { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.6f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
+        //======================================================================
+        // Bank R: an album's guitar sounds, inspired by Deftones' White Pony
+        // (2000; the owner's twelfth album bank). Cleans, effects and leads:
+        // the heavy riffs are the amp capture's job. Documented: Terry Date
+        // produced it with the band; Stephen Carpenter told Premier Guitar he
+        // played a standard-scale seven-string, tuned like his six-strings
+        // with an extra high string that rings like a drone; Frank Delgado's
+        // keys, samples and turntables fill the space. Nothing reliable is
+        // published on the guitar effects, so these are our reading.
+
+        // A watery clean: a slow chorus, a soft echo and a hall.
+        make ("Underwater Chorus Clean", R, 1, "Album,Clean,Modulation", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.35f }, { modDepth, 0.7f }, { modMix, 0.5f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.28f } }),
+
+        // A hypnotic swirl: a slow, deep flanger and a plate on ringing chords.
+        make ("Hypnotic Flange Clean", R, 2, "Album,Clean,Modulation", {
+            { rigLevel, 6.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.2f }, { modDepth, 0.7f }, { modMix, 0.5f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        // A wall of noise: boosted, distorted again by CIPHER and crushed.
+        make ("Static Noise Wall", R, 3, "Album,FX,Lo-Fi", {
+            { rigLevel, -6 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { cipherOn, 1 }, { "cipher1Type", 27 }, { "cipher1Main", 0.6f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.6f },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 6 }, { lofiNoise, 2 }, { lofiMix, 0.5f } }),
+
+        // A sedated swirl: a slow phaser into a wobbling tape echo.
+        make ("Sedated Phase Echo", R, 4, "Album,Clean,Modulation,Delay", {
+            { rigLevel, 11 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.25f }, { modDepth, 0.65f },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A siren squeal: the pedal takes your note up an octave, boosted.
+        make ("Siren Octave Squeal", R, 5, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -8 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+
+        // A hushed lullaby: a clean through a worn cassette, a soft chorus, a room.
+        make ("Hushed Tape Lullaby", R, 6, "Album,Clean,Lo-Fi", {
+            { rigLevel, 8.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.4f }, { modDepth, 0.4f }, { modMix, 0.3f }, { modStereo, 1 },
+            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 4 }, { lofiNoise, 2 }, { lofiMix, 0.7f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.18f } }),
+
+        // A wailing lead: boosted, a long echo and a hall.
+        make ("Desert Wail Lead", R, 7, "Album,Lead,Delay", {
+            { rigLevel, -10 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.22f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.22f } }),
+
+        // A grinding texture: CIPHER's ring modulator rising and falling over two bars.
+        withCipher (make ("Grinding Ring Sweep", R, 8, "Album,FX", {
+            { cipherOn, 1 }, { rigLevel, 1.5f },
+            { "cipher1Type", 25 }, { "cipher1Main", 0.45f }, { "cipher1P1", 0.6f }, { "cipher1EnvAmount", 0.5f }, { "cipher1Speed", 2 },
+            { "cipher1Mix", 0.6f } }),
+            { { 1, 3 } }),
+
+        // A night drive: a wide chorus, dotted-eighth echoes, a hall.
+        make ("Night Drive Chorus Clean", R, 9, "Album,Clean,Modulation,Delay", {
+            { rigLevel, 6.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.5f }, { modMix, 0.45f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { delayPingPong, 1 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.65f }, { reverbMix, 0.25f } }),
+
+        // A haunted swell: volume swells (from the heel) into a tape echo and a cathedral.
+        make ("Haunted Swell Clean", R, 10, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 5.5f },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+
+        // A slow build: echoes played backwards, into a long hall.
+        make ("Slow Build Reverse Wash", R, 11, "Album,FX,Ambient,Delay", {
+            { rigLevel, -4 },
+            { delayOn, 1 }, { delayType, reverseDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.55f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+
+        // Scratching between riffs: HAVOK's scratch programs on the PROGRAM MAP
+        // keys, in time with the song. Touch the pad (or a MIDI pad, CC 92).
+        make ("Turntable Cuts", R, 12, "Album,FX,Scratch,Havok,Touch", {
+            { havokOn, 1 }, { havokProgram, scratchFlare }, { havokScratchSound, soundStab }, { havokX, rateSixteenth }, { havokY, 0.6f },
+            { "havokMap1Program", scratchFlare }, { "havokMap2Program", scratchBaby }, { "havokMap3Program", scratchCrab },
+            { "havokMap4Program", scratchChirp }, { "havokMap5Program", scratchTear }, { "havokMap6Program", scratchManual } }),
+
+        // A sunken synth pad: every frequency held, into a long tape echo and a hall.
+        make ("Sunken Freeze Pad", R, 13, "Album,Clean,Ambient", {
+            { cipherOn, 1 }, { rigLevel, -2 },
+            { "cipher1Type", 48 }, { "cipher1Main", 0.8f }, { "cipher1P1", 0.4f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.55f },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        // A high drone: a shimmer an octave up ringing above your chords, a plate.
+        make ("High Drone Shimmer", R, 14, "Album,Clean,Ambient", {
+            { rigLevel, 2 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        // A throbbing clean: a uni-vibe pulse, a short echo, a room.
+        make ("Throbbing Vibe Clean", R, 15, "Album,Clean,Modulation", {
+            { rigLevel, 7.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, uniVibe }, { modRate, 1.0f }, { modDepth, 0.75f }, { modMix, 0.5f },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbMix, 0.18f } }),
     };
 }
 

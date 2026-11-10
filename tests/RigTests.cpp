@@ -947,3 +947,10 @@ TEST_CASE ("Bank Q, an eleventh album's guitar sounds: cleans, effects and leads
                           "Really", "Okay?", "Okay", "Apparition", "DYWTYLM", "Rain", "Take", "Me", "Back", "To", "Eden", "Euclid",
                           "Sleep", "Token" });
 }
+
+TEST_CASE ("Bank R, a twelfth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (17, { "Feiticeira", "Digital", "Bath", "Elite", "Rx", "Queen", "Street", "Carp", "Teenager", "Knife",
+                          "Party", "Korea", "Passenger", "Change", "In", "The", "House", "Of", "Flies", "Pink", "Maggit",
+                          "Back", "To", "School", "Mini", "Boy's", "Republic", "White", "Pony", "Deftones" });
+}
