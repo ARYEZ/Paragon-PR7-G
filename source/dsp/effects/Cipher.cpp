@@ -402,6 +402,124 @@ namespace effects
     }
 
     //==========================================================================
+    // PITCH SNAP
+    bool Cipher::inScale (int scale, int semitone) noexcept
+    {
+        semitone = ((semitone % 12) + 12) % 12;
+        static constexpr bool scales[5][12] = {
+            { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },   // Chromatic
+            { 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0 },   // Natural Minor
+            { 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1 },   // Harmonic Minor
+            { 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1 },   // Major
+            { 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0 } }; // Minor Pentatonic
+        return scales[juce::jlimit (0, 4, scale)][semitone];
+    }
+
+    bool Cipher::canSnap (Type type) noexcept
+    {
+        return (type >= Type::ladderLp && type <= Type::dualFilter) || type == Type::eqBell || type == Type::eqLowShelf
+            || type == Type::eqHighShelf || type == Type::comb || type == Type::fm || type == Type::loop
+            || type == Type::pitchShift || type == Type::vocoder;
+    }
+
+    namespace
+    {
+        // The main knob as a frequency for the pitched effects, and back.
+        struct PitchMap { float low, ratio; };
+        PitchMap pitchMap (Cipher::Type type) noexcept
+        {
+            using T = Cipher::Type;
+            if (type == T::comb)    return { 20.0f, 250.0f };
+            if (type == T::fm)      return { 0.5f, 10000.0f };
+            if (type == T::loop)    return { 1.0f, 1000.0f };
+            if (type == T::vocoder) return { 30.0f, 33.0f };
+            return { 20.0f, 1000.0f };   // the filters and the EQ
+        }
+    }
+
+    float Cipher::snapMain (Type type, float main01, int scale, int root) noexcept
+    {
+        main01 = juce::jlimit (0.0f, 1.0f, main01);
+        if (type == Type::pitchShift)
+        {
+            // The interval snapped to the scale's steps from the root.
+            auto best = 0;
+            const auto wanted = (main01 - 0.5f) * 48.0f;
+            auto bestDistance = 1.0e9f;
+            for (int st = -24; st <= 24; ++st)
+                if (inScale (scale, st) && std::abs ((float) st - wanted) < bestDistance)
+                {
+                    bestDistance = std::abs ((float) st - wanted);
+                    best = st;
+                }
+            return 0.5f + (float) best / 48.0f;
+        }
+        const auto map = pitchMap (type);
+        const auto hz = map.low * std::pow (map.ratio, main01);
+        const auto note = 69.0f + 12.0f * std::log2 (hz / 440.0f);
+        auto best = juce::roundToInt (note);
+        for (int d = 0; d <= 6; ++d)
+        {
+            const auto down = juce::roundToInt (note) - d, up = juce::roundToInt (note) + d;
+            const auto downOk = inScale (scale, down - root), upOk = inScale (scale, up - root);
+            if (downOk || upOk)
+            {
+                best = downOk && upOk ? (std::abs ((float) down - note) <= std::abs ((float) up - note) ? down : up) : downOk ? down : up;
+                break;
+            }
+        }
+        const auto snappedHz = 440.0f * std::pow (2.0f, ((float) best - 69.0f) / 12.0f);
+        return juce::jlimit (0.0f, 1.0f, std::log (snappedHz / map.low) / std::log (map.ratio));
+    }
+
+    juce::String Cipher::noteName (float hz)
+    {
+        const auto note = juce::roundToInt (69.0f + 12.0f * std::log2 (juce::jmax (1.0f, hz) / 440.0f));
+        return rootNames[((note % 12) + 12) % 12] + juce::String (note / 12 - 1);
+    }
+
+    //==========================================================================
+    // The sequencer's steps as text: one 8-digit hex number per slot.
+    juce::String Cipher::sequenceToText (const std::array<juce::uint32, numSlots>& rows)
+    {
+        juce::StringArray parts;
+        for (auto row : rows)
+            parts.add (juce::String::toHexString ((juce::int64) row).paddedLeft ('0', 8));
+        return parts.joinIntoString (",");
+    }
+
+    std::array<juce::uint32, Cipher::numSlots> Cipher::sequenceFromText (const juce::String& text)
+    {
+        std::array<juce::uint32, numSlots> rows {};
+        const auto parts = juce::StringArray::fromTokens (text, ",", {});
+        for (int i = 0; i < juce::jmin (numSlots, parts.size()); ++i)
+            rows[(size_t) i] = (juce::uint32) parts[i].trim().getHexValue64();
+        return rows;
+    }
+
+    void Cipher::handleMidi (const juce::MidiBuffer& midi) noexcept
+    {
+        for (const auto metadata : midi)
+        {
+            const auto message = metadata.getMessage();
+            const auto pc = message.isNoteOnOrOff() ? message.getNoteNumber() % 12 : -1;
+            if (message.isNoteOn())
+            {
+                noteOns |= 1u << pc;
+                ++heldCount[(size_t) pc];
+            }
+            else if (message.isNoteOff())
+                heldCount[(size_t) pc] = juce::jmax (0, heldCount[(size_t) pc] - 1);
+            else if (message.isAllNotesOff() || message.isAllSoundOff())
+                heldCount.fill (0);
+        }
+        heldNotes = 0;
+        for (int n = 0; n < 12; ++n)
+            if (heldCount[(size_t) n] > 0)
+                heldNotes |= 1u << n;
+    }
+
+    //==========================================================================
     float Cipher::envelopeAt (const Envelope& points, float x) noexcept
     {
         if (points.empty())
@@ -485,6 +603,12 @@ namespace effects
     {
         double phase = 0.0;
         float glided = -1.0f;   // the main knob as moved, after GLIDE (-1: not started)
+        // Retriggering: the envelope's place once triggered (-1: not yet), and whether it's still moving.
+        double trigPhase = -1.0;
+        bool running = false;
+        // The sequencer and MIDI: whether the slot sounds, faded over a few milliseconds.
+        bool wasActive = true;
+        float activeGain = 1.0f;
 
         // Per channel: the filter states and this tick's coefficients.
         struct Channel
@@ -511,6 +635,10 @@ namespace effects
                 c.pole = 0.0f;
             }
             glided = -1.0f;
+            trigPhase = -1.0;
+            running = false;
+            wasActive = true;
+            activeGain = 1.0f;
         }
     };
 
@@ -663,13 +791,17 @@ namespace effects
         for (auto& t : timeStates)
             t = std::make_unique<TimeState>();
         master = std::make_unique<MasterState>();
-        for (int i = 0; i < numSlots; ++i)
+        for (int i = 0; i < numEnvelopes; ++i)
         {
             envelopes[(size_t) i] = shape (0);
             for (auto& v : tables[(size_t) i])
                 v = 0.5f;
+        }
+        for (int i = 0; i < numSlots; ++i)
+        {
             phases[(size_t) i] = 0.0f;
             moved[(size_t) i] = 0.5f;
+            active[(size_t) i] = true;
         }
     }
 
@@ -683,6 +815,7 @@ namespace effects
         low.setSize (2, maxBlockSize);
         master->oversampling.initProcessing ((size_t) maxBlockSize);
         maxBlock = maxBlockSize;
+        followerTicks.assign ((size_t) (maxBlockSize / tick + 2), 0.0f);
         master->compressor.prepare (sampleRate, maxBlockSize);
         const juce::dsp::ProcessSpec spec { sampleRate, (juce::uint32) maxBlockSize, 2 };
         for (auto* f : { &master->bassDry, &master->bassWet })
@@ -705,6 +838,13 @@ namespace effects
         for (auto* f : { &master->bassDry, &master->bassWet })
             f->reset();
         master->compressor.reset();
+        triggerLevelDb = -120.0f;
+        triggerHp[0] = triggerHp[1] = 0.0f;
+        followerLevel = 0.0f;
+        triggerArmed = true;
+        holdOffLeft = followHoldLeft = 0;
+        numAudioTriggers = 0;
+        freeBeats = 0.0;
         for (auto& t : timeStates)
             t->reset();
         for (int c = 0; c < 2; ++c)
@@ -713,7 +853,7 @@ namespace effects
 
     void Cipher::setEnvelope (int slot, const Envelope& points)
     {
-        if (slot < 0 || slot >= numSlots)
+        if (slot < 0 || slot >= numEnvelopes)
             return;
         auto& kept = envelopes[(size_t) slot];
         kept = tidy (points);
@@ -732,6 +872,63 @@ namespace effects
             const auto& m = settings.master;
             for (int c = 0; c < numChannels; ++c)
                 dry.copyFrom (c, 0, wet.getChannelPointer ((size_t) c), numSamples);
+
+            //------------------------------------------------------------------
+            // The AUDIO TRIGGER (where peaks restart the envelopes) and the AUDIO
+            // FOLLOWER (the second modulator), both listening to what comes in.
+            {
+                const auto sr = (float) sampleRate;
+                const auto hpOn = m.trigHpfHz > 25.0f;
+                const auto hpCoeff = 1.0f - std::exp (-2.0f * pi * juce::jlimit (20.0f, sr * 0.45f, m.trigHpfHz) / sr);
+                const auto peakFall = std::exp (-1.0f / (0.01f * sr));
+                const auto holdOff = (int) (m.trigHoldOffMs * 0.001f * sr);
+                const auto attack = 1.0f - std::exp (-1.0f / (juce::jmax (0.05f, m.followAttackMs) * 0.001f * sr));
+                const auto decay = 1.0f - std::exp (-1.0f / (juce::jmax (1.0f, m.followDecayMs) * 0.001f * sr));
+                const auto followHold = (int) (m.followHoldMs * 0.001f * sr);
+                const auto gateDb = juce::jmin (-1.0f, m.followGateDb);
+                numAudioTriggers = 0;
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    if (i % tick == 0 && i / tick < (int) followerTicks.size())
+                        followerTicks[(size_t) (i / tick)] = followerLevel;
+                    auto mono = 0.0f, filtered = 0.0f;
+                    for (int c = 0; c < numChannels; ++c)
+                    {
+                        const auto x = dry.getSample (c, i);
+                        mono = juce::jmax (mono, std::abs (x));
+                        triggerHp[c] += hpCoeff * (x - triggerHp[c]);
+                        filtered = juce::jmax (filtered, std::abs (hpOn ? x - triggerHp[c] : x));
+                    }
+                    // The trigger: a peak over LEVEL, then not again until it falls
+                    // HYSTERESIS below and HOLD-OFF has passed.
+                    const auto peakDb = juce::Decibels::gainToDecibels (filtered, -120.0f);
+                    triggerLevelDb = juce::jmax (peakDb, triggerLevelDb + 20.0f * std::log10 (peakFall));
+                    if (holdOffLeft > 0)
+                        --holdOffLeft;
+                    if (triggerArmed && holdOffLeft <= 0 && triggerLevelDb >= m.trigLevelDb)
+                    {
+                        triggerArmed = false;
+                        holdOffLeft = holdOff;
+                        if (numAudioTriggers < (int) audioTriggers.size())
+                            audioTriggers[(size_t) numAudioTriggers++] = i;
+                    }
+                    else if (! triggerArmed && triggerLevelDb < m.trigLevelDb - m.trigHysteresisDb)
+                        triggerArmed = true;
+                    // The follower: the level from GATE (0) to full scale (1),
+                    // rising at ATTACK, held for HOLD, falling at DECAY.
+                    const auto target = juce::jlimit (0.0f, 1.0f, (juce::Decibels::gainToDecibels (mono, -120.0f) - gateDb) / -gateDb);
+                    if (target > followerLevel)
+                    {
+                        followerLevel += attack * (target - followerLevel);
+                        followHoldLeft = followHold;
+                    }
+                    else if (followHoldLeft > 0)
+                        --followHoldLeft;
+                    else
+                        followerLevel += decay * (target - followerLevel);
+                }
+                follower = followerLevel;
+            }
 
             //------------------------------------------------------------------
             // The master drive: 4x oversampled so its harmonics don't fold back
@@ -836,37 +1033,94 @@ namespace effects
                     x[i] = x[i] * gain * wetGain + d[i] * dryGain;
             }
         });
+        if (settings.songBeats < 0.0)
+            freeBeats += (double) block.getNumSamples() / sampleRate * settings.bpm / 60.0;
+        noteOns = 0;   // MIDI note-ons count once, in the first part of the block
     }
 
     //==========================================================================
-    void Cipher::processSlot (int index, juce::dsp::AudioBlock<float>& block, const Slot& slot, const Settings& settings)
+    void Cipher::processSlot (int index, juce::dsp::AudioBlock<float>& block, const Slot& base, const Settings& settings)
     {
         auto& st = *slotStates[(size_t) index];
         const auto numSamples = (int) block.getNumSamples();
         const auto numChannels = (int) juce::jmin ((size_t) 2, block.getNumChannels());
+        const auto& m = settings.master;
 
         // The LFO runs whether or not the slot sounds, so the envelope keeps its place.
         const auto beatsPerSecond = settings.bpm / 60.0;
-        const auto cycleHz = slot.sync ? beatsPerSecond / speedBeats (slot.speed) : (double) juce::jlimit (0.01f, 40.0f, slot.rateHz);
-        const auto locked = slot.sync && settings.songBeats >= 0.0;   // PHASE LOCK: synced to the song's position while it plays
+        const auto cycleHz = base.sync ? beatsPerSecond / speedBeats (base.speed) : (double) juce::jlimit (0.01f, 40.0f, base.rateHz);
+        const auto retrigger = base.retrigAudio || base.retrigMidi;
+        // PHASE LOCK: synced to the song's position while it plays (unless a trigger restarts it).
+        const auto locked = base.sync && settings.songBeats >= 0.0 && ! retrigger;
         const auto phaseAt = [&] (int offset)
         {
             if (locked)
             {
                 const auto beats = settings.songBeats + (double) offset / sampleRate * beatsPerSecond;
-                const auto cycle = beats / speedBeats (slot.speed);
+                const auto cycle = beats / speedBeats (base.speed);
                 return cycle - std::floor (cycle);
             }
-            return st.phase;
+            return retrigger ? juce::jlimit (0.0, 1.0, st.trigPhase < 0.0 ? (double) base.startPos : st.trigPhase) : st.phase;
         };
 
-        const auto type = slot.on ? slot.type : Type::off;
+        // The sequencer's step at a point of the block (its loop follows the song while it plays).
+        const double stepBeats[] = { 1.0, 0.5, 0.25, 0.125, 0.0625 };
+        const auto lengthBeats = stepBeats[juce::jlimit (0, 4, m.seqSpeed)];
+        const auto firstStep = juce::jlimit (0, numSteps - 1, juce::jmin (m.seqStart, m.seqEnd));
+        const auto lastStep = juce::jlimit (0, numSteps - 1, juce::jmax (m.seqStart, m.seqEnd));
+        const auto stepAt = [&] (int offset)
+        {
+            const auto beats = (settings.songBeats >= 0.0 ? settings.songBeats : freeBeats) + (double) offset / sampleRate * beatsPerSecond;
+            const auto count = (long long) std::floor (beats / lengthBeats + 1.0e-9);
+            const auto length = (long long) (lastStep - firstStep + 1);
+            return firstStep + (int) (((count % length) + length) % length);
+        };
+        const auto row = sequence[(size_t) index].load();
+        const auto noteBit = 1u << (unsigned) index;   // slot n answers notes of pitch class n (C for slot 1 ... A for slot 10)
+        const auto fadeStep = (float) tick / (0.003f * (float) sampleRate);
+
+        const auto type = base.on ? base.type : Type::off;
         auto& table = tables[(size_t) index];
-        const auto glideCoeff = slot.glideMs > 0.5f ? std::exp (-(double) tick / (0.001 * slot.glideMs * sampleRate)) : 0.0;
+        auto& table2 = tables[(size_t) index + numSlots];
+        const auto glideCoeff = base.glideMs > 0.5f ? std::exp (-(double) tick / (0.001 * base.glideMs * sampleRate)) : 0.0;
+        Slot slot = base;
 
         for (int start = 0; start < numSamples; start += tick)
         {
             const auto count = juce::jmin (tick, numSamples - start);
+            slot = base;
+
+            // Does the slot sound now? MIDI on: while its note is held; the
+            // sequencer on: on its lit steps; otherwise always.
+            const auto currentStep = stepAt (start);
+            if (index == 0 && start == 0)
+                step = currentStep;
+            const auto isActive = m.midiOn ? (heldNotes & noteBit) != 0
+                                : m.seqOn ? (row >> (unsigned) currentStep & 1u) != 0
+                                          : true;
+            const auto startedNow = isActive && ! st.wasActive;
+            st.wasActive = isActive;
+            active[(size_t) index] = isActive;
+            st.activeGain = isActive ? juce::jmin (1.0f, st.activeGain + fadeStep) : juce::jmax (0.0f, st.activeGain - fadeStep);
+
+            // RETRIGGER: a peak (AUDIO), a MIDI note or the slot coming on in the
+            // sequencer (MIDI | SEQ) restarts the envelope at START (or anywhere,
+            // with RANDOM START).
+            if (retrigger)
+            {
+                auto triggered = false;
+                if (base.retrigAudio)
+                    for (int t = 0; t < numAudioTriggers; ++t)
+                        triggered = triggered || (audioTriggers[(size_t) t] >= start && audioTriggers[(size_t) t] < start + count);
+                if (base.retrigMidi)
+                    triggered = triggered || startedNow
+                             || (start == 0 && (m.midiOn ? (noteOns & noteBit) != 0 : noteOns != 0));
+                if (triggered)
+                {
+                    st.trigPhase = base.randomStart ? (double) random.nextFloat() : (double) base.startPos;
+                    st.running = true;
+                }
+            }
 
             // The envelope at this point of its cycle moves the main knob.
             const auto phase = (float) phaseAt (start);
@@ -877,23 +1131,68 @@ namespace effects
             float target = slot.main;
             switch (slot.style)
             {
-                case Style::both: target += slot.envAmount * (env - 0.5f); break;
+                case Style::both: case Style::snap: target += slot.envAmount * (env - 0.5f); break;
                 case Style::up:   target += slot.envAmount * env; break;
                 case Style::down: target -= slot.envAmount * env; break;
             }
+
+            // The second modulator: the audio follower or ENVELOPE 2, on its destination.
+            if (std::abs (slot.modAmount) > 1.0e-4f)
+            {
+                const auto value = slot.modSource == ModSource::audio
+                                     ? followerTicks[(size_t) juce::jmin ((int) followerTicks.size() - 1, start / tick)]
+                                     : table2[(size_t) i0].load() + (table2[(size_t) i0 + 1].load() - table2[(size_t) i0].load()) * frac;
+                const auto amount = slot.modAmount * value;
+                switch (slot.modDest)
+                {
+                    case ModDest::main:   target += amount; break;
+                    case ModDest::p1:     slot.p1 = juce::jlimit (0.0f, 1.0f, slot.p1 + amount); break;
+                    case ModDest::p2:     slot.p2 = juce::jlimit (0.0f, 1.0f, slot.p2 + amount); break;
+                    case ModDest::stereo: slot.stereo = juce::jlimit (-1.0f, 1.0f, slot.stereo + amount * 2.0f); break;
+                    case ModDest::gain:   slot.gainDb = juce::jlimit (-60.0f, 24.0f, slot.gainDb + amount * 24.0f); break;
+                    case ModDest::mix:    slot.mix = juce::jlimit (0.0f, 1.0f, slot.mix + amount); break;
+                }
+            }
             target = juce::jlimit (0.0f, 1.0f, target);
+            // PITCH SNAP: onto the scale's notes (GLIDE then slides between them).
+            if (slot.style == Style::snap && canSnap (type))
+                target = snapMain (type, target, m.scale, m.root);
             if (st.glided < 0.0f || glideCoeff <= 0.0)
                 st.glided = target;
             else
                 st.glided = (float) (target + (st.glided - target) * glideCoeff);
             phases[(size_t) index] = phase;
             moved[(size_t) index] = st.glided;
+            slot.mix *= st.activeGain;
 
-            if (! locked)
+            if (retrigger)
+            {
+                if (st.running)
+                {
+                    st.trigPhase += cycleHz * (double) count / sampleRate;
+                    const auto loopFrom = (double) juce::jmin (base.loopStart, base.loopEnd), loopTo = (double) juce::jmax (base.loopStart, base.loopEnd);
+                    if (base.envLoop)
+                    {
+                        // ENVELOPE LOOP: round the loop region (all of it if it's empty).
+                        const auto from = loopTo - loopFrom > 0.01 ? loopFrom : 0.0, to = loopTo - loopFrom > 0.01 ? loopTo : 1.0;
+                        if (st.trigPhase >= to)
+                            st.trigPhase = from + std::fmod (st.trigPhase - from, to - from);
+                    }
+                    else if (st.trigPhase >= 1.0)
+                    {
+                        st.trigPhase = 1.0;   // once through, then wait for the next trigger
+                        st.running = false;
+                    }
+                }
+            }
+            else if (! locked)
             {
                 st.phase += cycleHz * (double) count / sampleRate;
                 st.phase -= std::floor (st.phase);
             }
+
+            if (st.activeGain <= 0.0f && ! isTimeEffect (type))
+                continue;   // a filter switched off by the sequencer costs nothing
 
             if (type == Type::off)
                 continue;

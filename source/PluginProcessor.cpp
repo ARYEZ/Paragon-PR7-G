@@ -20,6 +20,7 @@ namespace
     const juce::Identifier expressionCcKey { "expressionCc" };
     const juce::Identifier tunerReferenceKey { "tunerReferenceHz" };
     const juce::Identifier cipherEnvelopeKey { "CipherEnvelope" };
+    const juce::Identifier cipherSequenceKey { "cipherSequence" };
 
     juce::String describeModel (const AmpStage::ModelInfo& info)
     {
@@ -161,6 +162,16 @@ effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double so
         s.stereo = v (12);
         s.gainDb = v (13);
         s.mix = v (14);
+        s.retrigAudio = v (15) > 0.5f;
+        s.retrigMidi = v (16) > 0.5f;
+        s.randomStart = v (17) > 0.5f;
+        s.envLoop = v (18) > 0.5f;
+        s.startPos = v (19);
+        s.loopStart = v (20);
+        s.loopEnd = v (21);
+        s.modSource = (Cipher::ModSource) juce::roundToInt (v (22));
+        s.modDest = (Cipher::ModDest) juce::roundToInt (v (23));
+        s.modAmount = v (24);
     }
     auto& m = settings.master;
     m.driveOn = isOn (ParamIDs::cipherDriveOn);
@@ -177,7 +188,29 @@ effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double so
     m.gainDb = param (ParamIDs::cipherGain);
     m.mix = param (ParamIDs::cipherMix);
     m.mixLaw = (int) param (ParamIDs::cipherMixLaw);
+    m.seqOn = isOn (ParamIDs::cipherSeqOn);
+    m.seqSpeed = (int) param (ParamIDs::cipherSeqSpeed);
+    m.seqStart = (int) param (ParamIDs::cipherSeqStart);
+    m.seqEnd = (int) param (ParamIDs::cipherSeqEnd);
+    m.midiOn = isOn (ParamIDs::cipherMidiOn);
+    m.scale = (int) param (ParamIDs::cipherScale);
+    m.root = (int) param (ParamIDs::cipherScaleRoot);
+    m.trigLevelDb = param (ParamIDs::cipherTrigLevel);
+    m.trigHpfHz = param (ParamIDs::cipherTrigHpf);
+    m.trigHysteresisDb = param (ParamIDs::cipherTrigHysteresis);
+    m.trigHoldOffMs = param (ParamIDs::cipherTrigHoldOff);
+    m.followAttackMs = param (ParamIDs::cipherFollowAttack);
+    m.followHoldMs = param (ParamIDs::cipherFollowHold);
+    m.followDecayMs = param (ParamIDs::cipherFollowDecay);
+    m.followGateDb = param (ParamIDs::cipherFollowGate);
     return settings;
+}
+
+void ParagonX1AudioProcessor::setCipherSequenceRow (int row, juce::uint32 steps)
+{
+    cipher.setSequenceRow (row, steps);
+    markModified();
+    requestCheckpoint();
 }
 
 void ParagonX1AudioProcessor::setCipherEnvelope (int slot, const effects::Cipher::Envelope& points, bool finished)
@@ -310,6 +343,7 @@ void ParagonX1AudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     juce::ScopedNoDenormals noDenormals;
 
     readMidiExpression (midi);
+    cipher.handleMidi (midi);   // CIPHER's MIDI-controlled slots and retriggering
 
     if (buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0)
         return;
@@ -834,9 +868,18 @@ Rig ParagonX1AudioProcessor::captureRig() const
     rig.ampModelPath = getAmpStatus().file.getFullPathName();
     rig.cabIrPath = getCabStatus().file.getFullPathName();
     const auto flat = effects::Cipher::toText (effects::Cipher::shape (0));
-    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+    for (int slot = 0; slot < effects::Cipher::numEnvelopes; ++slot)
         if (const auto text = effects::Cipher::toText (cipher.getEnvelope (slot)); text != flat)
             rig.cipherEnvelopes[slot] = text;
+    std::array<juce::uint32, effects::Cipher::numSlots> rows {};
+    auto anyLit = false;
+    for (int row = 0; row < effects::Cipher::numSlots; ++row)
+    {
+        rows[(size_t) row] = cipher.getSequenceRow (row);
+        anyLit = anyLit || rows[(size_t) row] != 0;
+    }
+    if (anyLit)
+        rig.cipherSequence = effects::Cipher::sequenceToText (rows);
     return rig;
 }
 
@@ -859,11 +902,14 @@ void ParagonX1AudioProcessor::applyRig (const Rig& rig)
     }
 
     // CIPHER's envelopes: the rig's, or flat for the slots it doesn't mention.
-    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+    for (int slot = 0; slot < effects::Cipher::numEnvelopes; ++slot)
     {
         const auto found = rig.cipherEnvelopes.find (slot);
         cipher.setEnvelope (slot, found != rig.cipherEnvelopes.end() ? effects::Cipher::fromText (found->second) : effects::Cipher::shape (0));
     }
+    const auto rows = effects::Cipher::sequenceFromText (rig.cipherSequence);
+    for (int row = 0; row < effects::Cipher::numSlots; ++row)
+        cipher.setSequenceRow (row, rows[(size_t) row]);
 
     if (! rig.keepAmpAndCab)
     {
@@ -1027,7 +1073,13 @@ void ParagonX1AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     state.setProperty (tappedBpmKey, tappedBpm.load(), nullptr);
     state.setProperty (expressionCcKey, expressionCc.load(), nullptr);
     state.setProperty (tunerReferenceKey, tunerReferenceHz.load(), nullptr);
-    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+    {
+        std::array<juce::uint32, effects::Cipher::numSlots> rows {};
+        for (int row = 0; row < effects::Cipher::numSlots; ++row)
+            rows[(size_t) row] = cipher.getSequenceRow (row);
+        state.setProperty (cipherSequenceKey, effects::Cipher::sequenceToText (rows), nullptr);
+    }
+    for (int slot = 0; slot < effects::Cipher::numEnvelopes; ++slot)
     {
         juce::ValueTree envelope (cipherEnvelopeKey);
         envelope.setProperty ("slot", slot + 1, nullptr);
@@ -1081,13 +1133,18 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
         }
     }
     // CIPHER's envelopes (not parameters): read, then taken out of the state.
-    for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
+    for (int slot = 0; slot < effects::Cipher::numEnvelopes; ++slot)
         cipher.setEnvelope (slot, effects::Cipher::shape (0));
+    {
+        const auto rows = effects::Cipher::sequenceFromText (state.getProperty (cipherSequenceKey).toString());
+        for (int row = 0; row < effects::Cipher::numSlots; ++row)
+            cipher.setSequenceRow (row, rows[(size_t) row]);
+    }
     for (int i = state.getNumChildren(); --i >= 0;)
         if (const auto child = state.getChild (i); child.hasType (cipherEnvelopeKey))
         {
             const auto slot = (int) child.getProperty ("slot", 0);
-            if (slot >= 1 && slot <= effects::Cipher::numSlots)
+            if (slot >= 1 && slot <= effects::Cipher::numEnvelopes)
                 cipher.setEnvelope (slot - 1, effects::Cipher::fromText (child.getProperty ("points").toString()));
             state.removeChild (i, nullptr);
         }

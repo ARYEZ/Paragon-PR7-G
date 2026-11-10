@@ -64,8 +64,24 @@ namespace effects
         static inline const juce::StringArray noteNames { "1 bar", "1/2", "1/4", "1/8", "1/16", "1/32", "1/64" };
         static int noteStep (float knob01, int steps) noexcept { return juce::jlimit (0, steps - 1, juce::roundToInt (juce::jlimit (0.0f, 1.0f, knob01) * (float) (steps - 1))); }
         static inline const juce::StringArray slowNames { "FULL", "1/2", "1/4", "1/8", "1/16" };
-        enum class Style { both, up, down };
-        static inline const juce::StringArray styleNames { "Both", "Up", "Down" };
+        enum class Style { both, up, down, snap };   // SNAP (0.74.0): both ways, snapped to the scale's notes
+        static inline const juce::StringArray styleNames { "Both", "Up", "Down", "Snap" };
+        // PITCH SNAP's scales (the manual's list) and their notes, from the root.
+        static inline const juce::StringArray scaleNames { "Chromatic", "Natural Minor", "Harmonic Minor", "Major", "Minor Pentatonic" };
+        static inline const juce::StringArray rootNames { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+        static bool inScale (int scale, int semitoneFromRoot) noexcept;
+        // Effects whose main knob is a pitch (the manual's list), and the main knob snapped to the scale.
+        static bool canSnap (Type) noexcept;
+        static float snapMain (Type, float main01, int scale, int root) noexcept;
+        static juce::String noteName (float hz);
+        // The second modulator: its source and where it goes (saved by number: only add to the end).
+        enum class ModSource { audio, envelope2 };
+        static inline const juce::StringArray modSourceNames { "Audio Follower", "Envelope 2" };
+        enum class ModDest { main, p1, p2, stereo, gain, mix };
+        static inline const juce::StringArray modDestNames { "Main", "Knob 1", "Knob 2", "Stereo", "Gain", "Mix" };
+        // The sequencer's step lengths.
+        static inline const juce::StringArray seqSpeedNames { "1/4", "1/8", "1/16", "1/32", "1/64" };
+        static constexpr int numSteps = 32;
         // The LFO's synced speeds: how long one pass of the envelope takes.
         static inline const juce::StringArray speedNames { "8 bars", "4 bars", "2 bars", "1 bar", "1/2 dotted", "1/2", "1/2 triplet",
                                                            "1/4 dotted", "1/4", "1/4 triplet", "1/8 dotted", "1/8", "1/8 triplet",
@@ -126,6 +142,12 @@ namespace effects
             float stereo = 0.0f;                        // -1 to 1: left and right moved apart
             float gainDb = 0.0f;
             float mix = 1.0f;
+            // Stage 3: retriggering and the second modulator.
+            bool retrigAudio = false, retrigMidi = false, randomStart = false, envLoop = true;
+            float startPos = 0.0f, loopStart = 0.0f, loopEnd = 1.0f;   // 0 to 1 across the envelope
+            ModSource modSource = ModSource::audio;
+            ModDest modDest = ModDest::main;
+            float modAmount = 0.0f;                                     // -1 to 1
         };
 
         struct Master
@@ -143,6 +165,12 @@ namespace effects
             float gainDb = 0.0f;
             float mix = 1.0f;
             int mixLaw = 1;                             // -3 dB
+            // Stage 3: the sequencer, MIDI, PITCH SNAP's scale, the audio trigger and follower.
+            bool seqOn = false, midiOn = false;
+            int seqSpeed = 2, seqStart = 0, seqEnd = 15;                // 1/16, steps 1-16
+            int scale = 0, root = 0;
+            float trigLevelDb = -24.0f, trigHpfHz = 20.0f, trigHysteresisDb = 6.0f, trigHoldOffMs = 40.0f;
+            float followAttackMs = 10.0f, followHoldMs = 0.0f, followDecayMs = 200.0f, followGateDb = -60.0f;
         };
 
         struct Settings
@@ -161,8 +189,24 @@ namespace effects
         void reset();
 
         // Message thread: a slot's envelope (sampled into a table the audio thread reads).
-        void setEnvelope (int slot, const Envelope&);
-        const Envelope& getEnvelope (int slot) const { return envelopes[(size_t) juce::jlimit (0, numSlots - 1, slot)]; }
+        // Envelopes 0-9 are the slots' envelopes; 10-19 their ENVELOPE 2.
+        static constexpr int numEnvelopes = numSlots * 2;
+        void setEnvelope (int index, const Envelope&);
+        const Envelope& getEnvelope (int index) const { return envelopes[(size_t) juce::jlimit (0, numEnvelopes - 1, index)]; }
+
+        // The sequencer's steps: bit n of row r lit means slot r plays on step n+1 (message thread).
+        void setSequenceRow (int row, juce::uint32 steps) noexcept { sequence[(size_t) juce::jlimit (0, numSlots - 1, row)] = steps; }
+        juce::uint32 getSequenceRow (int row) const noexcept { return sequence[(size_t) juce::jlimit (0, numSlots - 1, row)].load(); }
+        static juce::String sequenceToText (const std::array<juce::uint32, numSlots>&);
+        static std::array<juce::uint32, numSlots> sequenceFromText (const juce::String&);
+
+        // MIDI (audio thread, before process): note-ons retrigger, and with MIDI on,
+        // the held notes' classes (C to A) switch slots 1-10 on.
+        void handleMidi (const juce::MidiBuffer&) noexcept;
+        // For the panel: the step playing, the audio follower's level, whether a slot sounds now.
+        int getStep() const noexcept { return step.load(); }
+        float getFollower() const noexcept { return follower.load(); }
+        bool isSlotActive (int slot) const noexcept { return active[(size_t) slot].load(); }
 
         void process (juce::dsp::AudioBlock<float> stereo, const Settings&);
 
@@ -197,9 +241,25 @@ namespace effects
         std::array<std::unique_ptr<SlotState>, numSlots> slotStates;
         std::unique_ptr<MasterState> master;
 
-        std::array<Envelope, numSlots> envelopes;   // message thread's copy
-        std::array<std::array<std::atomic<float>, tableSize>, numSlots> tables;
+        std::array<Envelope, numEnvelopes> envelopes;   // message thread's copy
+        std::array<std::array<std::atomic<float>, tableSize>, numEnvelopes> tables;
         std::array<std::atomic<float>, numSlots> phases, moved;
+        std::array<std::atomic<juce::uint32>, numSlots> sequence {};
+        std::atomic<int> step { 0 };
+        std::atomic<float> follower { 0.0f };
+        std::array<std::atomic<bool>, numSlots> active {};
+        // The block's triggers (sample offsets), the audio trigger's and follower's state, MIDI.
+        std::array<int, 32> audioTriggers {};
+        int numAudioTriggers = 0;
+        juce::uint32 noteOns = 0;   // bit n: a note of pitch class n started this block
+        juce::uint32 heldNotes = 0;   // bit n: a note of pitch class n is held
+        std::array<int, 12> heldCount {};
+        float triggerLevelDb = -120.0f, triggerHp[2] {}, followerLevel = 0.0f;
+        bool triggerArmed = true;
+        int holdOffLeft = 0, followHoldLeft = 0;
+        std::vector<float> followerTicks;   // the follower's value at each tick of the block
+        double freeBeats = 0.0;   // the sequencer's place (in beats) when the song isn't playing
+        juce::Random random { 7 };
 
         double sampleRate = 48000.0;
         BypassFade fade;

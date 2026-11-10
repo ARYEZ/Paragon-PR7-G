@@ -52,7 +52,9 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     **envelope** you draw on the rack's display, which moves the main knob once per LFO cycle (synced to the song, or
     in hertz), with ENV MOD STYLE, GLIDE, STEREO, GAIN and MIX. The MASTER page has a drive (before or after the
     slots), four compressors (Squash, Maximizer, Multiband, Overkill), CLEAN BASS and the output GAIN and MIX.
-    Built in stages: the sequencer and retriggering, the spectral effects and macros are to come.
+    Since 0.74.0: a 32-step **sequencer** and MIDI to switch slots, audio and MIDI **retriggering** with START and loop
+    markers, a second modulator (the **audio follower** or **Envelope 2**) and **pitch snap**. Still to come: the spectral
+    effects and macros.
   - **Pitch** (first in the signal chain; no footswitch): **TUNING** retunes the whole guitar (-12 to +12 semitones: D
     standard, B, a capo...), the **OCTAVER** blends two octaves down, one down, the dry guitar and one up (POG-style,
     chords track too), and **FREEZE** holds what you just played as an endless pad you can play over (with LEVEL,

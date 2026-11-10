@@ -37,7 +37,9 @@ struct Rig
     // CIPHER's envelopes, by slot (0-9), as text ("x y curve;..."), for the
     // slots whose envelope isn't the flat default. Not parameters: a drawn
     // shape is a list of points. Older plugins ignore them.
-    std::map<int, juce::String> cipherEnvelopes;
+    std::map<int, juce::String> cipherEnvelopes;   // 0-9 the slots' envelopes, 10-19 their ENVELOPE 2
+    // CIPHER's sequencer steps (Cipher::sequenceToText); empty when no step is lit.
+    juce::String cipherSequence;
 
     // Factory rigs set only the effects: we can't ship other people's NAM
     // captures, so they keep whatever amp and cabinet the user has loaded.

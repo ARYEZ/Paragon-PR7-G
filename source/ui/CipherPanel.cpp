@@ -29,7 +29,7 @@ namespace
         box.setColour (juce::ComboBox::arrowColourId, orange.withAlpha (0.6f));
     }
 
-    // Short names for the slot keys.
+    // Short names for the slot keys and the sequencer's rows.
     juce::String shortName (Cipher::Type type)
     {
         const char* names[] = { "-", "LAD LP", "LAD BP", "LAD HP", "DIG LP", "DIG BP", "DIG HP", "101 LP", "101 BP", "101 HP",
@@ -41,17 +41,23 @@ namespace
 }
 
 //==============================================================================
-// The ENVELOPE EDITOR: the slot's envelope on a PR7 screen, with a grid of
-// sixteen, the playhead, and the points to drag. Snaps to the grid across
-// unless SHIFT is held, as the original's SNAP does.
+// The display: on a slot page the ENVELOPE EDITOR (grid of sixteen, the
+// playhead, points to drag; snaps across unless SHIFT is held, as the
+// original's SNAP does; START and loop markers with retriggering); on MASTER
+// the signal flow; on SEQ the sequencer's grid.
 class CipherPanel::Editor final : public juce::Component,
                                   public juce::SettableTooltipClient
 {
 public:
-    explicit Editor (CipherPanel& ownerPanel) : owner (ownerPanel)
+    explicit Editor (CipherPanel& ownerPanel) : owner (ownerPanel) { updateTooltip(); }
+
+    void updateTooltip()
     {
-        setTooltip ("The envelope: double-click to add a point, drag one to move it (SHIFT: off the grid), double-click it to "
-                    "remove it; drag the small dot between two points up or down to bend that line");
+        setTooltip (owner.shown == CipherPanel::seqPage
+                        ? "The sequencer: click or drag to light a slot's steps; click a row's name to pick it for ROTATE, CLEAR and RANDOM"
+                        : "The envelope: double-click to add a point, drag one to move it (SHIFT: off the grid), double-click it to remove it; "
+                          "drag the small dot between two points up or down to bend that line. With retriggering on, drag the S (START) "
+                          "and the loop's edges along the bottom");
     }
 
     juce::Rectangle<float> plotArea() const
@@ -73,29 +79,45 @@ public:
         return { juce::jlimit (0.0f, 1.0f, (p.x - a.getX()) / a.getWidth()), juce::jlimit (0.0f, 1.0f, (a.getBottom() - p.y) / a.getHeight()) };
     }
 
+    //--------------------------------------------------------------------------
     void paint (juce::Graphics& g) override
     {
         glass = LedDisplay::paintScreen (g, getLocalBounds().toFloat(), screenSize);
         if (owner.shown == CipherPanel::masterPage)
-        {
             paintChain (g);
-            LedDisplay::paintGlassOverlay (g, glass, screenSize);
-            return;
-        }
+        else if (owner.shown == CipherPanel::seqPage)
+            paintSequencer (g);
+        else
+            paintEnvelope (g);
+        LedDisplay::paintGlassOverlay (g, glass, screenSize);
+    }
+
+    const Cipher::Envelope& envelope() const { return owner.processor.getCipherEnvelope (owner.editIndex()); }
+
+    void paintEnvelope (juce::Graphics& g)
+    {
         const auto a = plotArea();
         const auto slot = juce::jmin (owner.shown, 9);
         const auto type = owner.shownType();
-        const auto& envelope = owner.processor.getCipherEnvelope (slot);
+        const auto& points = envelope();
 
-        // The title line: the slot, its effect and the main knob's value as moved.
+        // The title line: the slot, its effect, which envelope, and the main knob's value as it moves.
         auto title = glass.reduced (glass.getWidth() * 0.035f, glass.getHeight() * 0.06f).removeFromTop (14.0f);
         g.setFont (font (10.0f));
         g.setColour (orange);
-        g.drawText ("SLOT " + juce::String (slot + 1) + "  " + Cipher::typeNames[(int) type].toUpperCase(), title, juce::Justification::centredLeft, false);
+        g.drawText ("SLOT " + juce::String (slot + 1) + "  " + Cipher::typeNames[(int) type].toUpperCase() + (owner.editSecond ? "  ENV 2" : ""),
+                    title, juce::Justification::centredLeft, false);
         const auto moved = owner.processor.getCipher().getMovedMain (slot);
         const auto labels = Cipher::labelsFor (type);
         if (type != Cipher::Type::off)
-            g.drawText (juce::String (labels.main) + " " + Cipher::mainText (type, moved, juce::roundToInt (owner.raw (owner.slotId ("Option")))), title, juce::Justification::centredRight, false);
+        {
+            auto value = juce::String (labels.main) + " " + Cipher::mainText (type, moved, juce::roundToInt (owner.raw (owner.slotId ("Option"))));
+            // PITCH SNAP shows the note, as the original does.
+            if (juce::roundToInt (owner.raw (owner.slotId ("Style"))) == (int) Cipher::Style::snap && Cipher::canSnap (type)
+                && type != Cipher::Type::pitchShift && Cipher::isFilter (type))
+                value << "  " << Cipher::noteName (Cipher::cutoffHz (moved));
+            g.drawText (value, title, juce::Justification::centredRight, false);
+        }
 
         // The grid.
         for (int i = 1; i < 16; ++i)
@@ -111,13 +133,34 @@ public:
             g.fillRect (juce::Rectangle<float> (a.getX(), y - 0.5f, a.getWidth(), 1.0f));
         }
 
+        // Retriggering: the loop region shaded, the START line.
+        const auto retrigger = owner.raw (owner.slotId ("RetrigAudio")) > 0.5f || owner.raw (owner.slotId ("RetrigMidi")) > 0.5f;
+        if (retrigger)
+        {
+            if (owner.raw (owner.slotId ("EnvLoop")) > 0.5f)
+            {
+                const auto from = owner.raw (owner.slotId ("LoopStart")), to = owner.raw (owner.slotId ("LoopEnd"));
+                const auto x0 = a.getX() + a.getWidth() * juce::jmin (from, to), x1 = a.getX() + a.getWidth() * juce::jmax (from, to);
+                g.setColour (orange.withAlpha (0.14f));
+                g.fillRect (juce::Rectangle<float> (x0, a.getY(), x1 - x0, a.getHeight()));
+                g.setColour (orange.withAlpha (0.6f));
+                for (auto x : { x0, x1 })
+                    g.fillRect (juce::Rectangle<float> (x - 0.5f, a.getBottom() - 10.0f, 1.0f, 10.0f));
+            }
+            const auto sx = a.getX() + a.getWidth() * owner.raw (owner.slotId ("StartPos"));
+            g.setColour (Finish::printedRed().brighter (0.3f));
+            g.fillRect (juce::Rectangle<float> (sx - 1.0f, a.getY(), 2.0f, a.getHeight()));
+            g.setFont (font (8.0f));
+            g.drawText ("S", juce::Rectangle<float> (sx + 2.0f, a.getY(), 10.0f, 10.0f), juce::Justification::centredLeft, false);
+        }
+
         // The envelope, filled underneath like a lit LED band.
         juce::Path line, fill;
         const int steps = juce::jmax (64, (int) a.getWidth());
         for (int i = 0; i <= steps; ++i)
         {
             const auto x = (float) i / (float) steps;
-            const auto p = toScreen (x, Cipher::envelopeAt (envelope, x));
+            const auto p = toScreen (x, Cipher::envelopeAt (points, x));
             if (i == 0)
             {
                 line.startNewSubPath (p);
@@ -136,12 +179,12 @@ public:
         g.strokePath (line, juce::PathStrokeType (1.6f));
 
         // The points and, between each pair, the dot that bends the line.
-        for (size_t i = 0; i < envelope.size(); ++i)
+        for (size_t i = 0; i < points.size(); ++i)
         {
-            const auto p = toScreen (envelope[i].x, envelope[i].y);
+            const auto p = toScreen (points[i].x, points[i].y);
             g.setColour (orange);
             g.fillEllipse (juce::Rectangle<float> (7.0f, 7.0f).withCentre (p));
-            if (i + 1 < envelope.size() && envelope[i + 1].x - envelope[i].x > 0.02f)
+            if (i + 1 < points.size() && points[i + 1].x - points[i].x > 0.02f)
             {
                 g.setColour (orange.withAlpha (0.55f));
                 g.drawEllipse (juce::Rectangle<float> (5.0f, 5.0f).withCentre (handle ((int) i)), 1.0f);
@@ -155,7 +198,6 @@ public:
             g.setColour (juce::Colours::white.withAlpha (0.55f));
             g.fillRect (juce::Rectangle<float> (x - 0.75f, a.getY(), 1.5f, a.getHeight()));
         }
-        LedDisplay::paintGlassOverlay (g, glass, screenSize);
     }
 
     // MASTER: the whole chain, in order: the drive where it is, the ten
@@ -170,7 +212,7 @@ public:
         const auto on = [this] (const char* id) { return owner.raw (id) > 0.5f; };
         juce::StringArray lines;
         std::vector<bool> lit;
-        const auto add = [&] (const juce::String& text, bool active) { lines.add (text); lit.push_back (active); };
+        const auto add = [&] (const juce::String& text, bool activeLine) { lines.add (text); lit.push_back (activeLine); };
         const auto driveText = "DRIVE  " + Cipher::driveNames[juce::roundToInt (owner.raw (ParamIDs::cipherDriveType))].toUpperCase();
         add ("IN", true);
         if (! on (ParamIDs::cipherDriveAfter))
@@ -186,7 +228,6 @@ public:
         add ("COMP  " + Cipher::compNames[juce::roundToInt (owner.raw (ParamIDs::cipherComp))].toUpperCase(), on (ParamIDs::cipherCompOn));
         add ("CLEAN BASS  " + juce::String (juce::roundToInt (owner.raw (ParamIDs::cipherCleanBassHz))) + " HZ", on (ParamIDs::cipherCleanBassOn));
         add ("OUT", true);
-        // Two columns.
         const auto perColumn = (lines.size() + 1) / 2;
         const auto rowHeight = juce::jmin (14.0f, area.getHeight() / (float) perColumn);
         for (int i = 0; i < lines.size(); ++i)
@@ -200,103 +241,234 @@ public:
         }
     }
 
+    // SEQ: ten rows (the slots, named by effect) of 32 steps; the loop region
+    // lit, the playing step marked, the picked row's name brighter.
+    juce::Rectangle<float> gridArea() const
+    {
+        auto area = glass.isEmpty() ? getLocalBounds().toFloat().reduced (getWidth() * 0.035f, getHeight() * 0.06f)
+                                    : glass.reduced (glass.getWidth() * 0.035f, glass.getHeight() * 0.06f);
+        area.removeFromTop (16.0f);
+        area.removeFromLeft (44.0f);
+        return area;
+    }
+
+    void paintSequencer (juce::Graphics& g)
+    {
+        auto title = glass.reduced (glass.getWidth() * 0.035f, glass.getHeight() * 0.06f).removeFromTop (14.0f);
+        const auto seqOn = owner.raw (ParamIDs::cipherSeqOn) > 0.5f, midiOn = owner.raw (ParamIDs::cipherMidiOn) > 0.5f;
+        g.setFont (font (10.0f));
+        g.setColour (orange);
+        g.drawText (midiOn ? "SEQUENCE  (MIDI IN CONTROL)" : seqOn ? "SEQUENCE" : "SEQUENCE  (OFF)", title, juce::Justification::centredLeft, false);
+        const auto area = gridArea();
+        const auto cellW = area.getWidth() / (float) Cipher::numSteps, cellH = area.getHeight() / (float) Cipher::numSlots;
+        const auto first = juce::jmin ((int) owner.raw (ParamIDs::cipherSeqStart), (int) owner.raw (ParamIDs::cipherSeqEnd));
+        const auto last = juce::jmax ((int) owner.raw (ParamIDs::cipherSeqStart), (int) owner.raw (ParamIDs::cipherSeqEnd));
+        const auto playing = owner.processor.getCipher().getStep();
+        for (int r = 0; r < Cipher::numSlots; ++r)
+        {
+            const auto type = (Cipher::Type) juce::roundToInt (owner.raw (ParamIDs::cipherSlot (r + 1, "Type")));
+            g.setColour (orange.withAlpha (r == owner.seqRow ? 1.0f : 0.5f));
+            g.setFont (font (8.0f));
+            g.drawText (juce::String (r + 1) + " " + shortName (type), juce::Rectangle<float> (area.getX() - 44.0f, area.getY() + cellH * (float) r, 42.0f, cellH),
+                        juce::Justification::centredLeft, false);
+            const auto steps = owner.processor.getCipherSequenceRow (r);
+            for (int c = 0; c < Cipher::numSteps; ++c)
+            {
+                const auto cell = juce::Rectangle<float> (area.getX() + cellW * (float) c, area.getY() + cellH * (float) r, cellW, cellH).reduced (0.8f);
+                const auto inLoop = c >= first && c <= last;
+                const auto lit = (steps >> (unsigned) c & 1u) != 0;
+                g.setColour (orange.withAlpha (lit ? (inLoop ? 0.95f : 0.4f) : (inLoop ? 0.12f : 0.05f)));
+                g.fillRect (cell);
+            }
+        }
+        if (seqOn && ! midiOn && owner.raw (ParamIDs::cipherOn) > 0.5f)
+        {
+            g.setColour (juce::Colours::white.withAlpha (0.5f));
+            g.drawRect (juce::Rectangle<float> (area.getX() + cellW * (float) playing, area.getY(), cellW, area.getHeight()), 1.0f);
+        }
+    }
+
+    //--------------------------------------------------------------------------
     juce::Point<float> handle (int segment) const
     {
-        const auto& envelope = owner.processor.getCipherEnvelope (juce::jmin (owner.shown, 9));
-        const auto mid = (envelope[(size_t) segment].x + envelope[(size_t) segment + 1].x) * 0.5f;
-        return toScreen (mid, Cipher::envelopeAt (envelope, mid));
+        const auto& points = envelope();
+        const auto mid = (points[(size_t) segment].x + points[(size_t) segment + 1].x) * 0.5f;
+        return toScreen (mid, Cipher::envelopeAt (points, mid));
     }
 
     int pointAt (juce::Point<float> position) const
     {
-        const auto& envelope = owner.processor.getCipherEnvelope (juce::jmin (owner.shown, 9));
-        for (int i = (int) envelope.size(); --i >= 0;)
-            if (toScreen (envelope[(size_t) i].x, envelope[(size_t) i].y).getDistanceFrom (position) < 7.0f)
+        const auto& points = envelope();
+        for (int i = (int) points.size(); --i >= 0;)
+            if (toScreen (points[(size_t) i].x, points[(size_t) i].y).getDistanceFrom (position) < 7.0f)
                 return i;
         return -1;
     }
 
     int handleAt (juce::Point<float> position) const
     {
-        const auto& envelope = owner.processor.getCipherEnvelope (juce::jmin (owner.shown, 9));
-        for (int i = 0; i + 1 < (int) envelope.size(); ++i)
-            if (envelope[(size_t) i + 1].x - envelope[(size_t) i].x > 0.02f && handle (i).getDistanceFrom (position) < 6.0f)
+        const auto& points = envelope();
+        for (int i = 0; i + 1 < (int) points.size(); ++i)
+            if (points[(size_t) i + 1].x - points[(size_t) i].x > 0.02f && handle (i).getDistanceFrom (position) < 6.0f)
                 return i;
         return -1;
     }
 
+    // With retriggering: which marker (START, the loop's start or end) is under the mouse.
+    juce::String markerAt (juce::Point<float> position) const
+    {
+        const auto retrigger = owner.raw (owner.slotId ("RetrigAudio")) > 0.5f || owner.raw (owner.slotId ("RetrigMidi")) > 0.5f;
+        if (! retrigger)
+            return {};
+        const auto a = plotArea();
+        const auto near = [&] (const char* part) { return std::abs (a.getX() + a.getWidth() * owner.raw (owner.slotId (part)) - position.x) < 5.0f; };
+        if (owner.raw (owner.slotId ("EnvLoop")) > 0.5f && position.y > a.getBottom() - 12.0f)
+        {
+            if (near ("LoopStart")) return "LoopStart";
+            if (near ("LoopEnd")) return "LoopEnd";
+        }
+        if (near ("StartPos") && position.y < a.getY() + 14.0f)
+            return "StartPos";
+        return {};
+    }
+
     void mouseDown (const juce::MouseEvent& e) override
     {
+        if (owner.shown == CipherPanel::masterPage)
+            return;
+        if (owner.shown == CipherPanel::seqPage)
+        {
+            sequencerClick (e.position, true);
+            return;
+        }
+        marker = markerAt (e.position);
+        if (marker.isNotEmpty())
+        {
+            if (auto* p = owner.parameters.getParameter (owner.slotId (marker.toRawUTF8())))
+                p->beginChangeGesture();
+            return;
+        }
         dragging = pointAt (e.position);
         bending = dragging < 0 ? handleAt (e.position) : -1;
         changed = false;
         if (bending >= 0)
-            bendStart = owner.processor.getCipherEnvelope (juce::jmin (owner.shown, 9))[(size_t) bending].curve;
+            bendStart = envelope()[(size_t) bending].curve;
     }
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
-        const auto slot = juce::jmin (owner.shown, 9);
-        auto envelope = owner.processor.getCipherEnvelope (slot);
-        if (dragging >= 0 && dragging < (int) envelope.size())
+        if (owner.shown == CipherPanel::masterPage)
+            return;
+        if (owner.shown == CipherPanel::seqPage)
+        {
+            sequencerClick (e.position, false);
+            return;
+        }
+        if (marker.isNotEmpty())
+        {
+            auto x = fromScreen (e.position).x;
+            if (! e.mods.isShiftDown())
+                x = std::round (x * 16.0f) / 16.0f;
+            owner.setValue (owner.slotId (marker.toRawUTF8()), x);
+            repaint();
+            return;
+        }
+        auto points = envelope();
+        if (dragging >= 0 && dragging < (int) points.size())
         {
             auto p = fromScreen (e.position);
             if (! e.mods.isShiftDown())
                 p.x = std::round (p.x * 16.0f) / 16.0f;
             // A point stays between its neighbours.
-            const auto lowest = dragging > 0 ? envelope[(size_t) dragging - 1].x : 0.0f;
-            const auto highest = dragging + 1 < (int) envelope.size() ? envelope[(size_t) dragging + 1].x : 1.0f;
-            envelope[(size_t) dragging].x = juce::jlimit (lowest, highest, p.x);
-            envelope[(size_t) dragging].y = p.y;
+            const auto lowest = dragging > 0 ? points[(size_t) dragging - 1].x : 0.0f;
+            const auto highest = dragging + 1 < (int) points.size() ? points[(size_t) dragging + 1].x : 1.0f;
+            points[(size_t) dragging].x = juce::jlimit (lowest, highest, p.x);
+            points[(size_t) dragging].y = p.y;
         }
-        else if (bending >= 0 && bending + 1 < (int) envelope.size())
+        else if (bending >= 0 && bending + 1 < (int) points.size())
         {
             // Dragging up bows the line up, down bows it down.
-            const auto rising = envelope[(size_t) bending + 1].y >= envelope[(size_t) bending].y;
+            const auto rising = points[(size_t) bending + 1].y >= points[(size_t) bending].y;
             const auto dy = (float) -e.getDistanceFromDragStartY() / 80.0f;
-            envelope[(size_t) bending].curve = juce::jlimit (-1.0f, 1.0f, bendStart + (rising ? dy : -dy));
+            points[(size_t) bending].curve = juce::jlimit (-1.0f, 1.0f, bendStart + (rising ? dy : -dy));
         }
         else
             return;
         changed = true;
-        owner.processor.setCipherEnvelope (slot, envelope, false);
+        owner.processor.setCipherEnvelope (owner.editIndex(), points, false);
         repaint();
     }
 
     void mouseUp (const juce::MouseEvent&) override
     {
+        if (marker.isNotEmpty())
+            if (auto* p = owner.parameters.getParameter (owner.slotId (marker.toRawUTF8())))
+                p->endChangeGesture();
+        marker.clear();
         if (changed)
-            owner.processor.setCipherEnvelope (juce::jmin (owner.shown, 9), owner.processor.getCipherEnvelope (juce::jmin (owner.shown, 9)), true);
+            owner.processor.setCipherEnvelope (owner.editIndex(), envelope(), true);
         dragging = bending = -1;
         changed = false;
+        paintingValue = -1;
     }
 
     void mouseDoubleClick (const juce::MouseEvent& e) override
     {
-        const auto slot = juce::jmin (owner.shown, 9);
-        auto envelope = owner.processor.getCipherEnvelope (slot);
+        if (owner.shown >= CipherPanel::masterPage)
+            return;
+        auto points = envelope();
         if (const auto hit = pointAt (e.position); hit >= 0)
         {
-            if (envelope.size() > 1)
-                envelope.erase (envelope.begin() + hit);
+            if (points.size() > 1)
+                points.erase (points.begin() + hit);
         }
         else
         {
             auto p = fromScreen (e.position);
             if (! e.mods.isShiftDown())
                 p.x = std::round (p.x * 16.0f) / 16.0f;
-            envelope.push_back ({ p.x, p.y, 0.0f });
+            points.push_back ({ p.x, p.y, 0.0f });
         }
-        owner.processor.setCipherEnvelope (slot, envelope, true);
+        owner.processor.setCipherEnvelope (owner.editIndex(), points, true);
+        repaint();
+    }
+
+    // A click on the grid lights or clears a step (a drag paints the same way);
+    // a click on a row's name picks that row.
+    void sequencerClick (juce::Point<float> position, bool first)
+    {
+        const auto area = gridArea();
+        const auto r = (int) ((position.y - area.getY()) / (area.getHeight() / (float) Cipher::numSlots));
+        if (r < 0 || r >= Cipher::numSlots)
+            return;
+        if (position.x < area.getX())
+        {
+            if (first)
+                owner.seqRow = r;
+            owner.repaint();
+            return;
+        }
+        const auto c = (int) ((position.x - area.getX()) / (area.getWidth() / (float) Cipher::numSteps));
+        if (c < 0 || c >= Cipher::numSteps)
+            return;
+        auto steps = owner.processor.getCipherSequenceRow (r);
+        const auto bit = 1u << (unsigned) c;
+        if (first)
+            paintingValue = (steps & bit) != 0 ? 0 : 1;
+        const auto wanted = paintingValue == 1 ? (steps | bit) : (steps & ~bit);
+        if (wanted != steps)
+            owner.processor.setCipherSequenceRow (r, wanted);
+        owner.seqRow = r;
         repaint();
     }
 
 private:
     CipherPanel& owner;
     juce::Rectangle<float> glass;
-    int dragging = -1, bending = -1;
+    int dragging = -1, bending = -1, paintingValue = -1;
     float bendStart = 0.0f;
     bool changed = false;
+    juce::String marker;
 };
 
 //==============================================================================
@@ -317,18 +489,26 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
     onKey.attachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (parameters, ParamIDs::cipherOn, onKey.button);
     setUpKey (slotOn, "SLOT", "This slot on or off (it keeps its settings)");
     setUpKey (syncKey, "SYNC", "SYNC: the envelope's speed in notes, locked to the song; off, in hertz (RATE)");
+    setUpKey (retrigAudio, "AUDIO", "RETRIGGER AUDIO: a peak in the sound restarts the envelope from START (set the level on the SEQ page)");
+    setUpKey (retrigMidi, "MIDI|SEQ", "RETRIGGER MIDI | SEQ: a MIDI note, or the slot coming on in the sequencer, restarts the envelope");
+    setUpKey (randomStart, "RND", "RANDOM START: each trigger starts the envelope somewhere new");
+    setUpKey (envLoop, "LOOP", "ENVELOPE LOOP: after a trigger, go round (the loop region, if one is set); off, play once and wait");
     setUpKey (driveOn, "DRIVE", "The master drive on or off");
     setUpKey (driveAfter, "FX > DRIVE", "On: the drive after the ten slots (Effects -> Drive). Off: before them (Drive -> Effects)");
     setUpKey (compOn, "COMP", "The master compressor on or off");
     setUpKey (bassOn, "CLEAN BASS", "CLEAN BASS: below its frequency the sound passes untouched by CIPHER");
     setUpKey (bassListen, "LISTEN", "LISTEN: hear only the untouched lows, to set CLEAN BASS's frequency");
+    setUpKey (seqOn, "SEQ ON", "The sequencer: slots play only on their lit steps");
+    setUpKey (midiOn, "MIDI", "MIDI: slots play while their note is held (C for slot 1, C# for 2 ... A for 10, any octave)");
 
     for (int i = 0; i < (int) slotKeys.size(); ++i)
     {
         auto& key = slotKeys[(size_t) i];
         key.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
         key.setClickingTogglesState (false);
-        key.setTooltip (i < 10 ? "Slot " + juce::String (i + 1) + ": its effect, envelope and knobs" : juce::String ("MASTER: the drive, compressor, CLEAN BASS and output"));
+        key.setTooltip (i < 10 ? "Slot " + juce::String (i + 1) + ": its effect, envelope and knobs"
+                        : i == masterPage ? juce::String ("MASTER: the drive, compressor, CLEAN BASS and output")
+                                          : juce::String ("SEQ: the sequencer, MIDI, the audio trigger and follower, and PITCH SNAP's scale"));
         key.onClick = [this, i] { showSlot (i); };
         addAndMakeVisible (key);
     }
@@ -344,24 +524,41 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
     typeList.box.addItemList (Cipher::typeNames, 1);
     setUpChoice (speedList, "SPEED", "SPEED: how long one pass of the envelope takes, in notes");
     speedList.box.addItemList (Cipher::speedNames, 1);
-    setUpChoice (shapeList, "SHAPE", "Load a shape into the envelope (replaces the points)");
+    setUpChoice (shapeList, "SHAPE", "Load a shape into the envelope you're drawing (replaces the points)");
     shapeList.box.addItemList (Cipher::shapeNames, 1);
     shapeList.box.setTextWhenNothingSelected ("LOAD...");
     shapeList.box.onChange = [this]
     {
-        if (const auto chosen = shapeList.box.getSelectedItemIndex(); chosen >= 0 && shown < 10)
+        if (const auto chosen = shapeList.box.getSelectedItemIndex(); chosen >= 0 && isSlotPage())
         {
-            processor.setCipherEnvelope (shown, Cipher::shape (chosen), true);
+            processor.setCipherEnvelope (editIndex(), Cipher::shape (chosen), true);
             shapeList.box.setSelectedId (0, juce::dontSendNotification);
             editor->repaint();
         }
     };
+    setUpChoice (modSourceList, "MOD", "The second modulator: the audio follower (how loud you play) or ENVELOPE 2");
+    modSourceList.box.addItemList (Cipher::modSourceNames, 1);
+    setUpChoice (modDestList, "TO", "Where the second modulator goes");
+    modDestList.box.addItemList (Cipher::modDestNames, 1);
     setUpChoice (driveList, "TYPE", "The master drive's type");
     driveList.box.addItemList (Cipher::driveNames, 1);
     setUpChoice (compList, "TYPE", "The master compressor: Squash, Maximizer, Multiband or Overkill");
     compList.box.addItemList (Cipher::compNames, 1);
     setUpChoice (lawList, "MIX LAW", "How MIX blends at half way: -6 dB suits filters, -3 dB echoes and reverbs, 0 dB keeps the dry up");
     lawList.box.addItemList (Cipher::mixLawNames, 1);
+    setUpChoice (seqSpeedList, "STEP", "How long each step lasts");
+    seqSpeedList.box.addItemList (Cipher::seqSpeedNames, 1);
+    juce::StringArray stepNames;
+    for (int i = 1; i <= Cipher::numSteps; ++i)
+        stepNames.add (juce::String (i));
+    setUpChoice (seqStartList, "LOOP", "The loop's first step (it follows the song's position)");
+    seqStartList.box.addItemList (stepNames, 1);
+    setUpChoice (seqEndList, "TO", "The loop's last step");
+    seqEndList.box.addItemList (stepNames, 1);
+    setUpChoice (scaleList, "SCALE", "PITCH SNAP's scale (ENV MOD SNAP on a slot)");
+    scaleList.box.addItemList (Cipher::scaleNames, 1);
+    setUpChoice (rootList, "KEY", "PITCH SNAP's key");
+    rootList.box.addItemList (Cipher::rootNames, 1);
 
     for (int i = 0; i < (int) optionKeys.size(); ++i)
     {
@@ -374,16 +571,51 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
         };
         addAndMakeVisible (key);
     }
-    const char* styles[] = { "BOTH", "UP", "DOWN" };
+    const char* styles[] = { "BOTH", "UP", "DOWN", "SNAP" };
     for (int i = 0; i < (int) styleKeys.size(); ++i)
     {
         auto& key = styleKeys[(size_t) i];
         key.setButtonText (styles[i]);
         key.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
-        key.setTooltip ("ENV MOD STYLE: the envelope moves the main knob both ways, only up, or only down");
+        key.setTooltip ("ENV MOD STYLE: the envelope moves the main knob both ways, only up, only down, or both ways snapped to "
+                        "the notes of the scale (set on the SEQ page)");
         key.onClick = [this, i] { setChoice (slotId ("Style"), i); };
         addAndMakeVisible (key);
     }
+    const char* envs[] = { "ENV 1", "ENV 2" };
+    for (int i = 0; i < 2; ++i)
+    {
+        auto& key = envKeys[(size_t) i];
+        key.setButtonText (envs[i]);
+        key.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
+        key.setTooltip (i == 0 ? "Draw ENVELOPE 1 (it moves the main knob)" : "Draw ENVELOPE 2 (the second modulator, with MOD set to Envelope 2)");
+        key.onClick = [this, i] { editEnvelope2 (i == 1); };
+        addAndMakeVisible (key);
+    }
+    for (auto* key : { &rotateLeft, &rotateRight, &clearKey, &randomKey })
+    {
+        key->getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
+        addAndMakeVisible (*key);
+    }
+    rotateLeft.setTooltip ("ROTATE the picked row's steps one to the left");
+    rotateRight.setTooltip ("ROTATE the picked row's steps one to the right");
+    clearKey.setTooltip ("CLEAR the picked row's steps");
+    randomKey.setTooltip ("RANDOM steps for the picked row, inside the loop");
+    rotateLeft.onClick = [this] { editRow ([] (juce::uint32 r) { return (r >> 1) | (r << 31); }); };
+    rotateRight.onClick = [this] { editRow ([] (juce::uint32 r) { return (r << 1) | (r >> 31); }); };
+    clearKey.onClick = [this] { editRow ([] (juce::uint32) { return 0u; }); };
+    randomKey.onClick = [this]
+    {
+        const auto first = juce::jmin ((int) raw (ParamIDs::cipherSeqStart), (int) raw (ParamIDs::cipherSeqEnd));
+        const auto last = juce::jmax ((int) raw (ParamIDs::cipherSeqStart), (int) raw (ParamIDs::cipherSeqEnd));
+        editRow ([first, last] (juce::uint32 r)
+        {
+            auto& random = juce::Random::getSystemRandom();
+            for (int c = first; c <= last; ++c)
+                r = random.nextBool() ? (r | (1u << (unsigned) c)) : (r & ~(1u << (unsigned) c));
+            return r;
+        });
+    };
 
     const auto setUpKnob = [this] (Knob& knob, const char* name, const char* tip)
     {
@@ -393,7 +625,7 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
         knob.slider.setTooltip (tip);
         addAndMakeVisible (knob.slider);
     };
-    setUpKnob (mainKnob, "MAIN", "The main knob (cutoff, frequency, vowel, gain or position): the envelope moves it");
+    setUpKnob (mainKnob, "MAIN", "The main knob (cutoff, frequency, time...): the envelope moves it");
     setUpKnob (p1Knob, "KNOB 1", "The effect's first knob");
     setUpKnob (p2Knob, "KNOB 2", "The effect's second knob");
     setUpKnob (envKnob, "ENV AMT", "ENV AMOUNT: how far the envelope moves the main knob (left of centre: the other way)");
@@ -402,12 +634,21 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
     setUpKnob (stereoKnob, "STEREO", "STEREO: moves the left and right sides' main knob apart");
     setUpKnob (gainKnob, "GAIN", "The slot's output level");
     setUpKnob (mixKnob, "MIX", "The slot's MIX with the sound coming into it");
+    setUpKnob (modKnob, "MOD AMT", "How much the second modulator moves its destination (left of centre: the other way)");
     setUpKnob (driveKnob, "DRIVE", "How hard the master drive is pushed");
     setUpKnob (toneKnob, "TONE", "TONE: darker to the left, brighter to the right");
     setUpKnob (compressKnob, "COMPRESS", "How hard the master compressor works");
     setUpKnob (bassKnob, "BASS FREQ", "CLEAN BASS: below this the sound passes untouched");
     setUpKnob (outGainKnob, "GAIN", "CIPHER's output level");
     setUpKnob (outMixKnob, "MIX", "CIPHER's MIX: the dry sound to everything CIPHER does");
+    setUpKnob (trigLevelKnob, "LEVEL", "AUDIO TRIGGER: a peak over this restarts the envelopes of slots set to retrigger on AUDIO");
+    setUpKnob (trigHpfKnob, "FILTER", "AUDIO TRIGGER: listens through a high-pass (all the way down: off), say to trigger on the pick, not the bass");
+    setUpKnob (trigHystKnob, "HYSTERESIS", "AUDIO TRIGGER: no new trigger until the sound falls this far below LEVEL");
+    setUpKnob (trigHoldKnob, "HOLD-OFF", "AUDIO TRIGGER: no new trigger for this long after one");
+    setUpKnob (followAttackKnob, "ATTACK", "AUDIO FOLLOWER: how fast it rises with the sound");
+    setUpKnob (followHoldKnob, "HOLD", "AUDIO FOLLOWER: how long it stays up after rising");
+    setUpKnob (followDecayKnob, "DECAY", "AUDIO FOLLOWER: how fast it falls back when the sound stops");
+    setUpKnob (followGateKnob, "GATE", "AUDIO FOLLOWER: sound below this doesn't move it (keeps hiss from moving things)");
 
     bind();
     startTimerHz (30);
@@ -423,22 +664,38 @@ Cipher::Type CipherPanel::shownType() const
                                         juce::roundToInt (raw (ParamIDs::cipherSlot (juce::jmin (shown, 9) + 1, "Type"))));
 }
 
-void CipherPanel::setChoice (const juce::String& id, int index)
+void CipherPanel::setChoice (const juce::String& id, int index) { setValue (id, (float) index); }
+
+void CipherPanel::setValue (const juce::String& id, float plain)
 {
     if (auto* parameter = parameters.getParameter (id))
     {
         parameter->beginChangeGesture();
-        parameter->setValueNotifyingHost (parameter->convertTo0to1 ((float) index));
+        parameter->setValueNotifyingHost (parameter->convertTo0to1 (plain));
         parameter->endChangeGesture();
     }
 }
 
+void CipherPanel::editRow (const std::function<juce::uint32 (juce::uint32)>& change)
+{
+    processor.setCipherSequenceRow (seqRow, change (processor.getCipherSequenceRow (seqRow)));
+    editor->repaint();
+}
+
 void CipherPanel::showSlot (int slot)
 {
-    shown = juce::jlimit (0, masterPage, slot);
+    shown = juce::jlimit (0, seqPage, slot);
+    editor->updateTooltip();
     bind();
     resized();
     repaint();
+}
+
+void CipherPanel::editEnvelope2 (bool second)
+{
+    editSecond = second;
+    editor->repaint();
+    timerCallback();
 }
 
 void CipherPanel::bind()
@@ -446,34 +703,45 @@ void CipherPanel::bind()
     using SA = juce::AudioProcessorValueTreeState::SliderAttachment;
     using BA = juce::AudioProcessorValueTreeState::ButtonAttachment;
     using CA = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
-    const auto master = shown == masterPage;
+    const auto slotPage = isSlotPage();
+    const auto master = shown == masterPage, seq = shown == seqPage;
 
-    for (auto* knob : { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob })
+    // A slot's controls follow the slot shown.
+    for (auto* knob : { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob, &modKnob })
         knob->attachment.reset();
-    for (auto* key : { &slotOn, &syncKey })
+    for (auto* key : { &slotOn, &syncKey, &retrigAudio, &retrigMidi, &randomStart, &envLoop })
         key->attachment.reset();
-    typeList.attachment.reset();
-    speedList.attachment.reset();
-    if (! master)
+    for (auto* choice : { &typeList, &speedList, &modSourceList, &modDestList })
+        choice->attachment.reset();
+    if (slotPage)
     {
         const std::pair<Knob*, const char*> knobs[] = { { &mainKnob, "Main" }, { &p1Knob, "P1" }, { &p2Knob, "P2" }, { &envKnob, "EnvAmount" },
                                                         { &rateKnob, "Rate" }, { &glideKnob, "Glide" }, { &stereoKnob, "Stereo" },
-                                                        { &gainKnob, "Gain" }, { &mixKnob, "Mix" } };
+                                                        { &gainKnob, "Gain" }, { &mixKnob, "Mix" }, { &modKnob, "ModAmount" } };
         for (const auto& [knob, part] : knobs)
         {
             knob->id = slotId (part);
             knob->attachment = std::make_unique<SA> (parameters, knob->id, knob->slider);
         }
-        slotOn.attachment = std::make_unique<BA> (parameters, slotId ("On"), slotOn.button);
-        syncKey.attachment = std::make_unique<BA> (parameters, slotId ("Sync"), syncKey.button);
-        typeList.attachment = std::make_unique<CA> (parameters, slotId ("Type"), typeList.box);
-        speedList.attachment = std::make_unique<CA> (parameters, slotId ("Speed"), speedList.box);
+        const std::pair<Key*, const char*> keys[] = { { &slotOn, "On" }, { &syncKey, "Sync" }, { &retrigAudio, "RetrigAudio" },
+                                                      { &retrigMidi, "RetrigMidi" }, { &randomStart, "RandomStart" }, { &envLoop, "EnvLoop" } };
+        for (const auto& [key, part] : keys)
+            key->attachment = std::make_unique<BA> (parameters, slotId (part), key->button);
+        const std::pair<Choice*, const char*> choices[] = { { &typeList, "Type" }, { &speedList, "Speed" }, { &modSourceList, "ModSource" },
+                                                            { &modDestList, "ModDest" } };
+        for (const auto& [choice, part] : choices)
+            choice->attachment = std::make_unique<CA> (parameters, slotId (part), choice->box);
     }
-    else if (driveKnob.attachment == nullptr)
+    // The master's and the sequencer page's controls are bound once.
+    if (driveKnob.attachment == nullptr)
     {
-        const std::pair<Knob*, const char*> knobs[] = { { &driveKnob, ParamIDs::cipherDrive }, { &toneKnob, ParamIDs::cipherTone },
-                                                        { &compressKnob, ParamIDs::cipherCompress }, { &bassKnob, ParamIDs::cipherCleanBassHz },
-                                                        { &outGainKnob, ParamIDs::cipherGain }, { &outMixKnob, ParamIDs::cipherMix } };
+        const std::pair<Knob*, const char*> knobs[] = {
+            { &driveKnob, ParamIDs::cipherDrive }, { &toneKnob, ParamIDs::cipherTone }, { &compressKnob, ParamIDs::cipherCompress },
+            { &bassKnob, ParamIDs::cipherCleanBassHz }, { &outGainKnob, ParamIDs::cipherGain }, { &outMixKnob, ParamIDs::cipherMix },
+            { &trigLevelKnob, ParamIDs::cipherTrigLevel }, { &trigHpfKnob, ParamIDs::cipherTrigHpf },
+            { &trigHystKnob, ParamIDs::cipherTrigHysteresis }, { &trigHoldKnob, ParamIDs::cipherTrigHoldOff },
+            { &followAttackKnob, ParamIDs::cipherFollowAttack }, { &followHoldKnob, ParamIDs::cipherFollowHold },
+            { &followDecayKnob, ParamIDs::cipherFollowDecay }, { &followGateKnob, ParamIDs::cipherFollowGate } };
         for (const auto& [knob, id] : knobs)
         {
             knob->id = id;
@@ -481,25 +749,40 @@ void CipherPanel::bind()
         }
         const std::pair<Key*, const char*> keys[] = { { &driveOn, ParamIDs::cipherDriveOn }, { &driveAfter, ParamIDs::cipherDriveAfter },
                                                       { &compOn, ParamIDs::cipherCompOn }, { &bassOn, ParamIDs::cipherCleanBassOn },
-                                                      { &bassListen, ParamIDs::cipherCleanBassListen } };
+                                                      { &bassListen, ParamIDs::cipherCleanBassListen }, { &seqOn, ParamIDs::cipherSeqOn },
+                                                      { &midiOn, ParamIDs::cipherMidiOn } };
         for (const auto& [key, id] : keys)
             key->attachment = std::make_unique<BA> (parameters, id, key->button);
-        driveList.attachment = std::make_unique<CA> (parameters, ParamIDs::cipherDriveType, driveList.box);
-        compList.attachment = std::make_unique<CA> (parameters, ParamIDs::cipherComp, compList.box);
-        lawList.attachment = std::make_unique<CA> (parameters, ParamIDs::cipherMixLaw, lawList.box);
+        const std::pair<Choice*, const char*> choices[] = { { &driveList, ParamIDs::cipherDriveType }, { &compList, ParamIDs::cipherComp },
+                                                            { &lawList, ParamIDs::cipherMixLaw }, { &seqSpeedList, ParamIDs::cipherSeqSpeed },
+                                                            { &seqStartList, ParamIDs::cipherSeqStart }, { &seqEndList, ParamIDs::cipherSeqEnd },
+                                                            { &scaleList, ParamIDs::cipherScale }, { &rootList, ParamIDs::cipherScaleRoot } };
+        for (const auto& [choice, id] : choices)
+            choice->attachment = std::make_unique<CA> (parameters, id, choice->box);
     }
 
-    for (auto* c : std::initializer_list<juce::Component*> { &slotOn.button, &syncKey.button, &typeList.box, &speedList.box, &shapeList.box,
-                                                             &mainKnob.slider, &p1Knob.slider, &p2Knob.slider, &envKnob.slider, &rateKnob.slider,
-                                                             &glideKnob.slider, &stereoKnob.slider, &gainKnob.slider, &mixKnob.slider })
-        c->setVisible (! master);
+    for (auto* c : std::initializer_list<juce::Component*> {
+             &slotOn.button, &syncKey.button, &retrigAudio.button, &retrigMidi.button, &randomStart.button, &envLoop.button,
+             &typeList.box, &speedList.box, &shapeList.box, &modSourceList.box, &modDestList.box,
+             &mainKnob.slider, &p1Knob.slider, &p2Knob.slider, &envKnob.slider, &rateKnob.slider, &glideKnob.slider, &stereoKnob.slider,
+             &gainKnob.slider, &mixKnob.slider, &modKnob.slider, &envKeys[0], &envKeys[1] })
+        c->setVisible (slotPage);
     for (auto& key : styleKeys)
-        key.setVisible (! master);
+        key.setVisible (slotPage);
     for (auto* c : std::initializer_list<juce::Component*> { &driveOn.button, &driveAfter.button, &compOn.button, &bassOn.button,
                                                              &bassListen.button, &driveList.box, &compList.box, &lawList.box,
                                                              &driveKnob.slider, &toneKnob.slider, &compressKnob.slider, &bassKnob.slider,
                                                              &outGainKnob.slider, &outMixKnob.slider })
         c->setVisible (master);
+    for (auto* c : std::initializer_list<juce::Component*> { &seqOn.button, &midiOn.button, &seqSpeedList.box, &seqStartList.box, &seqEndList.box,
+                                                             &scaleList.box, &rootList.box, &rotateLeft, &rotateRight, &clearKey, &randomKey,
+                                                             &trigLevelKnob.slider, &trigHpfKnob.slider, &trigHystKnob.slider, &trigHoldKnob.slider,
+                                                             &followAttackKnob.slider, &followHoldKnob.slider, &followDecayKnob.slider,
+                                                             &followGateKnob.slider })
+        c->setVisible (seq);
+    if (! slotPage)
+        for (auto& key : optionKeys)
+            key.setVisible (false);
     shownState.clear();
     timerCallback();
 }
@@ -525,27 +808,29 @@ void CipherPanel::timerCallback()
     if (! isShowing() && ! shownState.isEmpty())
         return;
 
-    // The slot keys show each slot's effect; the shown one is lit.
+    // The slot keys show each slot's effect; the shown page's key is lit.
     for (int i = 0; i < (int) slotKeys.size(); ++i)
     {
         auto& key = slotKeys[(size_t) i];
         const auto text = i < 10 ? juce::String (i + 1) + " " + shortName ((Cipher::Type) juce::roundToInt (raw (ParamIDs::cipherSlot (i + 1, "Type"))))
-                                 : juce::String ("MASTER");
+                                 : juce::String (i == masterPage ? "MASTER" : "SEQ");
         if (key.getButtonText() != text)
             key.setButtonText (text);
         key.setToggleState (i == shown, juce::dontSendNotification);
     }
+    envKeys[0].setToggleState (! editSecond, juce::dontSendNotification);
+    envKeys[1].setToggleState (editSecond, juce::dontSendNotification);
 
     const auto type = shownType();
     const auto labels = Cipher::labelsFor (type);
     const auto option = juce::roundToInt (raw (slotId ("Option")));
     const auto style = juce::roundToInt (raw (slotId ("Style")));
-    const auto master = shown == masterPage;
+    const auto slotPage = isSlotPage();
     for (int i = 0; i < (int) optionKeys.size(); ++i)
     {
         auto& key = optionKeys[(size_t) i];
         const auto modes = labels.modes;
-        const auto show = ! master && (modes != nullptr ? i < modes->size() : (labels.hasSlope && i < 4));
+        const auto show = slotPage && (modes != nullptr ? i < modes->size() : (labels.hasSlope && i < 4));
         key.setVisible (show);
         if (show)
             key.setButtonText (modes != nullptr ? (*modes)[i] : Cipher::slopeNames[i]);
@@ -553,7 +838,7 @@ void CipherPanel::timerCallback()
     }
     for (int i = 0; i < (int) styleKeys.size(); ++i)
         styleKeys[(size_t) i].setToggleState (i == style, juce::dontSendNotification);
-    if (! master)
+    if (slotPage)
     {
         p1Knob.slider.setEnabled (*labels.p1 != 0);
         p2Knob.slider.setEnabled (*labels.p2 != 0);
@@ -561,6 +846,9 @@ void CipherPanel::timerCallback()
         const auto synced = raw (slotId ("Sync")) > 0.5f;
         rateKnob.slider.setEnabled (! synced);
         speedList.box.setEnabled (synced);
+        const auto retrigger = raw (slotId ("RetrigAudio")) > 0.5f || raw (slotId ("RetrigMidi")) > 0.5f;
+        randomStart.button.setEnabled (retrigger);
+        envLoop.button.setEnabled (retrigger);
     }
 
     // A new type can bring different keys: lay them out again.
@@ -570,15 +858,18 @@ void CipherPanel::timerCallback()
         resized();
     }
 
-    // The editor's playhead moves with the envelope.
-    if (editor->isVisible() && type != Cipher::Type::off)
+    // The display moves with the envelope or the sequencer.
+    if (editor->isVisible() && (shown == seqPage || (slotPage && type != Cipher::Type::off)))
         editor->repaint();
 
-    juce::String state = juce::String (shown) + "|" + juce::String ((int) type) + "|" + juce::String (option);
-    for (auto* knob : { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob,
-                        &driveKnob, &toneKnob, &compressKnob, &bassKnob, &outGainKnob, &outMixKnob })
+    juce::String state = juce::String (shown) + "|" + juce::String ((int) type) + "|" + juce::String (option) + "|" + juce::String ((int) editSecond);
+    for (auto* knob : { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob, &modKnob,
+                        &driveKnob, &toneKnob, &compressKnob, &bassKnob, &outGainKnob, &outMixKnob, &trigLevelKnob, &trigHpfKnob,
+                        &trigHystKnob, &trigHoldKnob, &followAttackKnob, &followHoldKnob, &followDecayKnob, &followGateKnob })
         if (knob->slider.isVisible())
             state << "|" << knob->slider.getValue();
+    if (shown == seqPage)
+        state << "|" << juce::roundToInt (processor.getCipher().getFollower() * 20.0f);
     if (state != shownState)
     {
         shownState = state;
@@ -614,34 +905,36 @@ void CipherPanel::resized()
     onLabel = keys.removeFromLeft (46).toFloat();
     onKey.button.setBounds (keys.removeFromLeft (48).withSizeKeepingCentre (44, 24));
     keys.removeFromLeft (10);
-    const auto keyWidth = juce::jmin (64, (keys.getWidth() - 10 * 4) / 11);
+    const auto keyWidth = juce::jmin (64, (keys.getWidth() - 12 * 4 - 16) / 12);
     for (int i = 0; i < (int) slotKeys.size(); ++i)
     {
-        slotKeys[(size_t) i].setBounds (keys.removeFromLeft (i == masterPage ? keyWidth + 12 : keyWidth));
+        slotKeys[(size_t) i].setBounds (keys.removeFromLeft (i == masterPage ? keyWidth + 12 : i == seqPage ? keyWidth + 4 : keyWidth));
         keys.removeFromLeft (4);
     }
 
-    area.removeFromTop (10);
+    area.removeFromTop (8);
     auto row2 = area.removeFromTop (24);
-    area.removeFromTop (8);
+    area.removeFromTop (6);
     auto row3 = area.removeFromTop (24);
-    area.removeFromTop (8);
+    area.removeFromTop (6);
 
     const auto placeChoice = [] (Choice& c, juce::Rectangle<int>& row, int labelWidth, int width)
     {
         c.label = row.removeFromLeft (labelWidth).toFloat();
         c.box.setBounds (row.removeFromLeft (width).reduced (0, 1));
-        row.removeFromLeft (14);
+        row.removeFromLeft (12);
     };
     const auto placeKey = [] (Key& k, juce::Rectangle<int>& row, int labelWidth)
     {
         k.label = row.removeFromLeft (labelWidth).toFloat();
         k.button.setBounds (row.removeFromLeft (48).withSizeKeepingCentre (44, 24));
-        row.removeFromLeft (12);
+        row.removeFromLeft (10);
     };
 
-    if (shown != masterPage)
+    if (isSlotPage())
     {
+        auto row4 = area.removeFromTop (24);
+        area.removeFromTop (6);
         placeChoice (typeList, row2, 40, 150);
         optionLabel = row2.removeFromLeft (46).toFloat();
         const auto labels = Cipher::labelsFor (shownType());
@@ -657,18 +950,31 @@ void CipherPanel::resized()
         styleLabel = row3.removeFromLeft (62).toFloat();
         for (auto& key : styleKeys)
         {
-            key.setBounds (row3.removeFromLeft (50));
+            key.setBounds (row3.removeFromLeft (48));
             row3.removeFromLeft (4);
         }
-        row3.removeFromLeft (12);
+        row3.removeFromLeft (8);
         placeKey (syncKey, row3, 40);
-        placeChoice (speedList, row3, 48, 110);
-        placeChoice (shapeList, row3, 48, 110);
-        placeKey (slotOn, row3, 40);
+        placeChoice (speedList, row3, 48, 104);
+        placeChoice (shapeList, row3, 48, 104);
+        placeKey (slotOn, row3, 36);
 
-        layoutRow (area, { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob });
+        // Row 4: RETRIGGER, the second modulator, which envelope to draw.
+        retrigLabel = row4.removeFromLeft (44).toFloat();
+        for (auto* key : { &retrigAudio, &retrigMidi, &randomStart, &envLoop })
+            placeKey (*key, row4, key == &retrigAudio ? 38 : key == &retrigMidi ? 52 : 28);
+        placeChoice (modSourceList, row4, 32, 112);
+        placeChoice (modDestList, row4, 22, 72);
+        envLabel = row4.removeFromLeft (4).toFloat();
+        for (auto& key : envKeys)
+        {
+            key.setBounds (row4.removeFromLeft (50));
+            row4.removeFromLeft (4);
+        }
+
+        layoutRow (area, { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob, &modKnob });
     }
-    else
+    else if (shown == masterPage)
     {
         placeKey (driveOn, row2, 46);
         placeChoice (driveList, row2, 36, 120);
@@ -680,7 +986,32 @@ void CipherPanel::resized()
         placeKey (bassListen, row3, 52);
         placeChoice (lawList, row3, 60, 90);
 
+        area.removeFromTop (16);
         layoutRow (area, { &driveKnob, &toneKnob, &compressKnob, &bassKnob, &outGainKnob, &outMixKnob });
+    }
+    else
+    {
+        placeKey (seqOn, row2, 54);
+        placeKey (midiOn, row2, 36);
+        placeChoice (seqSpeedList, row2, 44, 70);
+        placeChoice (seqStartList, row2, 42, 56);
+        placeChoice (seqEndList, row2, 28, 56);
+        rowLabel = row2.removeFromLeft (48).toFloat();
+        for (auto* key : { &rotateLeft, &rotateRight, &clearKey, &randomKey })
+        {
+            key->setBounds (row2.removeFromLeft (key == &rotateLeft || key == &rotateRight ? 30 : key == &clearKey ? 64 : 76));
+            row2.removeFromLeft (4);
+        }
+
+        placeChoice (scaleList, row3, 48, 150);
+        placeChoice (rootList, row3, 32, 56);
+
+        area.removeFromTop (16);
+        auto knobs = area;
+        trigLabel = knobs.withHeight (12).withWidth (knobs.getWidth() / 2).toFloat().translated (0.0f, -14.0f);
+        followLabel = trigLabel.translated ((float) knobs.getWidth() / 2.0f, 0.0f);
+        layoutRow (knobs, { &trigLevelKnob, &trigHpfKnob, &trigHystKnob, &trigHoldKnob,
+                            &followAttackKnob, &followHoldKnob, &followDecayKnob, &followGateKnob });
     }
 }
 
@@ -693,12 +1024,12 @@ void CipherPanel::paint (juce::Graphics& g)
     {
         if (! c.box.isVisible())
             return;
-        stamped (g, c.name, c.label, 9.0f, juce::Justification::centredRight);
+        stamped (g, c.name, c.label.withTrimmedRight (5.0f), 9.0f, juce::Justification::centredRight);
         glasses.push_back (LedDisplay::paintScreen (g, c.box.getBounds().toFloat().expanded (2.0f, 3.0f), 0.35f));
     };
     const auto drawKey = [&] (Key& k)
     {
-        if (k.button.isVisible())
+        if (k.button.isVisible() && k.name.isNotEmpty() && ! k.label.isEmpty())
             stamped (g, k.name, k.label, 9.0f, juce::Justification::centredRight);
     };
     const auto type = shownType();
@@ -717,42 +1048,74 @@ void CipherPanel::paint (juce::Graphics& g)
         g.setFont (font (10.0f));
         g.drawFittedText (active ? value : juce::String ("-"), glass.toNearestInt(), juce::Justification::centred, 1, 0.7f);
     };
+    const auto percent = [] (float v) { return juce::String (juce::roundToInt (v * 100.0f)) + "%"; };
+    const auto ms = [] (float t) { return t < 1000.0f ? juce::String (t < 10.0f ? t : (float) juce::roundToInt (t), t < 10.0f ? 1 : 0) + " ms"
+                                                      : juce::String (t / 1000.0f, 1) + " s"; };
 
-    if (shown != masterPage)
+    if (isSlotPage())
     {
-        drawChoice (typeList);
-        drawChoice (speedList);
-        drawChoice (shapeList);
-        drawKey (slotOn);
-        drawKey (syncKey);
+        for (auto* c : { &typeList, &speedList, &shapeList, &modSourceList, &modDestList })
+            drawChoice (*c);
+        for (auto* k : { &slotOn, &syncKey, &retrigAudio, &retrigMidi, &randomStart, &envLoop })
+            drawKey (*k);
         if (labels.hasSlope || labels.modes != nullptr)
             stamped (g, labels.modes != nullptr ? "MODE" : "SLOPE", optionLabel, 9.0f, juce::Justification::centredRight);
         stamped (g, "ENV MOD", styleLabel, 9.0f, juce::Justification::centredRight);
+        stamped (g, "RETRIG", retrigLabel, 9.0f, juce::Justification::centredLeft);
 
         const auto value = [this] (const char* part) { return raw (slotId (part)); };
         drawKnob (mainKnob, labels.main[0] != 0 ? labels.main : "MAIN", Cipher::mainText (type, value ("Main"), juce::roundToInt (value ("Option"))));
         drawKnob (p1Knob, labels.p1[0] != 0 ? labels.p1 : "-", Cipher::p1Text (type, value ("P1")));
         drawKnob (p2Knob, labels.p2[0] != 0 ? labels.p2 : "-", Cipher::p2Text (type, value ("P2")));
-        drawKnob (envKnob, "ENV AMT", juce::String (juce::roundToInt (value ("EnvAmount") * 100.0f)) + "%");
+        drawKnob (envKnob, "ENV AMT", percent (value ("EnvAmount")));
         drawKnob (rateKnob, "RATE", juce::String (value ("Rate"), 2) + " Hz");
         drawKnob (glideKnob, "GLIDE", juce::String (juce::roundToInt (value ("Glide"))) + " ms");
         drawKnob (stereoKnob, labels.stereo, Cipher::stereoText (type, value ("Stereo")));
         drawKnob (gainKnob, "GAIN", juce::String (value ("Gain"), 1) + " dB");
-        drawKnob (mixKnob, "MIX", juce::String (juce::roundToInt (value ("Mix") * 100.0f)) + "%");
+        drawKnob (mixKnob, "MIX", percent (value ("Mix")));
+        drawKnob (modKnob, "MOD AMT", percent (value ("ModAmount")));
     }
-    else
+    else if (shown == masterPage)
     {
         drawChoice (driveList);
         drawChoice (compList);
         drawChoice (lawList);
         for (auto* key : { &driveOn, &driveAfter, &compOn, &bassOn, &bassListen })
             drawKey (*key);
-        drawKnob (driveKnob, "DRIVE", juce::String (juce::roundToInt (raw (ParamIDs::cipherDrive) * 100.0f)) + "%");
-        drawKnob (toneKnob, "TONE", juce::String (juce::roundToInt (raw (ParamIDs::cipherTone) * 100.0f)) + "%");
-        drawKnob (compressKnob, "COMPRESS", juce::String (juce::roundToInt (raw (ParamIDs::cipherCompress) * 100.0f)) + "%");
+        drawKnob (driveKnob, "DRIVE", percent (raw (ParamIDs::cipherDrive)));
+        drawKnob (toneKnob, "TONE", percent (raw (ParamIDs::cipherTone)));
+        drawKnob (compressKnob, "COMPRESS", percent (raw (ParamIDs::cipherCompress)));
         drawKnob (bassKnob, "BASS FREQ", juce::String (juce::roundToInt (raw (ParamIDs::cipherCleanBassHz))) + " Hz");
         drawKnob (outGainKnob, "GAIN", juce::String (raw (ParamIDs::cipherGain), 1) + " dB");
-        drawKnob (outMixKnob, "MIX", juce::String (juce::roundToInt (raw (ParamIDs::cipherMix) * 100.0f)) + "%");
+        drawKnob (outMixKnob, "MIX", percent (raw (ParamIDs::cipherMix)));
+    }
+    else
+    {
+        for (auto* c : { &seqSpeedList, &seqStartList, &seqEndList, &scaleList, &rootList })
+            drawChoice (*c);
+        drawKey (seqOn);
+        drawKey (midiOn);
+        stamped (g, "ROW " + juce::String (seqRow + 1), rowLabel, 9.0f, juce::Justification::centredRight);
+        // The two groups' names, printed in the unit's red, with the follower's level as a bar.
+        g.setColour (Finish::printedRed());
+        g.setFont (font (9.0f));
+        g.drawText ("AUDIO TRIGGER", trigLabel, juce::Justification::centredLeft, false);
+        g.drawText ("AUDIO FOLLOWER", followLabel, juce::Justification::centredLeft, false);
+        const auto level = processor.getCipher().getFollower();
+        const auto bar = followLabel.withTrimmedLeft (100.0f).withWidth (120.0f).reduced (0.0f, 3.0f);
+        g.setColour (orange.withAlpha (0.2f));
+        g.fillRect (bar);
+        g.setColour (orange);
+        g.fillRect (bar.withWidth (bar.getWidth() * level));
+        const auto trigHz = raw (ParamIDs::cipherTrigHpf);
+        drawKnob (trigLevelKnob, "LEVEL", juce::String (raw (ParamIDs::cipherTrigLevel), 1) + " dB");
+        drawKnob (trigHpfKnob, "FILTER", trigHz <= 25.0f ? juce::String ("OFF") : juce::String (juce::roundToInt (trigHz)) + " Hz");
+        drawKnob (trigHystKnob, "HYSTERESIS", juce::String (raw (ParamIDs::cipherTrigHysteresis), 1) + " dB");
+        drawKnob (trigHoldKnob, "HOLD-OFF", ms (raw (ParamIDs::cipherTrigHoldOff)));
+        drawKnob (followAttackKnob, "ATTACK", ms (raw (ParamIDs::cipherFollowAttack)));
+        drawKnob (followHoldKnob, "HOLD", ms (raw (ParamIDs::cipherFollowHold)));
+        drawKnob (followDecayKnob, "DECAY", ms (raw (ParamIDs::cipherFollowDecay)));
+        drawKnob (followGateKnob, "GATE", juce::String (raw (ParamIDs::cipherFollowGate), 1) + " dB");
     }
 }
 

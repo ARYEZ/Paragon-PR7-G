@@ -56,6 +56,8 @@ std::unique_ptr<juce::XmlElement> Rig::toXml() const
         envelope->setAttribute ("slot", slot + 1);
         envelope->setAttribute ("points", points);
     }
+    if (cipherSequence.isNotEmpty())
+        xml->createNewChildElement ("CipherSequence")->setAttribute ("steps", cipherSequence);
     return xml;
 }
 
@@ -99,8 +101,10 @@ std::optional<Rig> Rig::fromXml (const juce::XmlElement& xml)
         if (const auto id = parameter->getStringAttribute ("id"); id.isNotEmpty())
             rig.parameters[id] = (float) parameter->getDoubleAttribute ("value");
     for (const auto* envelope : xml.getChildWithTagNameIterator (cipherEnvelopeTag))
-        if (const auto slot = envelope->getIntAttribute ("slot", 0); slot >= 1 && slot <= 10)
+        if (const auto slot = envelope->getIntAttribute ("slot", 0); slot >= 1 && slot <= 20)
             rig.cipherEnvelopes[slot - 1] = envelope->getStringAttribute ("points");
+    if (const auto* sequence = xml.getChildByName ("CipherSequence"))
+        rig.cipherSequence = sequence->getStringAttribute ("steps");
 
     // Saved before the drive had a MODEL: it was the original overdrive,
     // model 0. Without this it would load as the newer default.

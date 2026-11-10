@@ -390,5 +390,46 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::cipherGain, "Cipher Output Gain", { -24.0f, 24.0f, 0.1f }, 0.0f, v37, asDb));
     layout.add (makeFloat (ParamIDs::cipherMix, "Cipher Mix", { 0.0f, 1.0f, 0.01f }, 1.0f, v37, asPercent));
     layout.add (makeChoice (ParamIDs::cipherMixLaw, "Cipher Mix Law", v37, Cipher::mixLawNames, 1));
+
+    // Added in PR7-G 0.74.0: CIPHER stage 3. Retriggering is off and the
+    // second modulator at 0, so slots from 0.72.0 and 0.73.0 play as before;
+    // the sequencer starts off (the original's starts on, but with no steps
+    // lit that would silence every slot). The audio trigger's HYSTERESIS
+    // and HOLD-OFF start at the manual's picture (6 dB, 40 ms).
+    constexpr int v38 = 38;
+    for (int slot = 1; slot <= Cipher::numSlots; ++slot)
+    {
+        const auto id = [slot] (const char* part) { return ParamIDs::cipherSlot (slot, part); };
+        const auto name = "Cipher " + juce::String (slot) + " ";
+        const ToText asSigned = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + "%"; };
+        layout.add (makeSwitch (id ("RetrigAudio").toRawUTF8(), name + "Retrigger Audio", v38, false));
+        layout.add (makeSwitch (id ("RetrigMidi").toRawUTF8(), name + "Retrigger MIDI/Seq", v38, false));
+        layout.add (makeSwitch (id ("RandomStart").toRawUTF8(), name + "Random Start", v38, false));
+        layout.add (makeSwitch (id ("EnvLoop").toRawUTF8(), name + "Envelope Loop", v38, true));
+        layout.add (makeFloat (id ("StartPos").toRawUTF8(), name + "Start", { 0.0f, 1.0f, 0.001f }, 0.0f, v38, asPercent));
+        layout.add (makeFloat (id ("LoopStart").toRawUTF8(), name + "Loop Start", { 0.0f, 1.0f, 0.001f }, 0.0f, v38, asPercent));
+        layout.add (makeFloat (id ("LoopEnd").toRawUTF8(), name + "Loop End", { 0.0f, 1.0f, 0.001f }, 1.0f, v38, asPercent));
+        layout.add (makeChoice (id ("ModSource").toRawUTF8(), name + "Mod Source", v38, Cipher::modSourceNames, 0));
+        layout.add (makeChoice (id ("ModDest").toRawUTF8(), name + "Mod Destination", v38, Cipher::modDestNames, 0));
+        layout.add (makeFloat (id ("ModAmount").toRawUTF8(), name + "Mod Amount", { -1.0f, 1.0f, 0.001f }, 0.0f, v38, asSigned));
+    }
+    juce::StringArray stepNames;
+    for (int i = 1; i <= Cipher::numSteps; ++i)
+        stepNames.add (juce::String (i));
+    layout.add (makeSwitch (ParamIDs::cipherSeqOn, "Cipher Sequencer On", v38, false));
+    layout.add (makeChoice (ParamIDs::cipherSeqSpeed, "Cipher Sequencer Speed", v38, Cipher::seqSpeedNames, 2));
+    layout.add (makeChoice (ParamIDs::cipherSeqStart, "Cipher Sequencer Loop Start", v38, stepNames, 0));
+    layout.add (makeChoice (ParamIDs::cipherSeqEnd, "Cipher Sequencer Loop End", v38, stepNames, 15));
+    layout.add (makeSwitch (ParamIDs::cipherMidiOn, "Cipher MIDI Control", v38, false));
+    layout.add (makeChoice (ParamIDs::cipherScale, "Cipher Scale", v38, Cipher::scaleNames, 0));
+    layout.add (makeChoice (ParamIDs::cipherScaleRoot, "Cipher Scale Root", v38, Cipher::rootNames, 0));
+    layout.add (makeFloat (ParamIDs::cipherTrigLevel, "Cipher Trigger Level", { -60.0f, 0.0f, 0.1f }, -24.0f, v38, asDb));
+    layout.add (makeFloat (ParamIDs::cipherTrigHpf, "Cipher Trigger Filter", skewed (20.0f, 5000.0f, 300.0f, 1.0f), 20.0f, v38, asHz));
+    layout.add (makeFloat (ParamIDs::cipherTrigHysteresis, "Cipher Trigger Hysteresis", { 0.0f, 24.0f, 0.1f }, 6.0f, v38, asDb));
+    layout.add (makeFloat (ParamIDs::cipherTrigHoldOff, "Cipher Trigger Hold-off", skewed (0.0f, 1000.0f, 100.0f, 1.0f), 40.0f, v38, asMs));
+    layout.add (makeFloat (ParamIDs::cipherFollowAttack, "Cipher Follower Attack", skewed (0.1f, 500.0f, 20.0f, 0.1f), 10.0f, v38, asMs));
+    layout.add (makeFloat (ParamIDs::cipherFollowHold, "Cipher Follower Hold", skewed (0.0f, 1000.0f, 100.0f, 1.0f), 0.0f, v38, asMs));
+    layout.add (makeFloat (ParamIDs::cipherFollowDecay, "Cipher Follower Decay", skewed (1.0f, 5000.0f, 300.0f, 1.0f), 200.0f, v38, asTime));
+    layout.add (makeFloat (ParamIDs::cipherFollowGate, "Cipher Follower Gate", { -90.0f, -6.0f, 0.1f }, -60.0f, v38, asDb));
     return layout;
 }

@@ -8,11 +8,11 @@
 // ENVELOPE EDITOR (a PR7 screen you draw on with the mouse: double-click to
 // add a point, drag one to move it, double-click it to remove it, drag the
 // small dot between two points up or down to bend that line), with the
-// envelope's playhead and the main knob as the envelope moves it. On the
-// face: the ten slot keys (each showing its effect) and MASTER, then for
-// a slot its TYPE, steepness (or Pan's mode), ENV MOD STYLE, SYNC and
-// SPEED, SHAPE, and its knobs; for MASTER the drive, compressor, CLEAN BASS
-// and output.
+// envelope's playhead and, with retriggering on, its START and loop markers
+// to drag. ENV 1 / ENV 2 pick which envelope you draw. On the SEQ page the
+// display is the sequencer's grid (click or drag to light steps). On the
+// face: the ten slot keys (each showing its effect), MASTER and SEQ, then
+// that page's controls.
 //
 // It covers the rack's display and its controls together (the faceplate
 // draws only CIPHER's name above the display).
@@ -25,10 +25,12 @@ public:
 
     void setAreas (juce::Rectangle<int> displayArea, juce::Rectangle<int> controlArea);
 
-    // 0-9 a slot, 10 the master section.
+    // 0-9 a slot, 10 the master section, 11 the sequencer.
     void showSlot (int slot);
     int getShownSlot() const noexcept { return shown; }
-    static constexpr int masterPage = 10;
+    static constexpr int masterPage = 10, seqPage = 11;
+    // Which envelope a slot page draws: ENV 1 (false) or ENV 2.
+    void editEnvelope2 (bool second);
 
     // The envelope editor, for tests: its screen, and a point's place there (0-1 each way).
     juce::Rectangle<int> getEditorBounds() const;
@@ -63,33 +65,44 @@ private:
     };
 
     void timerCallback() override;
-    void bind();   // attaches the controls to the shown slot's (or the master's) parameters
+    void bind();   // attaches the controls to the shown page's parameters
     void layoutRow (juce::Rectangle<int> row, std::initializer_list<Knob*>);
     float raw (const juce::String& id) const;
     juce::String slotId (const char* part) const { return ParamIDs::cipherSlot (juce::jmin (shown, 9) + 1, part); }
     effects::Cipher::Type shownType() const;
     void setChoice (const juce::String& id, int index);
+    void setValue (const juce::String& id, float plain);
+    bool isSlotPage() const noexcept { return shown < masterPage; }
+    int editIndex() const noexcept { return juce::jmin (shown, 9) + (editSecond ? effects::Cipher::numSlots : 0); }
+    void editRow (const std::function<juce::uint32 (juce::uint32)>& change);
 
     ParagonX1AudioProcessor& processor;
     juce::AudioProcessorValueTreeState& parameters;
     std::unique_ptr<Editor> editor;
-    int shown = 0;
+    int shown = 0, seqRow = 0;
+    bool editSecond = false;
 
     Key onKey;                                       // CIPHER on
-    std::array<juce::TextButton, 11> slotKeys;       // 1-10 and MASTER
+    std::array<juce::TextButton, 12> slotKeys;       // 1-10, MASTER and SEQ
     // A slot's controls.
-    Key slotOn, syncKey;
-    Choice typeList, speedList, shapeList;
+    Key slotOn, syncKey, retrigAudio, retrigMidi, randomStart, envLoop;
+    Choice typeList, speedList, shapeList, modSourceList, modDestList;
     std::array<juce::TextButton, 6> optionKeys;      // 6 12 18 24, or the effect's modes (PAN BALANCE ROTATE...)
-    std::array<juce::TextButton, 3> styleKeys;       // BOTH UP DOWN
-    Knob mainKnob, p1Knob, p2Knob, envKnob, rateKnob, glideKnob, stereoKnob, gainKnob, mixKnob;
+    std::array<juce::TextButton, 4> styleKeys;       // BOTH UP DOWN SNAP
+    std::array<juce::TextButton, 2> envKeys;         // ENV 1, ENV 2
+    Knob mainKnob, p1Knob, p2Knob, envKnob, rateKnob, glideKnob, stereoKnob, gainKnob, mixKnob, modKnob;
     // The master's.
     Key driveOn, driveAfter, compOn, bassOn, bassListen;
     Choice driveList, compList, lawList;
     Knob driveKnob, toneKnob, compressKnob, bassKnob, outGainKnob, outMixKnob;
+    // The sequencer page's.
+    Key seqOn, midiOn;
+    Choice seqSpeedList, seqStartList, seqEndList, scaleList, rootList;
+    juce::TextButton rotateLeft { "<" }, rotateRight { ">" }, clearKey { "CLEAR" }, randomKey { "RANDOM" };
+    Knob trigLevelKnob, trigHpfKnob, trigHystKnob, trigHoldKnob, followAttackKnob, followHoldKnob, followDecayKnob, followGateKnob;
 
     juce::Rectangle<int> display, controls;
-    juce::Rectangle<float> optionLabel, styleLabel, onLabel;
+    juce::Rectangle<float> optionLabel, styleLabel, onLabel, retrigLabel, envLabel, rowLabel, trigLabel, followLabel;
     mutable std::vector<juce::Rectangle<float>> glasses;
     juce::String shownState;
     int laidOutType = -1;   // the type the keys were last laid out for

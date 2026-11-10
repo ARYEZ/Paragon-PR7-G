@@ -7,6 +7,7 @@
 
 #include "dsp/effects/Cipher.h"
 #include "PluginProcessor.h"
+#include <set>
 
 using Catch::Matchers::WithinAbs;
 using effects::Cipher;
@@ -733,4 +734,213 @@ TEST_CASE ("CIPHER stage 2: Gate and Compress", "[effects][cipher]")
     CHECK (level (0.5f) - level (0.05f) < 14.0f);
     comp.slots[0].mix = 0.0f;
     CHECK_THAT (level (0.5f) - level (0.05f), WithinAbs (20.0, 0.1));
+}
+
+//==============================================================================
+// Stage 3: the sequencer, MIDI, retriggering, the second modulator, pitch snap.
+TEST_CASE ("CIPHER stage 3: the sequencer plays a slot only on its lit steps, in time with the song", "[effects][cipher]")
+{
+    // A Gain slot turned all the way down (silent) plays on steps 1-8 of a
+    // 16-step loop at 1/16: at 120 BPM each step is 125 ms, so the first
+    // second is silent and the next passes untouched.
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    cipher.setSequenceRow (0, 0x000000ffu);
+    auto s = oneSlot (Cipher::Type::gain, 0.0f);
+    s.master.seqOn = true;
+    const auto out = run (cipher, s, 1000.0, 2.0, 0.25f, [] (Cipher::Settings& settings, double seconds) { settings.songBeats = seconds * 2.0; });
+    CHECK (rms (out, 0, 0.05, 0.95) < 1.0e-4f);
+    CHECK_THAT (dB (rms (out, 0, 1.05, 1.95) / (0.25f / std::sqrt (2.0f))), WithinAbs (0.0, 0.1));
+    CHECK (cipher.getStep() >= 8);
+
+    // The loop region: steps 9-12 only (all lit), so the slot always plays.
+    Cipher looped;
+    looped.prepare (sampleRate, blockSize);
+    looped.setSequenceRow (0, 0x00000f00u);
+    s.master.seqStart = 8;
+    s.master.seqEnd = 11;
+    const auto loopOut = run (looped, s, 1000.0, 1.0, 0.25f, [] (Cipher::Settings& settings, double seconds) { settings.songBeats = seconds * 2.0; });
+    CHECK (rms (loopOut, 0, 0.05, 0.95) < 1.0e-4f);
+
+    // Text round trip.
+    std::array<juce::uint32, Cipher::numSlots> rows {};
+    rows[0] = 0xdeadbeefu;
+    rows[9] = 1u;
+    CHECK (Cipher::sequenceFromText (Cipher::sequenceToText (rows)) == rows);
+}
+
+TEST_CASE ("CIPHER stage 3: with MIDI on, a slot plays while its note is held (C for slot 1)", "[effects][cipher]")
+{
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    auto s = oneSlot (Cipher::Type::gain, 0.0f);   // silent while it plays
+    s.master.midiOn = true;
+    // No note: the slot is off, the sound passes.
+    auto out = run (cipher, s, 1000.0, 0.2);
+    CHECK (rms (out, 0, 0.1, 0.2) > 0.1f);
+    // Hold a C (any octave): it plays (silence).
+    juce::MidiBuffer on;
+    on.addEvent (juce::MidiMessage::noteOn (1, 48, (juce::uint8) 100), 0);
+    cipher.handleMidi (on);
+    out = run (cipher, s, 1000.0, 0.2);
+    CHECK (rms (out, 0, 0.1, 0.2) < 1.0e-4f);
+    // A D doesn't count for slot 1; letting go of the C ends it.
+    juce::MidiBuffer off;
+    off.addEvent (juce::MidiMessage::noteOff (1, 48), 0);
+    off.addEvent (juce::MidiMessage::noteOn (1, 50, (juce::uint8) 100), 0);
+    cipher.handleMidi (off);
+    out = run (cipher, s, 1000.0, 0.2);
+    CHECK (rms (out, 0, 0.1, 0.2) > 0.1f);
+}
+
+TEST_CASE ("CIPHER stage 3: retriggering restarts the envelope; LOOP off plays it once; a loop region keeps it inside", "[effects][cipher]")
+{
+    auto s = oneSlot (Cipher::Type::digitalLp, 0.5f);
+    s.slots[0].retrigAudio = true;
+    s.slots[0].envLoop = false;
+    s.slots[0].startPos = 0.25f;
+    s.slots[0].speed = 8;   // 1/4: half a second a pass at 120 BPM
+
+    // Silence: the envelope waits at START.
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    run (cipher, s, 1000.0, 0.3, 0.0f);
+    CHECK_THAT (cipher.getPhase (0), WithinAbs (0.25, 0.001));
+    // A note over the trigger level (-24 dB): it starts from START...
+    run (cipher, s, 1000.0, 0.1, 0.25f);
+    CHECK (cipher.getPhase (0) > 0.27f);
+    CHECK (cipher.getPhase (0) < 0.5f);
+    // ...and with LOOP off stops at the end, waiting for the next trigger.
+    run (cipher, s, 1000.0, 1.0, 0.25f);
+    CHECK_THAT (cipher.getPhase (0), WithinAbs (1.0, 0.001));
+
+    // LOOP on with a loop region: round 0.5-0.75 for good.
+    s.slots[0].envLoop = true;
+    s.slots[0].loopStart = 0.5f;
+    s.slots[0].loopEnd = 0.75f;
+    Cipher looped;
+    looped.prepare (sampleRate, blockSize);
+    float lowest = 1.0f, highest = 0.0f;
+    run (looped, s, 1000.0, 0.4, 0.25f);   // through the start and into the region
+    for (int i = 0; i < 40; ++i)
+    {
+        run (looped, s, 1000.0, (double) blockSize / sampleRate, 0.25f);
+        lowest = juce::jmin (lowest, looped.getPhase (0));
+        highest = juce::jmax (highest, looped.getPhase (0));
+    }
+    CAPTURE (lowest, highest);
+    CHECK (lowest >= 0.49f);
+    CHECK (highest <= 0.76f);
+
+    // MIDI | SEQ: a note restarts it.
+    auto midi = oneSlot (Cipher::Type::digitalLp, 0.5f);
+    midi.slots[0].retrigMidi = true;
+    midi.slots[0].speed = 8;
+    Cipher byNote;
+    byNote.prepare (sampleRate, blockSize);
+    run (byNote, midi, 1000.0, 0.3);
+    juce::MidiBuffer note;
+    note.addEvent (juce::MidiMessage::noteOn (1, 60, (juce::uint8) 100), 0);
+    byNote.handleMidi (note);
+    run (byNote, midi, 1000.0, (double) blockSize / sampleRate);
+    CHECK (byNote.getPhase (0) < 0.03f);
+
+    // RANDOM START: triggers land in different places.
+    auto random = midi;
+    random.slots[0].randomStart = true;
+    std::set<int> places;
+    Cipher randomCipher;
+    randomCipher.prepare (sampleRate, blockSize);
+    for (int i = 0; i < 6; ++i)
+    {
+        randomCipher.handleMidi (note);
+        run (randomCipher, random, 1000.0, (double) blockSize / sampleRate);
+        places.insert (juce::roundToInt (randomCipher.getPhase (0) * 20.0f));
+    }
+    CHECK (places.size() >= 3);
+}
+
+TEST_CASE ("CIPHER stage 3: the audio follower and ENVELOPE 2 as the second modulator", "[effects][cipher]")
+{
+    // The follower reads -12 dB as 0.8 (GATE -60 dB to full scale).
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    auto s = oneSlot (Cipher::Type::digitalLp, 0.3f);
+    s.slots[0].modSource = Cipher::ModSource::audio;
+    s.slots[0].modDest = Cipher::ModDest::main;
+    s.slots[0].modAmount = 0.5f;
+    run (cipher, s, 1000.0, 0.5, 0.25f);
+    CHECK_THAT (cipher.getFollower(), WithinAbs (0.79, 0.03));   // -12 dB peak, read through the 10 ms attack
+    CHECK_THAT (cipher.getMovedMain (0), WithinAbs (0.3 + 0.5 * 0.79, 0.03));
+    // Quiet: it falls back (DECAY), and the main knob with it.
+    run (cipher, s, 1000.0, 2.0, 0.0f);
+    CHECK (cipher.getFollower() < 0.01f);
+    CHECK_THAT (cipher.getMovedMain (0), WithinAbs (0.3, 0.01));
+
+    // ENVELOPE 2 (index 10 for slot 1) on GAIN: its top at 100% adds 24 dB.
+    Cipher second;
+    second.prepare (sampleRate, blockSize);
+    second.setEnvelope (Cipher::numSlots, { { 0.0f, 1.0f }, { 1.0f, 1.0f } });
+    auto g = oneSlot (Cipher::Type::gain, 0.5f);
+    g.slots[0].modSource = Cipher::ModSource::envelope2;
+    g.slots[0].modDest = Cipher::ModDest::gain;
+    g.slots[0].modAmount = -0.25f;   // -6 dB
+    const auto out = run (second, g, 1000.0, 0.5);
+    CHECK_THAT (dB (rms (out, 0, 0.2, 0.5) / (0.25f / std::sqrt (2.0f))), WithinAbs (-6.0, 0.1));
+}
+
+TEST_CASE ("CIPHER stage 3: PITCH SNAP holds the main knob on the scale's notes", "[effects][cipher]")
+{
+    // Chromatic: a cutoff a little off A4 snaps to 440 Hz.
+    const auto nearA = at (440.0f * std::pow (2.0f, 0.3f / 12.0f));
+    CHECK_THAT (Cipher::cutoffHz (Cipher::snapMain (Cipher::Type::digitalLp, nearA, 0, 0)), WithinAbs (440.0, 0.5));
+    // C major: C#4 (277 Hz) isn't in it; it goes to C4 or D4.
+    const auto snapped = Cipher::cutoffHz (Cipher::snapMain (Cipher::Type::digitalLp, at (277.18f), 3, 0));
+    CAPTURE (snapped);
+    CHECK ((std::abs (snapped - 261.63f) < 0.5f || std::abs (snapped - 293.66f) < 0.5f));
+    // Pitch Shift: +1.4 st in A minor pentatonic (steps 0 3 5 7 10) goes to 0 or +3.
+    const auto shift = Cipher::semitones (Cipher::snapMain (Cipher::Type::pitchShift, 0.5f + 1.4f / 48.0f, 4, 9));
+    CHECK ((shift == 0.0f || shift == 3.0f));
+    CHECK (Cipher::noteName (440.0f) == "A4");
+
+    // In the engine: SNAP with the envelope sweeping lands only on notes.
+    Cipher cipher;
+    cipher.prepare (sampleRate, blockSize);
+    cipher.setEnvelope (0, Cipher::shape (1));
+    auto s = oneSlot (Cipher::Type::digitalLp, 0.5f);
+    s.slots[0].style = Cipher::Style::snap;
+    s.slots[0].envAmount = 1.0f;
+    for (int i = 0; i < 20; ++i)
+    {
+        run (cipher, s, 1000.0, 0.09);
+        const auto hz = Cipher::cutoffHz (cipher.getMovedMain (0));
+        const auto note = 69.0 + 12.0 * std::log2 (hz / 440.0);
+        CHECK (std::abs (note - std::round (note)) < 0.01);
+    }
+}
+
+TEST_CASE ("CIPHER stage 3: the sequencer and ENVELOPE 2 are saved in rigs and projects", "[effects][cipher][rigs]")
+{
+    ParagonX1AudioProcessor processor;
+    processor.setCipherSequenceRow (2, 0x0f0f0f0fu);
+    processor.setCipherEnvelope (Cipher::numSlots + 4, Cipher::shape (3));   // slot 5's ENVELOPE 2
+    const auto rig = processor.captureRig();
+    CHECK (rig.cipherSequence.isNotEmpty());
+    REQUIRE (rig.cipherEnvelopes.count (14) == 1);
+    const auto reloaded = Rig::fromXml (*rig.toXml());
+    REQUIRE (reloaded.has_value());
+    CHECK (reloaded->cipherSequence == rig.cipherSequence);
+    CHECK (reloaded->cipherEnvelopes == rig.cipherEnvelopes);
+
+    juce::MemoryBlock state;
+    processor.getStateInformation (state);
+    ParagonX1AudioProcessor other;
+    other.setStateInformation (state.getData(), (int) state.getSize());
+    CHECK (other.getCipherSequenceRow (2) == 0x0f0f0f0fu);
+    CHECK (Cipher::toText (other.getCipherEnvelope (14)) == Cipher::toText (Cipher::shape (3)));
+
+    // A rig without them clears them.
+    Rig plain;
+    processor.loadRig ({ plain, {}, false });
+    CHECK (processor.getCipherSequenceRow (2) == 0u);
 }

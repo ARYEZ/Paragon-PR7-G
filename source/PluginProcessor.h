@@ -203,6 +203,9 @@ public:
     const effects::Cipher::Envelope& getCipherEnvelope (int slot) const { return cipher.getEnvelope (slot); }
     // `finished`: false while a drag is still going (one undo step for the whole drag).
     void setCipherEnvelope (int slot, const effects::Cipher::Envelope&, bool finished = true);
+    // The sequencer's steps for a slot (bit n: step n+1), an edit like the envelopes.
+    juce::uint32 getCipherSequenceRow (int row) const noexcept { return cipher.getSequenceRow (row); }
+    void setCipherSequenceRow (int row, juce::uint32 steps);
 
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int numSamples);
@@ -227,6 +230,7 @@ private:
         {
             return rig.parameters == other.rig.parameters && rig.ampModelPath == other.rig.ampModelPath
                 && rig.cabIrPath == other.rig.cabIrPath && rig.cipherEnvelopes == other.rig.cipherEnvelopes
+                && rig.cipherSequence == other.rig.cipherSequence
                 && current == other.current;
         }
     };
@@ -272,7 +276,7 @@ private:
     effects::Havok havok; // the touch pad, after LO-FI
     effects::Cipher cipher;   // last: the envelope filter and multi-effect, after HAVOK
     // CIPHER's parameters, looked up once (there are 150 for the slots).
-    std::array<std::array<std::atomic<float>*, 15>, effects::Cipher::numSlots> cipherSlotParams {};
+    std::array<std::array<std::atomic<float>*, 25>, effects::Cipher::numSlots> cipherSlotParams {};
     effects::Cipher::Settings readCipherSettings (double songBeats) const;
     effects::Glitch glitch;
     effects::PitchBlock pitchBlock;

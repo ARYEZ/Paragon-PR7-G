@@ -239,7 +239,10 @@ namespace ParamIDs
     // they're saved in rigs and projects as points (Rig::cipherEnvelopes).
     inline constexpr auto cipherOn             = "cipherOn";
     inline const juce::StringArray cipherSlotParts { "On", "Type", "Main", "P1", "P2", "Option", "EnvAmount", "Style", "Sync",
-                                                     "Speed", "Rate", "Glide", "Stereo", "Gain", "Mix" };
+                                                     "Speed", "Rate", "Glide", "Stereo", "Gain", "Mix",
+                                                     // Version 38 (stage 3): retriggering and the second modulator.
+                                                     "RetrigAudio", "RetrigMidi", "RandomStart", "EnvLoop", "StartPos", "LoopStart",
+                                                     "LoopEnd", "ModSource", "ModDest", "ModAmount" };
     inline juce::String cipherSlot (int slot, const char* part) { return "cipher" + juce::String (slot) + part; }
     inline constexpr auto cipherDriveOn        = "cipherDriveOn";
     inline constexpr auto cipherDriveType      = "cipherDriveType";
@@ -255,6 +258,24 @@ namespace ParamIDs
     inline constexpr auto cipherGain           = "cipherGain";
     inline constexpr auto cipherMix            = "cipherMix";
     inline constexpr auto cipherMixLaw         = "cipherMixLaw";
+    // Version 38 (stage 3): the sequencer (its steps are saved like the
+    // envelopes, as Rig::cipherSequence), MIDI control, PITCH SNAP's scale,
+    // the AUDIO TRIGGER and the AUDIO FOLLOWER.
+    inline constexpr auto cipherSeqOn          = "cipherSeqOn";
+    inline constexpr auto cipherSeqSpeed       = "cipherSeqSpeed";
+    inline constexpr auto cipherSeqStart       = "cipherSeqStart";
+    inline constexpr auto cipherSeqEnd         = "cipherSeqEnd";
+    inline constexpr auto cipherMidiOn         = "cipherMidiOn";
+    inline constexpr auto cipherScale          = "cipherScale";
+    inline constexpr auto cipherScaleRoot      = "cipherScaleRoot";
+    inline constexpr auto cipherTrigLevel      = "cipherTrigLevel";
+    inline constexpr auto cipherTrigHpf        = "cipherTrigHpf";
+    inline constexpr auto cipherTrigHysteresis = "cipherTrigHysteresis";
+    inline constexpr auto cipherTrigHoldOff    = "cipherTrigHoldOff";
+    inline constexpr auto cipherFollowAttack   = "cipherFollowAttack";
+    inline constexpr auto cipherFollowHold     = "cipherFollowHold";
+    inline constexpr auto cipherFollowDecay    = "cipherFollowDecay";
+    inline constexpr auto cipherFollowGate     = "cipherFollowGate";
 
     // Global settings: kept when switching rigs. Everything else is part of a rig.
     // The expression pedal's position is global for the same reason a real

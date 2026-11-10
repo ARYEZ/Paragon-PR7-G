@@ -162,7 +162,14 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
     if (const auto block = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_BLOCK", {}); block.isNotEmpty())
         if (auto* chain = findType<SignalChain> (*editor))
             chain->onSelect (block.getIntValue());
-    // PARAGON_SNAPSHOT_CIPHERSLOT=n: CIPHER's slot n (1-10) or 11 for MASTER.
+    // PARAGON_SNAPSHOT_CIPHERSEQ=hex,hex...: CIPHER's sequencer rows (slot 1 first).
+    if (const auto rows = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHERSEQ", {}); rows.isNotEmpty())
+    {
+        const auto parsed = effects::Cipher::sequenceFromText (rows);
+        for (int r = 0; r < effects::Cipher::numSlots; ++r)
+            processor.setCipherSequenceRow (r, parsed[(size_t) r]);
+    }
+    // PARAGON_SNAPSHOT_CIPHERSLOT=n: CIPHER's slot n (1-10), 11 for MASTER, 12 for SEQ.
     if (const auto slot = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHERSLOT", {}); slot.isNotEmpty())
         if (auto* panel = findType<CipherPanel> (*editor))
             panel->showSlot (slot.getIntValue() - 1);

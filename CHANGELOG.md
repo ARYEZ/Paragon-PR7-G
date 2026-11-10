@@ -2,6 +2,49 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.74.0
+
+- **This release also carries 0.73.0 (CIPHER stage 2), which was never published:** GitHub's macOS build machine never started, so the release step was skipped. Stage 2 added 19 effects to CIPHER's slots:
+  - **effects:** Comb, Phaser, Pitch Shift, Freq Shift, Ring Mod, FM, Distort and Decimate;
+  - **time effects:** Delay, Reverb, Reflect, Vocoder, Loop, Stretch, Varispeed, Slow and Reverse;
+  - **utilities:** Gate and Compress.
+
+  The full notes are under 0.73.0 in the CHANGELOG.
+- **CIPHER stage 3: the sequencer, retriggering, the second modulator and pitch snap** (from the Infiltrator 2 manual).
+  - **The sequencer (the new SEQ page):** 32 steps, a row for each slot; the display becomes the grid.
+    - Click or drag to light a slot's steps. With **SEQ ON**, a slot plays only on its lit steps; others pass the sound through (each slot fades in and out over 3 ms, so steps don't click).
+    - **STEP** sets each step's length (1/4 to 1/64). **LOOP** and **TO** set the part that repeats, 2 to 32 steps; it follows the song's position, as the manual says.
+    - Click a row's name to pick it, then **<** and **>** rotate its steps, **CLEAR** empties it, and **RANDOM** fills the loop at random.
+    - The sequencer starts **off**. The original's starts on, but with no steps lit that would silence every slot.
+  - **MIDI:** slots play while their note is held, in any octave: C for slot 1, C# for 2, and so on up to A for slot 10. With MIDI on, the notes are in charge rather than the sequencer.
+  - **RETRIG (on each slot):**
+    - **AUDIO:** a peak in your playing restarts the envelope;
+    - **MIDI|SEQ:** a MIDI note, or the slot coming on in the sequencer, restarts it;
+    - **RND:** each restart begins somewhere random;
+    - **LOOP:** after a restart the envelope goes round (only the loop region, if you've set one); off, it plays once and waits.
+
+    Drag the red **S** (START) along the top of the envelope, and the loop's edges along the bottom.
+  - **The AUDIO TRIGGER** (SEQ page): LEVEL, FILTER (listen through a high-pass, say to catch the pick and not the bass), HYSTERESIS and HOLD-OFF. Their defaults (6 dB, 40 ms) are the ones in the manual's picture.
+  - **The second modulator (on each slot):**
+    - **MOD:** the **Audio Follower** (how hard you play) or **Envelope 2**, a second drawn envelope (the **ENV 1 / ENV 2** keys pick which one you draw);
+    - **TO:** where it goes: the main knob, KNOB 1, KNOB 2, STEREO, GAIN or MIX;
+    - **MOD AMT:** how much.
+
+    The follower's ATTACK, HOLD, DECAY and GATE are on the SEQ page, with a meter. GLIDE smooths the follower too, as the manual says.
+  - **PITCH SNAP:** ENV MOD's new **SNAP** key snaps the main knob to the notes of a **SCALE** in a **KEY** (both on the SEQ page). It works on the filters, EQ, Comb, FM, Loop, Pitch Shift and Vocoder, and the display shows the filter's note.
+- **What's ours:**
+  - the audio trigger and the follower are shared by all ten slots (the manual shows one panel for each);
+  - the scale and key are shared too (the original sets them in each slot's envelope editor);
+  - MIDI is read once per block, so its timing is within one block, typically 2 to 10 ms.
+- **Rigs and projects** keep the sequence and every Envelope 2; rigs from 0.72.0 and 0.73.0 load and sound the same.
+- **Tests:**
+  - **the sequencer:** a slot silent on its lit steps and clean on the others, in time with the song; the loop region; the steps saved and reloaded;
+  - **MIDI:** a slot playing only while its own note is held;
+  - **retriggering:** the envelope waiting at START, restarting on a peak and on a note, playing once with LOOP off, staying in its loop region, and RANDOM START landing in different places;
+  - **the second modulator:** the follower reading -12 dB as 0.8 and moving the main knob then falling back; Envelope 2 on GAIN taking off 6 dB;
+  - **pitch snap:** onto A4, onto C major, onto a pentatonic interval, and a swept envelope landing only on notes;
+  - the sequence and Envelope 2 kept in rigs and projects.
+
 ## 0.73.0
 
 - **CIPHER stage 2: the time effects and the Gate and Compress utilities**, 19 new effects for its slots (inspired by Devious Machines' Infiltrator 2, from its manual). Each has its knobs named on the rack, and the envelope moves its main knob as with the filters.
