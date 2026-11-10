@@ -321,13 +321,13 @@ public:
         if (! retrigger)
             return {};
         const auto a = plotArea();
-        const auto near = [&] (const char* part) { return std::abs (a.getX() + a.getWidth() * owner.raw (owner.slotId (part)) - position.x) < 5.0f; };
+        const auto isNear = [&] (const char* part) { return std::abs (a.getX() + a.getWidth() * owner.raw (owner.slotId (part)) - position.x) < 5.0f; };
         if (owner.raw (owner.slotId ("EnvLoop")) > 0.5f && position.y > a.getBottom() - 12.0f)
         {
-            if (near ("LoopStart")) return "LoopStart";
-            if (near ("LoopEnd")) return "LoopEnd";
+            if (isNear ("LoopStart")) return "LoopStart";
+            if (isNear ("LoopEnd")) return "LoopEnd";
         }
-        if (near ("StartPos") && position.y < a.getY() + 14.0f)
+        if (isNear ("StartPos") && position.y < a.getY() + 14.0f)
             return "StartPos";
         return {};
     }
