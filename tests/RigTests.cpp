@@ -870,3 +870,25 @@ TEST_CASE ("Bank M, an eighth album's guitar sounds: cleans, effects and leads t
                           "It's", "All", "Good", "Send", "In", "Clowns", "Same", "Drug", "Anti", "Love", "Song", "Witch",
                           "Sick", "Man", "Outerspace", "Bleed" });
 }
+
+TEST_CASE ("Bank N, a ninth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (13, { "Capricorn", "A", "Brand", "New", "Name", "Edge", "Of", "The", "Earth", "Fallen", "Jupiter",
+                          "Oblivion", "Reckoning", "Buddha", "For", "Mary", "Echelon", "Welcome", "To", "Universe", "Mission",
+                          "End", "Beginning", "93", "Million", "Miles", "Year", "Zero", "Struggle", "Thirty", "Seconds", "Mars" });
+
+    // The synth pulse: the note is chopped on the sixteenths, loud to near
+    // silent (10 ms windows swing more than 15 dB), like a gated synth.
+    RigRig r;
+    r.processor.loadRig (r.entryNamed ("Pulsing Synth Riff"));
+    const auto out = pluck (r.processor, 1.0, 220.0, true);
+    float loudest = 0.0f, quietest = 1.0f;
+    for (double t = 0.1; t < 0.6; t += 0.01)
+    {
+        const auto level = rmsOf (out[0], t, t + 0.01);
+        loudest = std::max (loudest, level);
+        quietest = std::min (quietest, level);
+    }
+    CAPTURE (dBOf (loudest), dBOf (quietest));
+    CHECK (dBOf (loudest) - dBOf (quietest) > 15.0f);
+}

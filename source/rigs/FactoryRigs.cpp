@@ -71,6 +71,7 @@ namespace
     constexpr int L = 11;                // bank L: an album's guitar sounds (Rage Against the Machine, Evil Empire)
     constexpr float xpUpTwoOctaves = 13, xpUpSecond = 14, xpDownTwoOctaves = 18;   // QUASAR programs 14, 15 and 19
     constexpr int M = 12;                // bank M: an album's guitar sounds (Cold, 13 Ways to Bleed on Stage)
+    constexpr int N = 13;                // bank N: an album's guitar sounds (30 Seconds to Mars, 30 Seconds to Mars)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1389,6 +1390,126 @@ std::vector<Rig> makeFactoryRigs()
         make ("Twin Guitar Spread", M, 15, "Album,FX,Modulation", {
             { rigLevel, -3 },
             { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
+
+        //======================================================================
+        // Bank N: an album's guitar sounds, inspired by 30 Seconds to Mars'
+        // debut, 30 Seconds to Mars (2002; the owner's ninth album bank).
+        // Cleans, effects and leads: the heavy riffs are the amp capture's
+        // job. Documented (credits, reviews): produced by Bob Ezrin and Brian
+        // Virtue with the band, recorded in rural Wyoming; a space-themed
+        // concept record, heavy riffs under pounding synths; Jared Leto on
+        // guitar and synth, Solon Bixler on extra guitar; Ezrin's piano on two
+        // songs; one review: Tool's take on The Dark Side of the Moon. Nothing
+        // is published on the guitar effects, so the sounds are our reading.
+
+        // A riff chopped into a synth-like pulse: a deep sixteenth tremolo,
+        // a wide dimension.
+        make ("Pulsing Synth Riff", N, 1, "Album,FX,Modulation", {
+            { rigLevel, 1 },
+            { modOn, 1 }, { modType, tremolo }, { modSync, sixteenth }, { modDepth, 0.9f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // A clean that reaches out to the horizon: a dotted-eighth echo, wide,
+        // a hall.
+        make ("Horizon Delay Clean", N, 2, "Album,Clean,Delay", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.28f },
+            { delayPingPong, 1 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.22f } }),
+
+        // A huge, planet-sized lead: an octave below and above your note,
+        // boosted, a long echo.
+        make ("Planetary Drone Lead", N, 3, "Album,Lead,Pitch,Octave,Sub", {
+            { rigLevel, -5 },
+            { octOn, 1 }, { octSubOne, 0.5f }, { octDry, 0.9f }, { octUp, 0.5f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.2f } }),
+
+        // A countdown riff: a slow, deep phaser over your amp.
+        make ("Countdown Phase Riff", N, 4, "Album,FX,Modulation", {
+            { rigLevel, 3 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.2f }, { modDepth, 0.8f } }),
+
+        // A dark ritual: a slow, deep, resonant flange and a dark room.
+        make ("Dark Ritual Flange", N, 5, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.15f }, { modDepth, 0.9f }, { modManual, 3 }, { modRes, 7 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.5f }, { reverbTone, 3 }, { reverbMix, 0.2f } }),
+
+        // A reflective clean: a shimmer rising out of each note, a hall.
+        make ("Reflective Shimmer Clean", N, 6, "Album,Clean,Ambient,Delay", {
+            { rigLevel, 2 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+
+        // An orbiting clean: your note circling slowly from side to side,
+        // a plate.
+        make ("Orbit Pan Clean", N, 7, "Album,Clean,Modulation", {
+            { rigLevel, 8 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, autoPan }, { modSync, wholeNote }, { modDepth, 0.8f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        // A clean to sit with a piano: an octave above, soft, a warm plate.
+        make ("Piano Partner Clean", N, 8, "Album,Clean,Pitch,Octave", {
+            { rigLevel, 3 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.45f },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { eqOn, 1 }, { "eq250", 1 }, { "eq8k", -2 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.55f }, { reverbTone, 4 }, { reverbMix, 0.25f } }),
+
+        // A starfield: volume swells (swell from the heel) into a long echo
+        // and a cathedral.
+        make ("Starfield Swell", N, 9, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 2 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+
+        // A lead that travels: boosted, a long tape echo that keeps going.
+        make ("Long-Haul Echo Lead", N, 10, "Album,Lead,Delay", {
+            { rigLevel, -6 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.25f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.15f } }),
+
+        // Thrust: your riff as two guitars, one each side, a wall of them.
+        make ("Wide Thrust Riff", N, 11, "Album,FX,Modulation", {
+            { rigLevel, -3 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.6f }, { modMix, 0.8f }, { modStereo, 1 } }),
+
+        // A robot choir: the talk box shaping your lead into vowels (the pedal
+        // opens the mouth), boosted, a plate.
+        make ("Robot Choir Lead", N, 12, "Album,Lead,Talk Box,Expression", {
+            { rigLevel, 2 },
+            { fpOn, 1 }, { fpType, talkBoxType }, { fpResonance, 6 }, { fpMix, 1 },
+            { expressionTarget, pedalTalkBox },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A transmission from far away: your guitar through a radio, with
+        // static and an echo.
+        make ("Distant Transmission", N, 13, "Album,FX,Lo-Fi", {
+            { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 6 }, { lofiNoise, 4 }, { lofiMix, 1 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, eighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f } }),
+
+        // A synth-like lead: an envelope filter that opens with how hard you
+        // pick, a dark echo.
+        make ("Envelope Synth Lead", N, 14, "Album,Lead,Filter", {
+            { rigLevel, 6 },
+            { fpOn, 1 }, { fpType, autoWah }, { fpSensitivity, 7 }, { fpResonance, 7 }, { fpMix, 1 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 5 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, analogDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.15f } }),
+
+        // Weightless: your notes scattered into floating fragments, in a big
+        // space.
+        make ("Weightless Texture", N, 15, "Album,FX,Ambient,Glitch", {
+            { rigLevel, 1 },
+            { glitchOn, 1 }, { glitchMode, glitchTexturizer }, { glitchDensity, 6 }, { glitchChaos, 4 }, { glitchMix, 0.6f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.45f } }),
     };
 }
 

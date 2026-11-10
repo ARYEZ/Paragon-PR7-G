@@ -2,6 +2,41 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.71.0
+
+- **A ninth album bank, bank N: 15 rigs inspired by the guitar sounds on 30 Seconds to Mars' self-titled debut** (2002). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **N01 Pulsing Synth Riff** | Your riff chopped on the sixteenths, loud to near silent, like a gated synth | "Capricorn (A Brand New Name)" (riffs under pounding synths) |
+  | **N02 Horizon Delay Clean** | A clean with a dotted-eighth echo bouncing side to side, a hall | "Edge of the Earth" |
+  | **N03 Planetary Drone Lead** | A lead with an octave below and above your note, boosted, a long echo | "Fallen" (first called "Jupiter") |
+  | **N04 Countdown Phase Riff** | A slow, deep phaser over your amp | "Oblivion" |
+  | **N05 Dark Ritual Flange** | A slow, deep, resonant flange in a dark room | "Buddha for Mary" (reviewers call it the record's darkest song) |
+  | **N06 Reflective Shimmer Clean** | A shimmer rising out of each note, a hall | "Echelon" (reviewers call it the reflective one) |
+  | **N07 Orbit Pan Clean** | Your note circling slowly from side to side, a plate | "Welcome to the Universe" |
+  | **N08 Piano Partner Clean** | A soft clean with an octave above, to sit with a piano | "The Mission" (Bob Ezrin's piano) |
+  | **N09 Starfield Swell** | Volume swells (the pedal) into a long echo and a cathedral | "End of the Beginning" |
+  | **N10 Long-Haul Echo Lead** | A boosted lead with a long tape echo that keeps going | "93 Million Miles" |
+  | **N11 Wide Thrust Riff** | Your riff as two guitars, one each side | "Year Zero" |
+  | **N12 Robot Choir Lead** | The talk box shaping your lead into vowels (the pedal opens the mouth) | The record's synth voices |
+  | **N13 Distant Transmission** | Your guitar through a radio, with static and an echo | The record's space theme |
+  | **N14 Envelope Synth Lead** | An envelope filter that opens with how hard you pick, for a synth-like lead | Jared Leto playing guitar and synth |
+  | **N15 Weightless Texture** | Your notes scattered into floating fragments in a big space | The record's space-rock atmosphere |
+
+  - **What's documented:**
+    - produced by Bob Ezrin and Brian Virtue with the band, recorded in rural Wyoming in 2001 and early 2002;
+    - a space-themed concept record: reviews hear heavy riffs under pounding synths, and one calls it Tool's take on Pink Floyd's *The Dark Side of the Moon*;
+    - Jared Leto on guitar and synth, Solon Bixler on extra guitar; Ezrin's piano on "The Mission" and "Welcome to the Universe";
+    - "Fallen" began as a demo called "Jupiter"; reviewers call "Buddha for Mary" the darkest song and "Echelon" the reflective one.
+  - **The sounds are our reading.** I found nothing published on the album's guitar effects or gear, so every rig is my idea of how a guitar could sit in each song, and most song links are guesses. **I couldn't listen to the album or the rigs here.** Tell me which are off and how, or which songs have the parts you're after.
+  - **With the pedal:** **N09 swells from the heel.** **N12** is a talk box on the pedal (heel "oo", toe "ee").
+- **Tests:**
+  - bank N goes through the shared album-bank checks;
+  - "Pulsing Synth Riff" checks the note really is chopped (more than 15 dB between loud and quiet moments);
+  - "Planetary Drone Lead" checks the octave below is there.
+- **The PRESETS page** has a Bank N button beside Bank M.
+
 ## 0.70.0
 
 - **The noise gate is now called BASTION** (it was SENTRY). TC Electronic already sells a noise gate pedal called the Sentry, and we keep other makers' product names off our effects.

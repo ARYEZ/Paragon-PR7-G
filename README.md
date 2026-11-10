@@ -86,13 +86,13 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
 - All effects start switched off, so projects made with earlier versions sound the same.
 - **Rigs:** SAVE in the header saves the current sound as a rig; **<** and **>** step through rigs; a
   `*` after the name means it's changed since loading. The **PRESETS** tab browses, searches, files
-  (banks A-M), tags and favourites rigs. Factory rigs set the effects and keep your amp and cab.
-  **E** holds rigs inspired by particular songs; **F** to **M** are album banks, 15 cleans,
+  (banks A-N), tags and favourites rigs. Factory rigs set the effects and keep your amp and cab.
+  **E** holds rigs inspired by particular songs; **F** to **N** are album banks, 15 cleans,
   effects and leads each (the rhythm tone is your amp capture): **F** inspired by the guitar
   sounds on Spiritbox's *Eternal Blue*, **G** by those on Korn's self-titled debut, **H** by
   those on Linkin Park's *Hybrid Theory*, **I** by those on Periphery's *Periphery III: Select
   Difficulty*, **J** by those on Sevendust's *Next*, **K** by those on Tool's *Ænima*, **L** by those on Rage Against the Machine's *Evil Empire*,
-  **M** by those on Cold's *13 Ways to Bleed on Stage*. The CHANGELOG lists which song inspired each rig.
+  **M** by those on Cold's *13 Ways to Bleed on Stage*, **N** by those on 30 Seconds to Mars' self-titled debut. The CHANGELOG lists which song inspired each rig.
   INPUT and OUTPUT stay put when you switch rigs; each rig has its own **RIG LEVEL** (on the unit), which adds to OUTPUT.
 - **TAP** (header or pedal) sets the delay's tempo from your taps; the BPM turns orange. Click the
   BPM to follow your DAW's tempo again. The TAP light flashes in time.
