@@ -88,6 +88,7 @@ namespace
     constexpr int N = 13;                // bank N: an album's guitar sounds (30 Seconds to Mars, 30 Seconds to Mars)
     constexpr int O = 14;                // bank O: CIPHER, the envelope filter and multi-effect
     constexpr float pedalCipherMacro = 10;   // the expression pedal on CIPHER's MACRO 1
+    constexpr int P = 15;                // bank P: an album's guitar sounds (Static-X, Wisconsin Death Trip)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1635,6 +1636,111 @@ std::vector<Rig> makeFactoryRigs()
             { "cipher2Type", 29 }, { "cipher2Main", 0.385f }, { "cipher2P1", 0.45f }, { "cipher2Stereo", 1.0f }, { "cipher2EnvAmount", 0 },
             { "cipher2Mix", 0.8f } }),
             { { 1, 3 } }),
+
+        //======================================================================
+        // Bank P: an album's guitar sounds, inspired by Static-X's Wisconsin
+        // Death Trip (1999; the owner's tenth album bank). Cleans, effects and
+        // leads: the riffs are the amp capture's job. Documented: produced by
+        // Ulrich Wild in about eight weeks; Wayne Static's guitars through his
+        // Marshall Valvestate VS100 head (Wild, in an interview); Koichi Fukuda
+        // on lead guitar and programming; an industrial "evil disco" sound of
+        // riffs, samples and machine-like drums. Nothing is published on the
+        // guitar effects, so these are our reading, many on CIPHER.
+
+        // The riff chopped on the sixteenths by CIPHER's sequencer (two on, two off).
+        withCipher (make ("Evil Disco Chop", P, 1, "Album,FX,Glitch", {
+            { cipherOn, 1 }, { cipherSeqOn, 1 }, { cipherSeqSpeed, 2 }, { rigLevel, 3 },
+            { "cipher1Type", 19 }, { "cipher1Main", 0.0f }, { "cipher1EnvAmount", 0 } }),
+            {}, "0000cccc,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000"),
+
+        // A noisy industrial lead: boosted, ring-modulated and crushed.
+        make ("Ring Noise Lead", P, 2, "Album,Lead,FX", {
+            { rigLevel, -4 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { cipherOn, 1 }, { "cipher1Type", 25 }, { "cipher1Main", 0.5f }, { "cipher1P1", 0.5f }, { "cipher1P2", 0.6f },
+            { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.5f },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 5 }, { lofiNoise, 1 }, { lofiMix, 0.4f } }),
+
+        // A synth-like pulse: a resonant filter plucked open every sixteenth.
+        withCipher (make ("Sixteenth Synth Pulse", P, 3, "Album,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 3 },
+            { "cipher1Type", 7 }, { "cipher1Main", 0.4f }, { "cipher1P1", 0.7f }, { "cipher1P2", 0.2f },
+            { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 14 } }),
+            { { 1, 7 } }),
+
+        // A robotic voice: the riff through CIPHER's vocoder.
+        make ("Robot Riff Voice", P, 4, "Album,FX", {
+            { cipherOn, 1 }, { rigLevel, 9 },
+            { "cipher1Type", 32 }, { "cipher1Main", 0.35f }, { "cipher1P2", 0.3f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.7f } }),
+
+        // A machine-gun clean: a hard sixteenth tremolo, a plate.
+        make ("Machine Tremolo Clean", P, 5, "Album,Clean,Modulation", {
+            { rigLevel, 4 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, tremolo }, { modSync, sixteenth }, { modDepth, 1.0f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A creepy drone: volume swells (from the heel) into a reverse reverb and a shimmer.
+        make ("Graveyard Drone Swell", P, 6, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 2 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.7f }, { reverbMix, 0.45f } }),
+
+        // A hypnotic flange on the riff.
+        make ("Hypno Flange Riff", P, 7, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.5f }, { modDepth, 0.8f }, { modManual, 4 }, { modRes, 6 } }),
+
+        // The riff cut and re-sequenced on the sixteenths.
+        make ("Glitched Riff Sequence", P, 8, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 6 }, { glitchChaos, 4 }, { glitchMix, 1 } }),
+
+        // An octave squeal on the pedal for accents: heel your note, toe an octave up.
+        make ("Quasar Squeal Accent", P, 9, "Album,Lead,Pitch,Expression", {
+            { rigLevel, -3 },
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
+            { expressionTarget, pedalWhammyWah },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 } }),
+
+        // A haunted clean as if through an old phone line, with static.
+        make ("Haunted Radio Clean", P, 10, "Album,Clean,Lo-Fi", {
+            { rigLevel, 3 },
+            { lofiOn, 1 }, { lofiType, telephone }, { lofiAmount, 6 }, { lofiNoise, 3 }, { lofiMix, 1 },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // A spectral wash: every frequency held and fading, into a spectral reverb.
+        make ("Spectral Wash Clean", P, 11, "Album,Clean,Ambient", {
+            { cipherOn, 1 }, { rigLevel, -6 },
+            { "cipher1Type", 48 }, { "cipher1Main", 0.8f }, { "cipher1P1", 0.3f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.6f },
+            { "cipher2Type", 49 }, { "cipher2Main", 0.55f }, { "cipher2EnvAmount", 0 } }),
+
+        // A cold, clear clean with a dotted-eighth echo and a hall.
+        make ("Frozen Echo Clean", P, 12, "Album,Clean,Delay", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        // A pitch dive: CIPHER's shifter falling from an octave up to an octave down each bar, beside the dry.
+        withCipher (make ("Pitch Dive Riser", P, 13, "Album,FX,Pitch", {
+            { cipherOn, 1 }, { rigLevel, 1 },
+            { "cipher1Type", 23 }, { "cipher1Main", 0.5f }, { "cipher1P1", 0.7f }, { "cipher1EnvAmount", 1.0f },
+            { "cipher1Speed", 3 }, { "cipher1Mix", 0.5f } }),
+            { { 1, 2 } }),
+
+        // A fast phaser on the riff.
+        make ("Fast Phase Riff", P, 14, "Album,FX,Modulation", {
+            { modOn, 1 }, { modType, phaser }, { modRate, 2.5f }, { modDepth, 0.7f } }),
+
+        // A synth-like lead: an octave above, boosted, chorused wide, an echo.
+        make ("Synth Octave Lead", P, 15, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -5 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.6f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
     };
 }
 
