@@ -89,6 +89,8 @@ namespace
     constexpr int O = 14;                // bank O: CIPHER, the envelope filter and multi-effect
     constexpr float pedalCipherMacro = 10;   // the expression pedal on CIPHER's MACRO 1
     constexpr int P = 15;                // bank P: an album's guitar sounds (Static-X, Wisconsin Death Trip)
+    constexpr int Q = 16;                // bank Q: an album's guitar sounds (Sleep Token, Take Me Back to Eden)
+    constexpr float eighthTriplet = 8;   // DELAY / MOD sync: 1/8 triplet
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -1740,6 +1742,123 @@ std::vector<Rig> makeFactoryRigs()
             { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.6f },
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
             { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
+
+        //======================================================================
+        // Bank Q: an album's guitar sounds, inspired by Sleep Token's Take Me
+        // Back to Eden (2023; the owner's eleventh album bank, picked for
+        // effects). Cleans, effects and leads: the heavy riffs are the amp
+        // capture's job. Documented: Vessel credited with production, guitar,
+        // bass, keys and synths, Carl Bown co-producing and engineering;
+        // reviewers hear chorus-soaked cleans, long ambient passages, a
+        // jazz-like solo and electronic, R&B and trap touches beside the
+        // heaviness. Nothing is published on the guitar effects (the heavy
+        // tone is widely said, not confirmed, to be an amp plugin), so these
+        // are our reading.
+
+        // A lush, chorus-soaked clean and a plate.
+        make ("Velvet Chorus Clean", Q, 1, "Album,Clean,Modulation", {
+            { rigLevel, 5 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        // A ritual swell: volume swells (from the heel) into a shimmer and a cathedral.
+        make ("Ritual Swell Pad", Q, 2, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 2 },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+
+        // A neon synth pulse: CIPHER's resonant filter plucked open every sixteenth, wide.
+        withCipher (make ("Neon Synth Pulse", Q, 3, "Album,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 3 },
+            { "cipher1Type", 7 }, { "cipher1Main", 0.42f }, { "cipher1P1", 0.65f }, { "cipher1P2", 0.2f },
+            { "cipher1EnvAmount", 0.55f }, { "cipher1Speed", 14 }, { "cipher1Stereo", 0.4f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+            { { 1, 7 } }),
+
+        // A liquid clean: a slow, deep phaser and a hall.
+        make ("Liquid Phase Clean", Q, 4, "Album,Clean,Modulation", {
+            { rigLevel, 6 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.3f }, { modDepth, 0.7f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.22f } }),
+
+        // A crushing sub layer: an octave below your riff, for the drops.
+        make ("Sub Octave Drop", Q, 5, "Album,FX,Pitch,Sub", {
+            { rigLevel, -2 },
+            { octOn, 1 }, { octSubOne, 0.8f }, { octDry, 0.9f }, { octUp, 0 } }),
+
+        // A soaring lead: boosted, a shimmer rising out of each note, a long echo.
+        make ("Soaring Shimmer Lead", Q, 6, "Album,Lead,Delay", {
+            { rigLevel, -8 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.25f },
+            { delayDuck, 0.5f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.2f } }),
+
+        // A soft, tape-worn clean: through a gently wobbling cassette, a room.
+        make ("Soft Tape Clean", Q, 7, "Album,Clean,Lo-Fi", {
+            { rigLevel, 5 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 4 }, { lofiNoise, 2 }, { lofiMix, 0.7f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // An electronic break: the sound cut and re-sequenced on the sixteenths.
+        make ("Glitch Stutter Break", Q, 8, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 5 }, { glitchChaos, 3 }, { glitchMix, 1 } }),
+
+        // A trap-feel clean: a tremolo in triplet eighths, a plate.
+        make ("Triplet Tremolo Clean", Q, 9, "Album,Clean,Modulation", {
+            { rigLevel, 6 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, tremolo }, { modSync, eighthTriplet }, { modDepth, 0.7f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // Rainfall: a clean with echoes bouncing side to side and a hall.
+        make ("Rainfall Delay Clean", Q, 10, "Album,Clean,Delay", {
+            { rigLevel, 3 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
+            { delayPingPong, 1 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.28f } }),
+
+        // A warm, jazzy solo tone: smooth compression, a light boost, a plate.
+        make ("Warm Jazz Solo", Q, 11, "Album,Lead", {
+            { rigLevel, -1 },
+            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 5 }, { compDetail, 4 }, { compMix, 0.7f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 1 }, { driveTone, 4 }, { driveLevel, 4 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // A halo of sound: every frequency held and fading, into a spectral reverb.
+        make ("Spectral Halo Pad", Q, 12, "Album,Clean,Ambient", {
+            { cipherOn, 1 }, { rigLevel, -9 },
+            { "cipher1Type", 48 }, { "cipher1Main", 0.85f }, { "cipher1P1", 0.35f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.6f },
+            { "cipher2Type", 49 }, { "cipher2Main", 0.65f }, { "cipher2EnvAmount", 0 } }),
+
+        // A choir-like swell: CIPHER's formant sweeping slowly through the vowels, into a hall.
+        withCipher (make ("Formant Choir Swell", Q, 13, "Album,FX,Filter,Ambient", {
+            { cipherOn, 1 }, { rigLevel, 10 },
+            { "cipher1Type", 15 }, { "cipher1Main", 0.5f }, { "cipher1P1", 0.5f }, { "cipher1EnvAmount", 1.0f }, { "cipher1Speed", 2 },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+            { { 1, 4 } }),
+
+        // A blooming clean: a reverse reverb swelling in behind each note, a slow chorus.
+        make ("Reverse Bloom Clean", Q, 14, "Album,Clean,Ambient", {
+            { rigLevel, 8 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.35f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.65f }, { reverbMix, 0.45f } }),
+
+        // A wide synth lead: an octave above, doubled side to side, an echo.
+        make ("Wide Octave Synth Lead", Q, 15, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -8 },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.6f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.6f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
     };
 }

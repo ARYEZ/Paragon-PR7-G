@@ -2,6 +2,37 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.78.0
+
+- **An eleventh album bank, bank Q: 15 rigs inspired by the guitar sounds on Sleep Token's *Take Me Back to Eden*** (2023), picked for its effects. **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's an atmospheric record, so the rigs lean on chorus, shimmer, reverse reverb, CIPHER and GLITCH. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **Q01 Velvet Chorus Clean** | A lush, chorus-soaked clean and a plate | "Chokehold" |
+  | **Q02 Ritual Swell Pad** | Volume swells (the pedal) into a shimmer and a cathedral | "The Summoning" (its ritual build) |
+  | **Q03 Neon Synth Pulse** | CIPHER's resonant filter plucked open every sixteenth, wide | "Granite" |
+  | **Q04 Liquid Phase Clean** | A slow, deep phaser on a clean, a hall | "Aqua Regia" |
+  | **Q05 Sub Octave Drop** | An octave below your riff, for the drops | "Vore" |
+  | **Q06 Soaring Shimmer Lead** | A boosted lead, a shimmer rising out of each note, a long echo | "Ascensionism" |
+  | **Q07 Soft Tape Clean** | A clean through a gently wobbling cassette | "Are You Really Okay?" |
+  | **Q08 Glitch Stutter Break** | The sound cut and re-sequenced on the sixteenths | "The Apparition" |
+  | **Q09 Triplet Tremolo Clean** | A tremolo in triplet eighths, for the trap feel | "DYWTYLM" |
+  | **Q10 Rainfall Delay Clean** | Echoes bouncing side to side, a hall | "Rain" |
+  | **Q11 Warm Jazz Solo** | Smooth compression, a light boost, a plate: a warm solo tone | The album's jazz-like solo |
+  | **Q12 Spectral Halo Pad** | Every frequency held and fading, into a spectral reverb | "Take Me Back to Eden" |
+  | **Q13 Formant Choir Swell** | CIPHER's formant sweeping slowly through the vowels, into a cathedral | The album's choral moments |
+  | **Q14 Reverse Bloom Clean** | A reverse reverb swelling in behind each note, a slow chorus | "Euclid" |
+  | **Q15 Wide Octave Synth Lead** | An octave above, doubled side to side, an echo | The album's synth leads |
+
+  - **What's documented:**
+    - Vessel is credited with production, guitar, bass, keyboards and synthesizers;
+    - Carl Bown co-produced and engineered it;
+    - reviewers hear chorus-soaked cleans, long ambient passages, a jazz-like solo, and electronic, R&B and trap touches beside the heavy parts.
+  - **The sounds are our reading.** I found nothing published on the guitar effects. The heavy tone is widely said to be an amp-modelling plugin, but the band hasn't confirmed it. Every rig and song link is my guess. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **Q02 swells from the heel.** The pedal starts half way, so rock it back first.
+- **The PRESETS page** has a Bank Q button.
+- **Tests:** bank Q goes through the shared album-bank checks (names free of song titles, each rig doing what its tags say, levels within 6 dB).
+
 ## 0.77.0
 
 - **A tenth album bank, bank P: 15 rigs inspired by the guitar sounds on Static-X's *Wisconsin Death Trip*** (1999). **Cleans, effects and leads**: the riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. Several use CIPHER, which suits the album's industrial, machine-like sound. Inside the plugin each rig is named for its sound; here is what inspired each one:
