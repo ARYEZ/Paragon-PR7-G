@@ -2,6 +2,47 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.76.0
+
+- **CIPHER stage 5, the last: MACROS and a bank of factory rigs.** CIPHER now has everything in the Infiltrator 2 manual we planned in five stages.
+  - **MACROS (the new MACRO page):** eight knobs, each moving any number of others at once, as the manual describes.
+    - **To set one up:** pick a macro with its key, pick a knob under **TARGET**, and press **ADD**. Each line has its own **DEPTH** (how far its knob moves at the macro's top, either way) and **CURVE** (straight, early or late).
+    - **The display** lists what the picked macro moves, with a bar showing how far each knob is moved right now. Click a line to edit it; **REMOVE** and **CLEAR** take lines out.
+    - **What a macro can move** (the manual's list): each slot's main knob, knobs 1 and 2, ENV AMOUNT, RATE, MOD AMOUNT, GLIDE, STEREO, GAIN and MIX, and the master's DRIVE, TONE, COMPRESS, output GAIN and MIX.
+    - **NAME:** rename a macro (up to 16 letters); the name shows on its key and knob.
+    - **Your knobs keep their own settings.** A macro moves them only while the sound is made, so turning it back to 0 puts everything back where it was.
+    - **Your DAW can automate the macros**, and they're saved with rigs and projects, as are the assignments and names. Undo covers them.
+    - **New for guitar:** the expression pedal can play **MACRO 1** (EXPRESSION ASSIGN: **Cipher Macro 1**). One rock of the pedal can open a filter, bring in a delay and push the drive at once.
+  - **Bank O: 15 CIPHER rigs**, one idea each:
+
+    | Rig | What it does |
+    |---|---|
+    | O01 Filter Pulse | A resonant filter pulsing in eighths; MACRO 1 (FILTER, also on the expression pedal) opens it |
+    | O02 Pick Wah | Each pick sets off a quick wah sweep (audio retrigger) |
+    | O03 Stutter Gate | The sequencer chops your playing in a sixteenth pattern |
+    | O04 Talking Formant | The vowel sweeps A-E-I-O-U and back each bar |
+    | O05 Half-Time Tape | Each quarter note played back at half speed, an octave down, under the dry |
+    | O06 Beat Repeat Chop | The last sixteenth looped on the sequencer's beats |
+    | O07 Pentatonic Arp | The pitch shifter stepping through an arpeggio, snapped to A minor pentatonic |
+    | O08 Spectral Freeze Pad | Every frequency held and fading, into a spectral reverb |
+    | O09 Robot Choir | Your playing shapes the vocoder's oscillator |
+    | O10 Ring Siren | A ring modulator rising and falling every two bars |
+    | O11 Comb Riser | A comb filter climbing over two bars |
+    | O12 Phaser Swirl | A wide phaser, its two sides apart |
+    | O13 Wobble Filter | A dual filter jumping in triplet eighths, glided into a wobble |
+    | O14 Lo-Fi Radio Sweep | A narrow spectral band sweeping, like tuning a radio, then a lower sample rate |
+    | O15 Ping-Pong Filter Echo | A high-pass sweep into eighth echoes bouncing side to side |
+
+    These are **our presets**: the original's 600 belong to its makers. Each keeps your amp and cab. A test plays every one, checks it changes the sound, and keeps them all within 6 dB of each other.
+- **What's ours:** the macro curve's law (x to the power 2^-2c), DEPTH as a share of each knob's whole travel, the 64-line limit, and the rigs.
+- **I couldn't hear any of it here.** Tell me what sounds wrong, and which rigs need work.
+- **Tests:**
+  - a macro taking a Gain slot down exactly 6 dB, and the output GAIN up exactly 12 dB, while the knobs keep their settings;
+  - the curve law;
+  - the expression pedal playing MACRO 1;
+  - assignments and names kept in rigs and projects, and undo;
+  - bank O changing the sound and balanced.
+
 ## 0.75.0
 
 - **CIPHER stage 4: the 14 spectral effects** (the Infiltrator 2 manual's "Spectral" list). Each slot can now take an **FFT** effect, which turns the sound into its frequencies, changes them, and turns them back:

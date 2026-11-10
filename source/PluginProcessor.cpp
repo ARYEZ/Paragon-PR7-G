@@ -21,6 +21,7 @@ namespace
     const juce::Identifier tunerReferenceKey { "tunerReferenceHz" };
     const juce::Identifier cipherEnvelopeKey { "CipherEnvelope" };
     const juce::Identifier cipherSequenceKey { "cipherSequence" };
+    const juce::Identifier cipherMacrosKey { "cipherMacros" }, cipherMacroNamesKey { "cipherMacroNames" };
 
     juce::String describeModel (const AmpStage::ModelInfo& info)
     {
@@ -43,6 +44,10 @@ ParagonX1AudioProcessor::ParagonX1AudioProcessor()
       parameters (*this, nullptr, "ParagonX1", createParameterLayout())
 {
     inputGainDb = parameters.getRawParameterValue (ParamIDs::inputGain);
+    for (const auto& id : cipherMacroTargets())
+        cipherMacroTargetParams.push_back (parameters.getParameter (id));
+    for (int m = 0; m < ParamIDs::cipherNumMacros; ++m)
+        cipherMacroParams[(size_t) m] = parameters.getRawParameterValue (ParamIDs::cipherMacro (m + 1));
     for (int slot = 0; slot < effects::Cipher::numSlots; ++slot)
         for (int part = 0; part < ParamIDs::cipherSlotParts.size(); ++part)
             cipherSlotParams[(size_t) slot][(size_t) part]
@@ -135,9 +140,142 @@ juce::AudioProcessorParameter* ParagonX1AudioProcessor::getBypassParameter() con
     return parameters.getParameter (ParamIDs::bypass);
 }
 
-effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double songBeats) const
+namespace
+{
+    // The slot parts a macro can move (their index in ParamIDs::cipherSlotParts), and the master's.
+    constexpr int macroSlotParts[] = { 2, 3, 4, 6, 10, 24, 11, 12, 13, 14 };
+    const char* const macroSlotNames[] = { "Main", "Knob 1", "Knob 2", "Env Amount", "Rate", "Mod Amount", "Glide", "Stereo", "Gain", "Mix" };
+    const char* const macroMasterIds[] = { ParamIDs::cipherDrive, ParamIDs::cipherTone, ParamIDs::cipherCompress, ParamIDs::cipherGain, ParamIDs::cipherMix };
+    const char* const macroMasterNames[] = { "Drive", "Tone", "Compress", "Output Gain", "Output Mix" };
+    constexpr int numMacroSlotParts = (int) std::size (macroSlotParts);
+}
+
+const juce::StringArray& ParagonX1AudioProcessor::cipherMacroTargets()
+{
+    static const juce::StringArray targets = []
+    {
+        juce::StringArray ids;
+        for (int slot = 1; slot <= effects::Cipher::numSlots; ++slot)
+            for (const auto part : macroSlotParts)
+                ids.add (ParamIDs::cipherSlot (slot, ParamIDs::cipherSlotParts[part].toRawUTF8()));
+        for (const auto* id : macroMasterIds)
+            ids.add (id);
+        return ids;
+    }();
+    return targets;
+}
+
+juce::String ParagonX1AudioProcessor::cipherMacroTargetName (const juce::String& id)
+{
+    const auto index = cipherMacroTargets().indexOf (id);
+    if (index < 0)
+        return id;
+    if (index >= effects::Cipher::numSlots * numMacroSlotParts)
+        return juce::String ("Master ") + macroMasterNames[index - effects::Cipher::numSlots * numMacroSlotParts];
+    return "Slot " + juce::String (index / numMacroSlotParts + 1) + " " + macroSlotNames[index % numMacroSlotParts];
+}
+
+float ParagonX1AudioProcessor::cipherMacroCurve (float x, float curve) noexcept
+{
+    // CURVE bends the travel: x^(2^-2c), so 0 is straight, +1 rises early, -1 late (ours).
+    x = juce::jlimit (0.0f, 1.0f, x);
+    return std::abs (curve) < 1.0e-3f ? x : std::pow (x, std::pow (2.0f, -2.0f * juce::jlimit (-1.0f, 1.0f, curve)));
+}
+
+std::vector<ParagonX1AudioProcessor::CipherMacroAssignment> ParagonX1AudioProcessor::getCipherMacroAssignments() const
+{
+    std::vector<CipherMacroAssignment> list;
+    const auto& targets = cipherMacroTargets();
+    for (const auto& slot : cipherMacroSlots)
+        if (const auto macro = slot.macro.load(); macro >= 0)
+            list.push_back ({ macro, targets[slot.target.load()], slot.depth.load(), slot.curve.load() });
+    return list;
+}
+
+void ParagonX1AudioProcessor::applyCipherMacros (const std::vector<CipherMacroAssignment>& list)
+{
+    size_t used = 0;
+    for (const auto& a : list)
+    {
+        const auto target = cipherMacroTargets().indexOf (a.target);
+        if (target < 0 || a.macro < 0 || a.macro >= ParamIDs::cipherNumMacros || used >= cipherMacroSlots.size())
+            continue;
+        auto& slot = cipherMacroSlots[used++];
+        slot.target = target;
+        slot.depth = juce::jlimit (-1.0f, 1.0f, a.depth);
+        slot.curve = juce::jlimit (-1.0f, 1.0f, a.curve);
+        slot.macro = a.macro;
+    }
+    for (; used < cipherMacroSlots.size(); ++used)
+        cipherMacroSlots[used].macro = -1;
+}
+
+void ParagonX1AudioProcessor::setCipherMacroAssignments (const std::vector<CipherMacroAssignment>& list)
+{
+    applyCipherMacros (list);
+    markModified();
+    requestCheckpoint();
+}
+
+juce::String ParagonX1AudioProcessor::getCipherMacroName (int macro) const
+{
+    const auto& name = cipherMacroNames[(size_t) juce::jlimit (0, 7, macro)];
+    return name.isNotEmpty() ? name : "MACRO " + juce::String (macro + 1);
+}
+
+void ParagonX1AudioProcessor::setCipherMacroName (int macro, const juce::String& name)
+{
+    auto cleaned = name.removeCharacters ("|").trim().substring (0, 16).toUpperCase();
+    if (cleaned == "MACRO " + juce::String (macro + 1))
+        cleaned.clear();
+    cipherMacroNames[(size_t) juce::jlimit (0, 7, macro)] = cleaned;
+    markModified();
+    requestCheckpoint();
+}
+
+juce::String ParagonX1AudioProcessor::cipherMacrosToText (const std::vector<CipherMacroAssignment>& list)
+{
+    juce::StringArray parts;
+    for (const auto& a : list)
+        parts.add (juce::String (a.macro + 1) + ":" + a.target + ":" + juce::String (a.depth, 4) + ":" + juce::String (a.curve, 4));
+    return parts.joinIntoString (";");
+}
+
+std::vector<ParagonX1AudioProcessor::CipherMacroAssignment> ParagonX1AudioProcessor::cipherMacrosFromText (const juce::String& text)
+{
+    std::vector<CipherMacroAssignment> list;
+    for (const auto& part : juce::StringArray::fromTokens (text, ";", {}))
+    {
+        const auto bits = juce::StringArray::fromTokens (part, ":", {});
+        if (bits.size() >= 3)
+            list.push_back ({ bits[0].getIntValue() - 1, bits[1].trim(), bits[2].getFloatValue(), bits.size() > 3 ? bits[3].getFloatValue() : 0.0f });
+    }
+    return list;
+}
+
+effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double songBeats, float pedalMacro1) const
 {
     using effects::Cipher;
+    // The macros: each assignment's offset (of its knob's whole travel) at the macro's position.
+    constexpr int numTargets = effects::Cipher::numSlots * numMacroSlotParts + (int) std::size (macroMasterIds);
+    std::array<float, numTargets> offsets {};
+    auto anyMacro = false;
+    for (const auto& slot : cipherMacroSlots)
+        if (const auto macro = slot.macro.load(); macro >= 0)
+        {
+            const auto position = macro == 0 && pedalMacro1 >= 0.0f ? pedalMacro1 : cipherMacroParams[(size_t) macro]->load();
+            const auto offset = slot.depth.load() * cipherMacroCurve (position, slot.curve.load());
+            offsets[(size_t) juce::jlimit (0, numTargets - 1, slot.target.load())] += offset;
+            anyMacro = anyMacro || offset != 0.0f;
+        }
+    const auto moved = [&] (int target, float plain)
+    {
+        const auto offset = offsets[(size_t) target];
+        if (! anyMacro || offset == 0.0f)
+            return plain;
+        auto* p = cipherMacroTargetParams[(size_t) target];
+        return p->convertFrom0to1 (juce::jlimit (0.0f, 1.0f, p->convertTo0to1 (plain) + offset));
+    };
     Cipher::Settings settings;
     settings.on = isOn (ParamIDs::cipherOn);
     settings.bpm = getTempoBpm();
@@ -145,7 +283,14 @@ effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double so
     for (size_t slot = 0; slot < (size_t) Cipher::numSlots; ++slot)
     {
         const auto& p = cipherSlotParams[slot];
-        const auto v = [&p] (int part) { return p[(size_t) part]->load(); };
+        const auto v = [&] (int part)
+        {
+            const auto plain = p[(size_t) part]->load();
+            for (int i = 0; i < numMacroSlotParts; ++i)
+                if (macroSlotParts[i] == part)
+                    return moved ((int) slot * numMacroSlotParts + i, plain);
+            return plain;
+        };
         auto& s = settings.slots[slot];
         s.on = v (0) > 0.5f;
         s.type = (Cipher::Type) juce::roundToInt (v (1));
@@ -176,17 +321,18 @@ effects::Cipher::Settings ParagonX1AudioProcessor::readCipherSettings (double so
     auto& m = settings.master;
     m.driveOn = isOn (ParamIDs::cipherDriveOn);
     m.driveType = (int) param (ParamIDs::cipherDriveType);
-    m.drive = param (ParamIDs::cipherDrive);
-    m.tone = param (ParamIDs::cipherTone);
+    constexpr auto master = effects::Cipher::numSlots * numMacroSlotParts;
+    m.drive = moved (master, param (ParamIDs::cipherDrive));
+    m.tone = moved (master + 1, param (ParamIDs::cipherTone));
     m.driveAfter = isOn (ParamIDs::cipherDriveAfter);
     m.compOn = isOn (ParamIDs::cipherCompOn);
     m.comp = (Cipher::Comp) (int) param (ParamIDs::cipherComp);
-    m.compress = param (ParamIDs::cipherCompress);
+    m.compress = moved (master + 2, param (ParamIDs::cipherCompress));
     m.cleanBassOn = isOn (ParamIDs::cipherCleanBassOn);
     m.cleanBassHz = param (ParamIDs::cipherCleanBassHz);
     m.cleanBassListen = isOn (ParamIDs::cipherCleanBassListen);
-    m.gainDb = param (ParamIDs::cipherGain);
-    m.mix = param (ParamIDs::cipherMix);
+    m.gainDb = moved (master + 3, param (ParamIDs::cipherGain));
+    m.mix = moved (master + 4, param (ParamIDs::cipherMix));
     m.mixLaw = (int) param (ParamIDs::cipherMixLaw);
     m.seqOn = isOn (ParamIDs::cipherSeqOn);
     m.seqSpeed = (int) param (ParamIDs::cipherSeqSpeed);
@@ -562,7 +708,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                                   (int) param (ParamIDs::havokScratchSound), getTempoBpm(), songBeats });
 
     // CIPHER last of all, after HAVOK.
-    cipher.process (stereoBlock, readCipherSettings (songBeats));
+    cipher.process (stereoBlock, readCipherSettings (songBeats, expressionTarget == ExpressionTargets::cipherMacro1 ? pedal : -1.0f));
 
     // The master OUTPUT knob plus the rig's own RIG LEVEL, and the
     // expression pedal when it's a VOLUME pedal. Squaring the position gives
@@ -881,6 +1027,18 @@ Rig ParagonX1AudioProcessor::captureRig() const
     }
     if (anyLit)
         rig.cipherSequence = effects::Cipher::sequenceToText (rows);
+    rig.cipherMacros = cipherMacrosToText (getCipherMacroAssignments());
+    {
+        juce::StringArray names;
+        auto renamed = false;
+        for (const auto& n : cipherMacroNames)
+        {
+            names.add (n);
+            renamed = renamed || n.isNotEmpty();
+        }
+        if (renamed)
+            rig.cipherMacroNames = names.joinIntoString ("|");
+    }
     return rig;
 }
 
@@ -911,6 +1069,12 @@ void ParagonX1AudioProcessor::applyRig (const Rig& rig)
     const auto rows = effects::Cipher::sequenceFromText (rig.cipherSequence);
     for (int row = 0; row < effects::Cipher::numSlots; ++row)
         cipher.setSequenceRow (row, rows[(size_t) row]);
+    applyCipherMacros (cipherMacrosFromText (rig.cipherMacros));
+    {
+        const auto names = juce::StringArray::fromTokens (rig.cipherMacroNames, "|", {});
+        for (int m = 0; m < 8; ++m)
+            cipherMacroNames[(size_t) m] = m < names.size() ? names[m] : juce::String();
+    }
 
     if (! rig.keepAmpAndCab)
     {
@@ -1079,6 +1243,11 @@ void ParagonX1AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
         for (int row = 0; row < effects::Cipher::numSlots; ++row)
             rows[(size_t) row] = cipher.getSequenceRow (row);
         state.setProperty (cipherSequenceKey, effects::Cipher::sequenceToText (rows), nullptr);
+        state.setProperty (cipherMacrosKey, cipherMacrosToText (getCipherMacroAssignments()), nullptr);
+        juce::StringArray names;
+        for (const auto& n : cipherMacroNames)
+            names.add (n);
+        state.setProperty (cipherMacroNamesKey, names.joinIntoString ("|"), nullptr);
     }
     for (int slot = 0; slot < effects::Cipher::numEnvelopes; ++slot)
     {
@@ -1140,6 +1309,10 @@ void ParagonX1AudioProcessor::setStateInformation (const void* data, int sizeInB
         const auto rows = effects::Cipher::sequenceFromText (state.getProperty (cipherSequenceKey).toString());
         for (int row = 0; row < effects::Cipher::numSlots; ++row)
             cipher.setSequenceRow (row, rows[(size_t) row]);
+        applyCipherMacros (cipherMacrosFromText (state.getProperty (cipherMacrosKey).toString()));
+        const auto names = juce::StringArray::fromTokens (state.getProperty (cipherMacroNamesKey).toString(), "|", {});
+        for (int m = 0; m < 8; ++m)
+            cipherMacroNames[(size_t) m] = m < names.size() ? names[m] : juce::String();
     }
     for (int i = state.getNumChildren(); --i >= 0;)
         if (const auto child = state.getChild (i); child.hasType (cipherEnvelopeKey))

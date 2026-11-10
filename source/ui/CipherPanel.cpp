@@ -89,6 +89,8 @@ public:
             paintChain (g);
         else if (owner.shown == CipherPanel::seqPage)
             paintSequencer (g);
+        else if (owner.shown == CipherPanel::macroPage)
+            paintMacros (g);
         else
             paintEnvelope (g);
         LedDisplay::paintGlassOverlay (g, glass, screenSize);
@@ -290,6 +292,57 @@ public:
         }
     }
 
+    // MACRO: what the picked macro moves, one line each (click one to edit it).
+    juce::Rectangle<float> linesArea() const
+    {
+        auto area = (glass.isEmpty() ? getLocalBounds().toFloat() : glass).reduced (getWidth() * 0.04f, getHeight() * 0.07f);
+        area.removeFromTop (18.0f);
+        return area;
+    }
+
+    void paintMacros (juce::Graphics& g)
+    {
+        auto title = glass.reduced (glass.getWidth() * 0.04f, glass.getHeight() * 0.07f).removeFromTop (14.0f);
+        const auto macro = owner.editMacro;
+        const auto position = owner.raw (ParamIDs::cipherMacro (macro + 1));
+        g.setFont (font (10.0f));
+        g.setColour (orange);
+        g.drawText (owner.processor.getCipherMacroName (macro), title, juce::Justification::centredLeft, false);
+        g.drawText (juce::String (juce::roundToInt (position * 100.0f)) + "%", title, juce::Justification::centredRight, false);
+        const auto lines = owner.macroLines();
+        const auto area = linesArea();
+        if (lines.empty())
+        {
+            g.setColour (orange.withAlpha (0.5f));
+            g.setFont (font (9.0f));
+            g.drawFittedText ("NOTHING ASSIGNED: PICK A KNOB UNDER TARGET AND PRESS ADD", area.toNearestInt(), juce::Justification::centred, 2);
+            return;
+        }
+        const auto rowHeight = juce::jmin (14.0f, area.getHeight() / (float) juce::jmax (1, (int) lines.size()));
+        for (int i = 0; i < (int) lines.size(); ++i)
+        {
+            const auto row = juce::Rectangle<float> (area.getX(), area.getY() + rowHeight * (float) i, area.getWidth(), rowHeight);
+            if (i == owner.editLine)
+            {
+                g.setColour (orange.withAlpha (0.18f));
+                g.fillRect (row);
+            }
+            const auto& a = lines[(size_t) i];
+            g.setColour (orange.withAlpha (i == owner.editLine ? 1.0f : 0.75f));
+            g.setFont (font (9.0f));
+            g.drawText (ParagonX1AudioProcessor::cipherMacroTargetName (a.target).toUpperCase(), row.withTrimmedLeft (3.0f), juce::Justification::centredLeft, false);
+            const auto depth = juce::roundToInt (a.depth * 100.0f);
+            g.drawText ((depth > 0 ? "+" : "") + juce::String (depth) + "%" + (std::abs (a.curve) > 0.005f ? "  C" + juce::String (a.curve, 2) : juce::String()),
+                        row.withTrimmedRight (3.0f), juce::Justification::centredRight, false);
+            // The bar: how far the knob is moved now.
+            const auto now = a.depth * ParagonX1AudioProcessor::cipherMacroCurve (position, a.curve);
+            const auto bar = row.withTrimmedTop (rowHeight - 2.0f);
+            g.setColour (orange.withAlpha (0.6f));
+            const auto centre = bar.getCentreX();
+            g.fillRect (juce::Rectangle<float> (juce::jmin (centre, centre + now * bar.getWidth() * 0.5f), bar.getY(), std::abs (now) * bar.getWidth() * 0.5f, 2.0f));
+        }
+    }
+
     //--------------------------------------------------------------------------
     juce::Point<float> handle (int segment) const
     {
@@ -338,6 +391,14 @@ public:
     {
         if (owner.shown == CipherPanel::masterPage)
             return;
+        if (owner.shown == CipherPanel::macroPage)
+        {
+            const auto area = linesArea();
+            const auto lines = owner.macroLines();
+            const auto rowHeight = juce::jmin (14.0f, area.getHeight() / (float) juce::jmax (1, (int) lines.size()));
+            owner.selectAssignment ((int) ((e.position.y - area.getY()) / rowHeight));
+            return;
+        }
         if (owner.shown == CipherPanel::seqPage)
         {
             sequencerClick (e.position, true);
@@ -359,7 +420,7 @@ public:
 
     void mouseDrag (const juce::MouseEvent& e) override
     {
-        if (owner.shown == CipherPanel::masterPage)
+        if (owner.shown == CipherPanel::masterPage || owner.shown == CipherPanel::macroPage)
             return;
         if (owner.shown == CipherPanel::seqPage)
         {
@@ -510,7 +571,8 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
         key.setClickingTogglesState (false);
         key.setTooltip (i < 10 ? "Slot " + juce::String (i + 1) + ": its effect, envelope and knobs"
                         : i == masterPage ? juce::String ("MASTER: the drive, compressor, CLEAN BASS and output")
-                                          : juce::String ("SEQ: the sequencer, MIDI, the audio trigger and follower, and PITCH SNAP's scale"));
+                        : i == seqPage ? juce::String ("SEQ: the sequencer, MIDI, the audio trigger and follower, and PITCH SNAP's scale")
+                                       : juce::String ("MACRO: eight knobs that each move several others at once"));
         key.onClick = [this, i] { showSlot (i); };
         addAndMakeVisible (key);
     }
@@ -652,6 +714,93 @@ CipherPanel::CipherPanel (ParagonX1AudioProcessor& processorToUse)
     setUpKnob (followDecayKnob, "DECAY", "AUDIO FOLLOWER: how fast it falls back when the sound stops");
     setUpKnob (followGateKnob, "GATE", "AUDIO FOLLOWER: sound below this doesn't move it (keeps hiss from moving things)");
 
+    // The MACRO page: the eight macro knobs (parameters: the DAW can automate
+    // them, and the expression pedal can play MACRO 1), a key each to pick
+    // which one to edit, its name, and what it moves.
+    for (int m = 0; m < 8; ++m)
+    {
+        auto& knob = macroKnobs[(size_t) m];
+        setUpKnob (knob, "MACRO", "A macro: turn it to move every knob assigned to it");
+        knob.id = ParamIDs::cipherMacro (m + 1);
+        knob.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (parameters, knob.id, knob.slider);
+        auto& key = macroKeys[(size_t) m];
+        key.setButtonText (juce::String (m + 1));
+        key.getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
+        key.setTooltip ("Edit macro " + juce::String (m + 1) + ": its name and what it moves");
+        key.onClick = [this, m] { selectMacro (m); };
+        addAndMakeVisible (key);
+    }
+    nameEditor.setColour (juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
+    nameEditor.setColour (juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
+    nameEditor.setColour (juce::TextEditor::focusedOutlineColourId, orange.withAlpha (0.5f));
+    nameEditor.setColour (juce::TextEditor::textColourId, orange);
+    nameEditor.setFont (font (13.0f));
+    nameEditor.setInputRestrictions (16);
+    nameEditor.setTooltip ("The macro's name: type and press Enter");
+    nameEditor.onReturnKey = [this] { processor.setCipherMacroName (editMacro, nameEditor.getText()); repaint(); };
+    nameEditor.onFocusLost = nameEditor.onReturnKey;
+    addAndMakeVisible (nameEditor);
+    setUpChoice (targetList, "TARGET", "The knob to move: pick it, then ADD (or pick another to change the line you've picked)");
+    for (const auto& id : ParagonX1AudioProcessor::cipherMacroTargets())
+        targetList.box.addItem (ParagonX1AudioProcessor::cipherMacroTargetName (id), targetList.box.getNumItems() + 1);
+    targetList.box.onChange = [this]
+    {
+        const auto chosen = targetList.box.getSelectedItemIndex();
+        if (chosen >= 0 && editLine >= 0)
+            changeAssignment ([chosen] (auto& a) { a.target = ParagonX1AudioProcessor::cipherMacroTargets()[chosen]; });
+    };
+    for (auto* key : { &addKey, &removeKey, &clearMacroKey })
+    {
+        key->getProperties().set (ParagonLookAndFeel::pedalButtonProperty, true);
+        addAndMakeVisible (*key);
+    }
+    addKey.setTooltip ("ADD the knob under TARGET to this macro (half its travel to start with)");
+    removeKey.setTooltip ("REMOVE the line you've picked from this macro");
+    clearMacroKey.setTooltip ("CLEAR everything from this macro");
+    addKey.onClick = [this]
+    {
+        auto all = processor.getCipherMacroAssignments();
+        if ((int) all.size() >= ParagonX1AudioProcessor::cipherMaxAssignments)
+            return;
+        const auto chosen = juce::jmax (0, targetList.box.getSelectedItemIndex());
+        all.push_back ({ editMacro, ParagonX1AudioProcessor::cipherMacroTargets()[chosen], 0.5f, 0.0f });
+        processor.setCipherMacroAssignments (all);
+        editLine = (int) macroLines().size() - 1;
+        timerCallback();
+        editor->repaint();
+    };
+    removeKey.onClick = [this]
+    {
+        auto all = processor.getCipherMacroAssignments();
+        auto seen = 0;
+        for (auto it = all.begin(); it != all.end(); ++it)
+            if (it->macro == editMacro && seen++ == editLine)
+            {
+                all.erase (it);
+                break;
+            }
+        processor.setCipherMacroAssignments (all);
+        editLine = juce::jmin (editLine, (int) macroLines().size() - 1);
+        editor->repaint();
+    };
+    clearMacroKey.onClick = [this]
+    {
+        auto all = processor.getCipherMacroAssignments();
+        all.erase (std::remove_if (all.begin(), all.end(), [this] (const auto& a) { return a.macro == editMacro; }), all.end());
+        processor.setCipherMacroAssignments (all);
+        editLine = -1;
+        editor->repaint();
+    };
+    for (auto* knob : { &depthKnob, &curveKnob })
+    {
+        knob->slider.setRange (-1.0, 1.0, 0.01);
+        knob->slider.setDoubleClickReturnValue (true, knob == &depthKnob ? 0.5 : 0.0);
+    }
+    setUpKnob (depthKnob, "DEPTH", "How far the picked line's knob moves at the macro's top (left of centre: the other way)");
+    setUpKnob (curveKnob, "CURVE", "How the picked line's knob moves along the macro's travel: straight at the centre, early to the right, late to the left");
+    depthKnob.slider.onValueChange = [this] { const auto v = (float) depthKnob.slider.getValue(); changeAssignment ([v] (auto& a) { a.depth = v; }); };
+    curveKnob.slider.onValueChange = [this] { const auto v = (float) curveKnob.slider.getValue(); changeAssignment ([v] (auto& a) { a.curve = v; }); };
+
     bind();
     startTimerHz (30);
 }
@@ -686,7 +835,7 @@ void CipherPanel::editRow (const std::function<juce::uint32 (juce::uint32)>& cha
 
 void CipherPanel::showSlot (int slot)
 {
-    shown = juce::jlimit (0, seqPage, slot);
+    shown = juce::jlimit (0, macroPage, slot);
     editor->updateTooltip();
     bind();
     resized();
@@ -700,13 +849,66 @@ void CipherPanel::editEnvelope2 (bool second)
     timerCallback();
 }
 
+std::vector<ParagonX1AudioProcessor::CipherMacroAssignment> CipherPanel::macroLines() const
+{
+    std::vector<ParagonX1AudioProcessor::CipherMacroAssignment> lines;
+    for (const auto& a : processor.getCipherMacroAssignments())
+        if (a.macro == editMacro)
+            lines.push_back (a);
+    return lines;
+}
+
+void CipherPanel::changeAssignment (const std::function<void (ParagonX1AudioProcessor::CipherMacroAssignment&)>& change)
+{
+    if (editLine < 0)
+        return;
+    auto all = processor.getCipherMacroAssignments();
+    auto seen = 0;
+    for (auto& a : all)
+        if (a.macro == editMacro && seen++ == editLine)
+        {
+            auto changed = a;
+            change (changed);
+            if (changed == a)
+                return;
+            a = changed;
+            break;
+        }
+    processor.setCipherMacroAssignments (all);
+    editor->repaint();
+}
+
+void CipherPanel::selectMacro (int macro)
+{
+    editMacro = juce::jlimit (0, 7, macro);
+    editLine = macroLines().empty() ? -1 : 0;
+    nameEditor.setText (processor.getCipherMacroName (editMacro), juce::dontSendNotification);
+    timerCallback();
+    editor->repaint();
+}
+
+void CipherPanel::selectAssignment (int line)
+{
+    const auto count = (int) macroLines().size();
+    editLine = line >= 0 && line < count ? line : editLine;
+    timerCallback();
+    editor->repaint();
+}
+
 void CipherPanel::bind()
 {
     using SA = juce::AudioProcessorValueTreeState::SliderAttachment;
     using BA = juce::AudioProcessorValueTreeState::ButtonAttachment;
     using CA = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
     const auto slotPage = isSlotPage();
-    const auto master = shown == masterPage, seq = shown == seqPage;
+    const auto master = shown == masterPage, seq = shown == seqPage, macros = shown == macroPage;
+    for (auto& knob : macroKnobs)
+        knob.slider.setVisible (macros);
+    for (auto& key : macroKeys)
+        key.setVisible (macros);
+    for (auto* c : std::initializer_list<juce::Component*> { &nameEditor, &targetList.box, &addKey, &removeKey, &clearMacroKey,
+                                                             &depthKnob.slider, &curveKnob.slider })
+        c->setVisible (macros);
 
     // A slot's controls follow the slot shown.
     for (auto* knob : { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob, &modKnob })
@@ -815,7 +1017,7 @@ void CipherPanel::timerCallback()
     {
         auto& key = slotKeys[(size_t) i];
         const auto text = i < 10 ? juce::String (i + 1) + " " + shortName ((Cipher::Type) juce::roundToInt (raw (ParamIDs::cipherSlot (i + 1, "Type"))))
-                                 : juce::String (i == masterPage ? "MASTER" : "SEQ");
+                                 : juce::String (i == masterPage ? "MASTER" : i == seqPage ? "SEQ" : "MACRO");
         if (key.getButtonText() != text)
             key.setButtonText (text);
         key.setToggleState (i == shown, juce::dontSendNotification);
@@ -853,6 +1055,35 @@ void CipherPanel::timerCallback()
         envLoop.button.setEnabled (retrigger);
     }
 
+    // The MACRO page: each key shows its macro's name; the picked line's DEPTH and CURVE.
+    for (int m = 0; m < 8; ++m)
+    {
+        const auto name = processor.getCipherMacroName (m);
+        if (macroKeys[(size_t) m].getButtonText() != name)
+            macroKeys[(size_t) m].setButtonText (name);
+        macroKeys[(size_t) m].setToggleState (m == editMacro, juce::dontSendNotification);
+        macroKnobs[(size_t) m].name = name;
+    }
+    if (shown == macroPage)
+    {
+        if (! nameEditor.hasKeyboardFocus (true))
+            nameEditor.setText (processor.getCipherMacroName (editMacro), juce::dontSendNotification);
+        const auto lines = macroLines();
+        if ((editLine < 0 || editLine >= (int) lines.size()) && ! lines.empty())
+            editLine = 0;
+        const auto picked = editLine >= 0 && editLine < (int) lines.size();
+        depthKnob.slider.setEnabled (picked);
+        curveKnob.slider.setEnabled (picked);
+        if (picked)
+        {
+            depthKnob.slider.setValue (lines[(size_t) editLine].depth, juce::dontSendNotification);
+            curveKnob.slider.setValue (lines[(size_t) editLine].curve, juce::dontSendNotification);
+            targetList.box.setSelectedItemIndex (ParagonX1AudioProcessor::cipherMacroTargets().indexOf (lines[(size_t) editLine].target),
+                                                 juce::dontSendNotification);
+        }
+        editor->repaint();
+    }
+
     // A new type can bring different keys: lay them out again.
     if ((int) type != laidOutType)
     {
@@ -867,7 +1098,9 @@ void CipherPanel::timerCallback()
     juce::String state = juce::String (shown) + "|" + juce::String ((int) type) + "|" + juce::String (option) + "|" + juce::String ((int) editSecond);
     for (auto* knob : { &mainKnob, &p1Knob, &p2Knob, &envKnob, &rateKnob, &glideKnob, &stereoKnob, &gainKnob, &mixKnob, &modKnob,
                         &driveKnob, &toneKnob, &compressKnob, &bassKnob, &outGainKnob, &outMixKnob, &trigLevelKnob, &trigHpfKnob,
-                        &trigHystKnob, &trigHoldKnob, &followAttackKnob, &followHoldKnob, &followDecayKnob, &followGateKnob })
+                        &trigHystKnob, &trigHoldKnob, &followAttackKnob, &followHoldKnob, &followDecayKnob, &followGateKnob,
+                        &macroKnobs[0], &macroKnobs[1], &macroKnobs[2], &macroKnobs[3], &macroKnobs[4], &macroKnobs[5],
+                        &macroKnobs[6], &macroKnobs[7], &depthKnob, &curveKnob })
         if (knob->slider.isVisible())
             state << "|" << knob->slider.getValue();
     if (shown == seqPage)
@@ -907,10 +1140,10 @@ void CipherPanel::resized()
     onLabel = keys.removeFromLeft (46).toFloat();
     onKey.button.setBounds (keys.removeFromLeft (48).withSizeKeepingCentre (44, 24));
     keys.removeFromLeft (10);
-    const auto keyWidth = juce::jmin (64, (keys.getWidth() - 12 * 4 - 16) / 12);
+    const auto keyWidth = juce::jmin (64, (keys.getWidth() - 13 * 4 - 24) / 13);
     for (int i = 0; i < (int) slotKeys.size(); ++i)
     {
-        slotKeys[(size_t) i].setBounds (keys.removeFromLeft (i == masterPage ? keyWidth + 12 : i == seqPage ? keyWidth + 4 : keyWidth));
+        slotKeys[(size_t) i].setBounds (keys.removeFromLeft (i == masterPage ? keyWidth + 12 : i == macroPage ? keyWidth + 8 : i == seqPage ? keyWidth + 4 : keyWidth));
         keys.removeFromLeft (4);
     }
 
@@ -990,6 +1223,26 @@ void CipherPanel::resized()
 
         area.removeFromTop (16);
         layoutRow (area, { &driveKnob, &toneKnob, &compressKnob, &bassKnob, &outGainKnob, &outMixKnob });
+    }
+    else if (shown == macroPage)
+    {
+        for (auto& key : macroKeys)
+        {
+            key.setBounds (row2.removeFromLeft (84));
+            row2.removeFromLeft (4);
+        }
+        nameLabel = row3.removeFromLeft (48).toFloat();
+        nameEditor.setBounds (row3.removeFromLeft (170).reduced (0, 1));
+        row3.removeFromLeft (16);
+        placeChoice (targetList, row3, 52, 190);
+        for (auto* key : { &addKey, &removeKey, &clearMacroKey })
+        {
+            key->setBounds (row3.removeFromLeft (70));
+            row3.removeFromLeft (4);
+        }
+        area.removeFromTop (8);
+        layoutRow (area, { &macroKnobs[0], &macroKnobs[1], &macroKnobs[2], &macroKnobs[3], &macroKnobs[4], &macroKnobs[5],
+                           &macroKnobs[6], &macroKnobs[7], &depthKnob, &curveKnob });
     }
     else
     {
@@ -1091,6 +1344,16 @@ void CipherPanel::paint (juce::Graphics& g)
         drawKnob (bassKnob, "BASS FREQ", juce::String (juce::roundToInt (raw (ParamIDs::cipherCleanBassHz))) + " Hz");
         drawKnob (outGainKnob, "GAIN", juce::String (raw (ParamIDs::cipherGain), 1) + " dB");
         drawKnob (outMixKnob, "MIX", percent (raw (ParamIDs::cipherMix)));
+    }
+    else if (shown == macroPage)
+    {
+        stamped (g, "NAME", nameLabel.withTrimmedRight (6.0f), 9.0f, juce::Justification::centredRight);
+        glasses.push_back (LedDisplay::paintScreen (g, nameEditor.getBounds().toFloat().expanded (2.0f, 3.0f), 0.35f));
+        drawChoice (targetList);
+        for (int m = 0; m < 8; ++m)
+            drawKnob (macroKnobs[(size_t) m], processor.getCipherMacroName (m), percent (raw (ParamIDs::cipherMacro (m + 1))));
+        drawKnob (depthKnob, "DEPTH", percent ((float) depthKnob.slider.getValue()));
+        drawKnob (curveKnob, "CURVE", juce::String (curveKnob.slider.getValue(), 2));
     }
     else
     {

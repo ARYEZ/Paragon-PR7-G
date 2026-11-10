@@ -203,6 +203,31 @@ public:
     const effects::Cipher::Envelope& getCipherEnvelope (int slot) const { return cipher.getEnvelope (slot); }
     // `finished`: false while a drag is still going (one undo step for the whole drag).
     void setCipherEnvelope (int slot, const effects::Cipher::Envelope&, bool finished = true);
+    // CIPHER's MACROS (message thread). Each assignment moves one knob: at
+    // the macro's top the knob sits `depth` (-1 to 1, of its whole travel)
+    // from its own setting, along `curve` (-1 to 1, 0 straight). Saved with
+    // rigs and projects; part of undo.
+    static constexpr int cipherMaxAssignments = 64;
+    struct CipherMacroAssignment
+    {
+        int macro = 0;             // 0 to 7
+        juce::String target;       // a parameter ID from cipherMacroTargets()
+        float depth = 0.5f, curve = 0.0f;
+        bool operator== (const CipherMacroAssignment& o) const { return macro == o.macro && target == o.target && depth == o.depth && curve == o.curve; }
+    };
+    // What a macro can move: each slot's Main, Knob 1, Knob 2, Env Amount, Rate,
+    // Mod Amount, Glide, Stereo, Gain and Mix, then the master's Drive, Tone,
+    // Compress, Output Gain and Mix (the manual's list).
+    static const juce::StringArray& cipherMacroTargets();
+    static juce::String cipherMacroTargetName (const juce::String& parameterId);
+    static float cipherMacroCurve (float position01, float curve) noexcept;
+    std::vector<CipherMacroAssignment> getCipherMacroAssignments() const;
+    void setCipherMacroAssignments (const std::vector<CipherMacroAssignment>&);
+    juce::String getCipherMacroName (int macro) const;   // "MACRO 1" when not renamed
+    void setCipherMacroName (int macro, const juce::String&);
+    static juce::String cipherMacrosToText (const std::vector<CipherMacroAssignment>&);
+    static std::vector<CipherMacroAssignment> cipherMacrosFromText (const juce::String&);
+
     // The sequencer's steps for a slot (bit n: step n+1), an edit like the envelopes.
     juce::uint32 getCipherSequenceRow (int row) const noexcept { return cipher.getSequenceRow (row); }
     void setCipherSequenceRow (int row, juce::uint32 steps);
@@ -230,7 +255,8 @@ private:
         {
             return rig.parameters == other.rig.parameters && rig.ampModelPath == other.rig.ampModelPath
                 && rig.cabIrPath == other.rig.cabIrPath && rig.cipherEnvelopes == other.rig.cipherEnvelopes
-                && rig.cipherSequence == other.rig.cipherSequence
+                && rig.cipherSequence == other.rig.cipherSequence && rig.cipherMacros == other.rig.cipherMacros
+                && rig.cipherMacroNames == other.rig.cipherMacroNames
                 && current == other.current;
         }
     };
@@ -277,7 +303,17 @@ private:
     effects::Cipher cipher;   // last: the envelope filter and multi-effect, after HAVOK
     // CIPHER's parameters, looked up once (there are 150 for the slots).
     std::array<std::array<std::atomic<float>*, 25>, effects::Cipher::numSlots> cipherSlotParams {};
-    effects::Cipher::Settings readCipherSettings (double songBeats) const;
+    effects::Cipher::Settings readCipherSettings (double songBeats, float pedalMacro1 = -1.0f) const;
+    struct CipherMacroSlot
+    {
+        std::atomic<int> macro { -1 }, target { 0 };
+        std::atomic<float> depth { 0.0f }, curve { 0.0f };
+    };
+    std::array<CipherMacroSlot, cipherMaxAssignments> cipherMacroSlots;
+    std::array<juce::String, 8> cipherMacroNames;
+    std::vector<juce::RangedAudioParameter*> cipherMacroTargetParams;   // in cipherMacroTargets() order
+    std::array<std::atomic<float>*, 8> cipherMacroParams {};
+    void applyCipherMacros (const std::vector<CipherMacroAssignment>&);
     effects::Glitch glitch;
     effects::PitchBlock pitchBlock;
     effects::TalkBox talkBox;   // FILTER / PITCH's Talk Box type, after the cab   // first: TUNING, OCTAVER and FREEZE, before the wah   // after the EQ (POST), or after FILTER / PITCH (PRE)

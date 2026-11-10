@@ -25,10 +25,13 @@ public:
 
     void setAreas (juce::Rectangle<int> displayArea, juce::Rectangle<int> controlArea);
 
-    // 0-9 a slot, 10 the master section, 11 the sequencer.
+    // 0-9 a slot, 10 the master section, 11 the sequencer, 12 the macros.
     void showSlot (int slot);
     int getShownSlot() const noexcept { return shown; }
-    static constexpr int masterPage = 10, seqPage = 11;
+    static constexpr int masterPage = 10, seqPage = 11, macroPage = 12;
+    // The MACRO page, for tests: pick a macro and an assignment (by its line).
+    void selectMacro (int macro);
+    void selectAssignment (int line);
     // Which envelope a slot page draws: ENV 1 (false) or ENV 2.
     void editEnvelope2 (bool second);
 
@@ -83,7 +86,7 @@ private:
     bool editSecond = false;
 
     Key onKey;                                       // CIPHER on
-    std::array<juce::TextButton, 12> slotKeys;       // 1-10, MASTER and SEQ
+    std::array<juce::TextButton, 13> slotKeys;       // 1-10, MASTER, SEQ and MACRO
     // A slot's controls.
     Key slotOn, syncKey, retrigAudio, retrigMidi, randomStart, envLoop;
     Choice typeList, speedList, shapeList, modSourceList, modDestList;
@@ -100,6 +103,18 @@ private:
     Choice seqSpeedList, seqStartList, seqEndList, scaleList, rootList;
     juce::TextButton rotateLeft { "<" }, rotateRight { ">" }, clearKey { "CLEAR" }, randomKey { "RANDOM" };
     Knob trigLevelKnob, trigHpfKnob, trigHystKnob, trigHoldKnob, followAttackKnob, followHoldKnob, followDecayKnob, followGateKnob;
+
+    // The macro page's.
+    std::array<Knob, 8> macroKnobs;
+    std::array<juce::TextButton, 8> macroKeys;
+    juce::TextEditor nameEditor;
+    Choice targetList;
+    juce::TextButton addKey { "ADD" }, removeKey { "REMOVE" }, clearMacroKey { "CLEAR" };
+    Knob depthKnob, curveKnob;   // the picked assignment's (not parameters)
+    int editMacro = 0, editLine = -1;
+    std::vector<ParagonX1AudioProcessor::CipherMacroAssignment> macroLines() const;   // the picked macro's assignments
+    void changeAssignment (const std::function<void (ParagonX1AudioProcessor::CipherMacroAssignment&)>&);
+    juce::Rectangle<float> nameLabel;
 
     juce::Rectangle<int> display, controls;
     juce::Rectangle<float> optionLabel, styleLabel, onLabel, retrigLabel, envLabel, rowLabel, trigLabel, followLabel;

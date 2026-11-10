@@ -892,3 +892,44 @@ TEST_CASE ("Bank N, a ninth album's guitar sounds: cleans, effects and leads tha
     CAPTURE (dBOf (loudest), dBOf (quietest));
     CHECK (dBOf (loudest) - dBOf (quietest) > 15.0f);
 }
+
+TEST_CASE ("Bank O, CIPHER's rigs: each changes the sound, stays finite, and they're balanced", "[rigs][cipher]")
+{
+    const auto rigs = bankRigs (14);
+    REQUIRE (rigs.size() == 15);
+    RigRig plain;
+    plain.processor.loadRig (plain.entryNamed ("Clean Slate"));
+    const auto dry = pluck (plain.processor);
+    std::vector<float> levels;
+    const auto measures = juce::SystemStats::getEnvironmentVariable ("PARAGON_RIG_MEASURES", {}).isNotEmpty();
+    for (const auto& rig : rigs)
+    {
+        INFO (rig.name);
+        CHECK (rig.tags.contains ("Cipher"));
+        CHECK (rig.parameters.count ("cipherOn") == 1);
+        RigRig r;
+        r.processor.loadRig (r.entryNamed (rig.name));
+        const auto out = pluck (r.processor);
+        auto finite = true;
+        for (int i = 0; i < out[0].size(); ++i)
+            finite = finite && std::isfinite (out[0][(size_t) i]);
+        REQUIRE (finite);
+        const auto playing = rmsOf (out[0], 0.0, 1.0);
+        levels.push_back (dBOf (playing));
+        if (measures)
+            std::printf ("%-24s playing %6.1f dB\n", rig.name.toRawUTF8(), dBOf (playing));
+        // It changes the sound: the difference from the same note through Clean Slate is within 10 dB of the note.
+        std::vector<float> difference (out[0].size());
+        for (size_t n = 0; n < difference.size(); ++n)
+            difference[n] = out[0][n] - dry[0][n];
+        CHECK (dBOf (rmsOf (difference, 0.1, 1.0)) - dBOf (rmsOf (dry[0], 0.1, 1.0)) > -10.0f);
+    }
+    auto sorted = levels;
+    std::sort (sorted.begin(), sorted.end());
+    const auto median = sorted[sorted.size() / 2];
+    for (size_t n = 0; n < rigs.size(); ++n)
+    {
+        INFO (rigs[n].name << ": " << levels[n] << " dB, the bank's median " << median << " dB");
+        CHECK (std::abs (levels[n] - median) < 6.0f);
+    }
+}

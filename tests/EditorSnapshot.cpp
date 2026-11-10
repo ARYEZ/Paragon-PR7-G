@@ -169,7 +169,15 @@ TEST_CASE ("Render the editor to a PNG", "[.][snapshot]")
         for (int r = 0; r < effects::Cipher::numSlots; ++r)
             processor.setCipherSequenceRow (r, parsed[(size_t) r]);
     }
-    // PARAGON_SNAPSHOT_CIPHERSLOT=n: CIPHER's slot n (1-10), 11 for MASTER, 12 for SEQ.
+    // PARAGON_SNAPSHOT_CIPHERMACROS=macro:id:depth:curve;... and PARAGON_SNAPSHOT_CIPHERNAMES=a|b|...
+    if (const auto text = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHERMACROS", {}); text.isNotEmpty())
+        processor.setCipherMacroAssignments (ParagonX1AudioProcessor::cipherMacrosFromText (text));
+    {
+        const auto names = juce::StringArray::fromTokens (juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHERNAMES", {}), "|", {});
+        for (int m = 0; m < names.size(); ++m)
+            processor.setCipherMacroName (m, names[m]);
+    }
+    // PARAGON_SNAPSHOT_CIPHERSLOT=n: CIPHER's slot n (1-10), 11 for MASTER, 12 for SEQ, 13 for MACRO.
     if (const auto slot = juce::SystemStats::getEnvironmentVariable ("PARAGON_SNAPSHOT_CIPHERSLOT", {}); slot.isNotEmpty())
         if (auto* panel = findType<CipherPanel> (*editor))
             panel->showSlot (slot.getIntValue() - 1);

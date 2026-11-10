@@ -1134,3 +1134,96 @@ TEST_CASE ("CIPHER: CPU with ten spectral slots at 4096 (prints the share of a c
     const auto seconds = (juce::Time::getMillisecondCounterHiRes() - started) / 1000.0;
     std::printf ("CIPHER, ten spectral slots at 4096: %.1f%% of a core, latency %d samples\n", seconds / 10.0 * 100.0, cipher.getLatencySamples());
 }
+
+//==============================================================================
+// Stage 5: the macros.
+TEST_CASE ("CIPHER stage 5: a macro moves its knobs by DEPTH along CURVE; the pedal can play MACRO 1", "[effects][cipher]")
+{
+    ParagonX1AudioProcessor processor;
+    processor.prepareToPlay (sampleRate, blockSize);
+    auto& state = processor.getParameters();
+    const auto set = [&state] (const juce::String& id, float value)
+    {
+        auto* p = state.getParameter (id);
+        p->setValueNotifyingHost (p->convertTo0to1 (value));
+    };
+    set (ParamIDs::cipherOn, 1.0f);
+    set (ParamIDs::cipherSlot (1, "Type"), (float) Cipher::Type::gain);
+    set (ParamIDs::cipherSlot (1, "Main"), 0.5f);   // 0 dB
+    set (ParamIDs::cipherSlot (1, "EnvAmount"), 0.0f);
+    processor.setCipherMacroAssignments ({ { 0, ParamIDs::cipherSlot (1, "Main"), -0.25f, 0.0f } });   // at the top: main 0.25, -6 dB
+
+    const auto level = [&processor]
+    {
+        juce::AudioBuffer<float> buffer (2, blockSize);
+        juce::MidiBuffer midi;
+        float last = 0.0f;
+        for (int b = 0; b < 40; ++b)
+        {
+            for (int i = 0; i < blockSize; ++i)
+                buffer.setSample (0, i, 0.25f), buffer.setSample (1, i, 0.25f);
+            processor.processBlock (buffer, midi);
+            last = buffer.getSample (0, blockSize - 1);
+        }
+        return last;
+    };
+    const auto atZero = level();
+    set (ParamIDs::cipherMacro (1), 1.0f);
+    const auto atTop = level();
+    CAPTURE (atZero, atTop);
+    CHECK_THAT (dB (atTop / atZero), WithinAbs (-6.02, 0.15));
+    // The knob's own setting doesn't change: the macro moves it as the sound is made.
+    CHECK_THAT (state.getRawParameterValue (ParamIDs::cipherSlot (1, "Main"))->load(), WithinAbs (0.5, 0.001));
+
+    // CURVE: at half way, a straight line is half the depth; +1 rises early (x^0.25), -1 late (x^4).
+    CHECK_THAT (ParagonX1AudioProcessor::cipherMacroCurve (0.5f, 0.0f), WithinAbs (0.5, 1.0e-4));
+    CHECK_THAT (ParagonX1AudioProcessor::cipherMacroCurve (0.5f, 1.0f), WithinAbs (std::pow (0.5, 0.25), 1.0e-4));
+    CHECK_THAT (ParagonX1AudioProcessor::cipherMacroCurve (0.5f, -1.0f), WithinAbs (0.0625, 1.0e-4));
+
+    // A master target: the output GAIN (24 dB either way across its travel, so +0.25 of it is +12 dB).
+    processor.setCipherMacroAssignments ({ { 1, ParamIDs::cipherGain, 0.25f, 0.0f } });
+    set (ParamIDs::cipherMacro (2), 1.0f);
+    CHECK_THAT (dB (level() / atZero), WithinAbs (12.0, 0.15));
+
+    // The expression pedal on CIPHER MACRO 1 plays it, whatever the knob says.
+    processor.setCipherMacroAssignments ({ { 0, ParamIDs::cipherSlot (1, "Main"), -0.25f, 0.0f } });
+    set (ParamIDs::cipherMacro (1), 0.0f);
+    set (ParamIDs::cipherMacro (2), 0.0f);
+    set (ParamIDs::expressionTarget, (float) ExpressionTargets::cipherMacro1);
+    set (ParamIDs::expression, 1.0f);
+    CHECK_THAT (dB (level() / atZero), WithinAbs (-6.02, 0.15));
+}
+
+TEST_CASE ("CIPHER stage 5: macros and their names are saved in rigs and projects, and undo covers them", "[effects][cipher][rigs]")
+{
+    ParagonX1AudioProcessor processor;
+    const std::vector<ParagonX1AudioProcessor::CipherMacroAssignment> list {
+        { 0, ParamIDs::cipherSlot (3, "P1"), 0.4f, 0.25f }, { 7, ParamIDs::cipherDrive, -0.5f, 0.0f } };
+    processor.setCipherMacroAssignments (list);
+    processor.setCipherMacroName (0, "sweep");
+    processor.setCipherMacroName (2, "space");
+    CHECK (processor.getCipherMacroName (0) == "SWEEP");
+    CHECK (processor.getCipherMacroName (1) == "MACRO 2");
+
+    const auto rig = processor.captureRig();
+    const auto reloaded = Rig::fromXml (*rig.toXml());
+    REQUIRE (reloaded.has_value());
+    CHECK (reloaded->cipherMacros == rig.cipherMacros);
+    CHECK (reloaded->cipherMacroNames == rig.cipherMacroNames);
+    CHECK (ParagonX1AudioProcessor::cipherMacrosFromText (rig.cipherMacros) == list);
+
+    juce::MemoryBlock state;
+    processor.getStateInformation (state);
+    ParagonX1AudioProcessor other;
+    other.setStateInformation (state.getData(), (int) state.getSize());
+    CHECK (other.getCipherMacroAssignments() == list);
+    CHECK (other.getCipherMacroName (2) == "SPACE");
+    CHECK (other.getCipherMacroName (1) == "MACRO 2");
+
+    processor.flushUndoStep();
+    processor.setCipherMacroAssignments ({});
+    processor.flushUndoStep();
+    processor.undo();
+    CHECK (processor.getCipherMacroAssignments() == list);
+    CHECK (ParagonX1AudioProcessor::cipherMacroTargetName (ParamIDs::cipherSlot (3, "P1")) == "Slot 3 Knob 1");
+}
