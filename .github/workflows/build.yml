@@ -52,6 +52,13 @@ jobs:
             fi
             echo "apt attempt $attempt failed or stalled; retrying"
             sudo dpkg --configure -a || true   # finish anything a killed install left half done
+            # 0.82.0: GitHub's own Ubuntu mirror and archive.ubuntu.com both stopped answering for a while,
+            # so the retries use other official Ubuntu mirrors (the runner reads its mirrors from this list).
+            printf '%s\n' http://mirrors.edge.kernel.org/ubuntu/ http://mirror.math.princeton.edu/pub/ubuntu/ \
+              http://mirrors.mit.edu/ubuntu/ | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+            for list in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+              [ -f "$list" ] && sudo sed -i -E 's#https?://(azure\.)?archive\.ubuntu\.com/ubuntu/?#http://mirrors.edge.kernel.org/ubuntu/#g' "$list"
+            done
             sleep 10
           done
           exit 1
