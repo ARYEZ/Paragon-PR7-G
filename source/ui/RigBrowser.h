@@ -6,7 +6,7 @@
 
 // The PRESETS page: browse, load, file and organise rigs.
 //
-//   left:   filters (all / favourites / mine / factory) and banks A-D
+//   left:   filters (all / favourites / mine / factory), banks A-E on one row and the expansions (a bank per line)
 //   middle: search box and the list of rigs (double-click to load)
 //   right:  the selected rig's details: name, favourite, bank, number,
 //           tags, what it uses, and the buttons to act on it
@@ -23,8 +23,11 @@ public:
     void promptSaveAs();
 
     // Shows only some rigs: `filter` 0 all, 1 favourites, 2 mine, 3 factory;
-    // `bank` -1 for every bank or 0-3 for A-D. (The dock's RIG BROWSER uses this.)
+    // `bank` -1 for every bank, 0-4 for A-E, then the expansions.
     void showFilter (int filter, int bank);
+    // The expansions' scrolling list, for tests: its view, and the button for expansion `index` (0 = bank F).
+    const juce::Viewport& getExpansionView() const noexcept { return expansionView; }
+    const juce::Component* getExpansionButton (int index) const { return bankButtons[Rig::numMainBanks + 1 + index]; }
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -61,6 +64,12 @@ private:
     juce::String selectedFactoryName;
 
     juce::OwnedArray<juce::TextButton> filterButtons, bankButtons;
+    // As on PR7-K: the expansions scroll, so any number of banks fits. Their buttons live in
+    // `expansionHolder`, shown through `expansionView`; `expansionsHeading` is where EXPANSIONS is drawn.
+    juce::Viewport expansionView;
+    juce::Component expansionHolder;
+    juce::Rectangle<int> expansionsHeading;
+    void showExpansionButton (int index);   // scrolls the list so bankButtons[index] is in view
     juce::TextEditor search;
     juce::ListBox list { "Rigs", this };
 

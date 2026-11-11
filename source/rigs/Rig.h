@@ -18,6 +18,12 @@ struct Rig
 {
     static constexpr int numBanks = 19;          // A to D, E for the song-inspired rigs, F to N and P to S album banks, O CIPHER
     static constexpr int maxNumber = 99;
+    // The PRESETS page's layout, as on PR7-K: banks A-E on one row, then the
+    // expansions (F on: the album banks and CIPHER's) a bank per line, each
+    // with a name of its own (never an album, song or band word).
+    static constexpr int numMainBanks = 5;
+    static bool isExpansionBank (int bankIndex) { return bankIndex >= numMainBanks; }
+    static juce::String expansionName (int bankIndex);   // "TIDAL GLASS"; empty for A-E
 
     juce::String name { "New Rig" };
     int bank = 0;                               // 0 = A

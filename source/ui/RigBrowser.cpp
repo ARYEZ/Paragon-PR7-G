@@ -57,7 +57,20 @@ RigBrowser::RigBrowser (ParagonX1AudioProcessor& p) : processor (p)
     addRadio (filterButtons, "Factory Rigs", 1, [this] { filter = Filter::factory; refreshList(); });
     addRadio (bankButtons, "All Banks", 2, [this] { bankFilter = -1; refreshList(); });
     for (int bank = 0; bank < Rig::numBanks; ++bank)
-        addRadio (bankButtons, "Bank " + Rig::bankName (bank), 2, [this, bank] { bankFilter = bank; refreshList(); });
+    {
+        // A-E by letter on one row; the expansions by letter and name, a line each.
+        const auto text = Rig::isExpansionBank (bank) ? Rig::bankName (bank) + "  " + Rig::expansionName (bank) : Rig::bankName (bank);
+        addRadio (bankButtons, text, 2, [this, bank] { bankFilter = bank; refreshList(); });
+    }
+    // The expansions in a scrolling list of their own (as on PR7-K).
+    for (int index = Rig::numMainBanks + 1; index < bankButtons.size(); ++index)
+        expansionHolder.addAndMakeVisible (bankButtons[index]);
+    expansionView.setViewedComponent (&expansionHolder, false);
+    expansionView.setScrollBarsShown (true, false);
+    expansionView.setScrollBarThickness (8);
+    expansionView.getVerticalScrollBar().setColour (juce::ScrollBar::thumbColourId, ParagonColours::accentDim);
+    expansionView.setSingleStepSizes (10, 22);
+    addAndMakeVisible (expansionView);
     filterButtons[0]->setToggleState (true, juce::dontSendNotification);
     bankButtons[0]->setToggleState (true, juce::dontSendNotification);
 
@@ -91,7 +104,7 @@ RigBrowser::RigBrowser (ParagonX1AudioProcessor& p) : processor (p)
     addAndMakeVisible (tagsEditor);
 
     for (int bank = 0; bank < Rig::numBanks; ++bank)
-        bankBox.addItem (Rig::bankName (bank), bank + 1);
+        bankBox.addItem (Rig::isExpansionBank (bank) ? Rig::bankName (bank) + "  " + Rig::expansionName (bank) : Rig::bankName (bank), bank + 1);
     for (int number = 1; number <= Rig::maxNumber; ++number)
         numberBox.addItem (juce::String (number).paddedLeft ('0', 3), number);
     for (auto* box : { &bankBox, &numberBox })
@@ -317,12 +330,25 @@ void RigBrowser::saveDetails()
     refreshList();
 }
 
+void RigBrowser::showExpansionButton (int index)
+{
+    if (index <= Rig::numMainBanks || index >= bankButtons.size())
+        return;
+    const auto row = bankButtons[index]->getBounds();
+    const auto view = expansionView.getViewArea();
+    if (row.getY() < view.getY())
+        expansionView.setViewPosition (0, row.getY());
+    else if (row.getBottom() > view.getBottom())
+        expansionView.setViewPosition (0, row.getBottom() - view.getHeight());
+}
+
 void RigBrowser::showFilter (int newFilter, int bank)
 {
     const auto filterIndex = juce::jlimit (0, filterButtons.size() - 1, newFilter);
     const auto bankIndex = juce::jlimit (0, bankButtons.size() - 1, bank + 1);
     filterButtons[filterIndex]->setToggleState (true, juce::dontSendNotification);
     bankButtons[bankIndex]->setToggleState (true, juce::dontSendNotification);
+    showExpansionButton (bankIndex);
     filter = (Filter) filterIndex;
     bankFilter = bank;
     refreshList();
@@ -397,6 +423,8 @@ void RigBrowser::paint (juce::Graphics& g)
     g.drawText ("RIG BROWSER", sidebarArea.reduced (12, 8).withHeight (16), juce::Justification::centredLeft, false);
     if (bankButtons.size() > 0)
         g.drawText ("BANKS", bankButtons[0]->getBounds().translated (0, -22).withHeight (16), juce::Justification::centredLeft, false);
+    if (bankButtons.size() > Rig::numMainBanks + 1)
+        g.drawText ("EXPANSIONS", expansionsHeading, juce::Justification::centredLeft, false);
 }
 
 void RigBrowser::resized()
@@ -411,23 +439,37 @@ void RigBrowser::resized()
         sidebar.removeFromTop (4);
     }
     sidebar.removeFromTop (28);
-    // ALL BANKS across, then the banks two to a row: one per row stopped
-    // fitting with the album banks (bank H, PR7-G 0.64.0), as on PR7-V.
-    for (size_t i = 0; i < bankButtons.size(); ++i)
+    // As on PR7-K: ALL BANKS, then banks A-E side by side on one row, then
+    // EXPANSIONS and the expansions a bank per line, in a list that scrolls
+    // when they don't all fit (rows of 22 px; the scroll bar only then).
+    if (bankButtons.size() > Rig::numMainBanks)
     {
-        if (i == 0 || i % 2 == 1)
+        bankButtons[0]->setBounds (sidebar.removeFromTop (28));
+        sidebar.removeFromTop (4);
+        auto row = sidebar.removeFromTop (28);
+        constexpr int gap = 4;
+        const auto width = (row.getWidth() - gap * (Rig::numMainBanks - 1)) / Rig::numMainBanks;
+        for (int bank = 0; bank < Rig::numMainBanks; ++bank)
         {
-            auto row = sidebar.removeFromTop (28);
-            sidebar.removeFromTop (4);
-            if (i == 0)
-            {
-                bankButtons[i]->setBounds (row);
-                continue;
-            }
-            bankButtons[i]->setBounds (row.removeFromLeft ((row.getWidth() - 4) / 2));
-            if (i + 1 < bankButtons.size())
-                bankButtons[i + 1]->setBounds (row.withTrimmedLeft (4));
+            bankButtons[bank + 1]->setBounds (bank == Rig::numMainBanks - 1 ? row : row.removeFromLeft (width));
+            row.removeFromLeft (gap);
         }
+        sidebar.removeFromTop (4);
+        const auto expansions = bankButtons.size() - Rig::numMainBanks - 1;
+        if (expansions > 0)
+        {
+            expansionsHeading = sidebar.removeFromTop (24).withTrimmedTop (2).withHeight (16);
+            expansionView.setBounds (sidebar);
+            constexpr int height = 22, rowGap = 3;
+            const auto total = expansions * (height + rowGap) - rowGap;
+            const auto rowWidth = sidebar.getWidth() - (total > sidebar.getHeight() ? expansionView.getScrollBarThickness() + 2 : 0);
+            expansionHolder.setSize (rowWidth, total);
+            for (int index = Rig::numMainBanks + 1; index < bankButtons.size(); ++index)
+                bankButtons[index]->setBounds (0, (index - Rig::numMainBanks - 1) * (height + rowGap), rowWidth, height);
+        }
+        for (int index = Rig::numMainBanks + 1; index < bankButtons.size(); ++index)
+            if (bankButtons[index]->getToggleState())
+                showExpansionButton (index);   // the chosen one in view
     }
 
     area.removeFromLeft (12);

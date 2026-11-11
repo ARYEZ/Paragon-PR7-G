@@ -24,6 +24,31 @@ juce::String Rig::bankName (int bankIndex)
     return juce::String::charToString ((juce::juce_wchar) ('A' + juce::jlimit (0, numBanks - 1, bankIndex)));
 }
 
+juce::String Rig::expansionName (int bankIndex)
+{
+    // Our own names (the owner can rename them); in bank order, F first.
+    static const char* const names[] = {
+        "TIDAL GLASS",     // F
+        "DREAD BOUNCE",    // G
+        "TURNTABLE ERA",   // H
+        "DJENT PRISM",     // I
+        "IRON GROOVE",     // J
+        "SPIRAL RITUAL",   // K
+        "RIOT SIGNAL",     // L
+        "FROSTBITE",       // M
+        "ORBITAL",         // N
+        "CIPHER",          // O: CIPHER's own bank
+        "MACHINE PULSE",   // P
+        "VELVET ALTAR",    // Q
+        "SUNKEN DREAM",    // R
+        "FUZZ COSMOS",     // S
+    };
+    static_assert (std::size (names) == (size_t) (numBanks - numMainBanks), "a name for each expansion bank");
+    if (! isExpansionBank (bankIndex) || bankIndex >= numBanks)
+        return {};
+    return names[bankIndex - numMainBanks];
+}
+
 juce::String Rig::getSlotName() const
 {
     return bankName (bank) + juce::String (number).paddedLeft ('0', 2);

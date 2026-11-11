@@ -2,6 +2,34 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.81.0
+
+- **The PRESETS page lays out its banks like PR7-K's:**
+  - **ALL BANKS**, then **A B C D E** side by side on one row.
+  - Under an **EXPANSIONS** heading, the album banks and CIPHER's bank, **one bank per line**, each with its letter and a name. The list scrolls once there are more than fit, so new album banks always have room.
+  - **Why:** two banks to a row had grown to eight rows of look-alike "Bank F", "Bank G" buttons, and the next few banks would have run off the panel.
+- **The expansion names are ours** (no album, song or band words, the same rule as the rigs). Tell me any you'd like renamed:
+
+  | Bank | Name | Its rigs |
+  |---|---|---|
+  | F | TIDAL GLASS | Spiritbox, *Eternal Blue* |
+  | G | DREAD BOUNCE | Korn, *Korn* |
+  | H | TURNTABLE ERA | Linkin Park, *Hybrid Theory* |
+  | I | DJENT PRISM | Periphery, *Periphery III* |
+  | J | IRON GROOVE | Sevendust, *Next* |
+  | K | SPIRAL RITUAL | Tool, *Ænima* |
+  | L | RIOT SIGNAL | Rage Against the Machine, *Evil Empire* |
+  | M | FROSTBITE | Cold, *13 Ways to Bleed on Stage* |
+  | N | ORBITAL | 30 Seconds to Mars, *30 Seconds to Mars* |
+  | O | CIPHER | CIPHER's own rigs |
+  | P | MACHINE PULSE | Static-X, *Wisconsin Death Trip* |
+  | Q | VELVET ALTAR | Sleep Token, *Take Me Back to Eden* |
+  | R | SUNKEN DREAM | Deftones, *White Pony* |
+  | S | FUZZ COSMOS | Muse, *Origin of Symmetry* |
+
+- **Nothing else changes:** rig slots still read F01, R12 and so on; your own rigs keep their banks, and you can still file a rig in any bank (the BANK box shows the names too).
+- **Tests:** a new check builds the page at its real size and confirms every expansion is a full line of its own with a name, in order, and that choosing the last bank scrolls it into view.
+
 ## 0.80.0
 
 - **A thirteenth album bank, bank S: 15 rigs inspired by the guitar sounds on Muse's *Origin of Symmetry*** (2001). **Cleans, effects and leads**: the heavy riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's a record of fuzz, pitch-shifting and grand spaces, so the rigs lean on fuzz (COSMONAUT), QUASAR's octave and harmony programs on the pedal, a wah into fuzz, GLITCH's kill switch, CIPHER's synth filters, a church-organ pad and a megaphone. Inside the plugin each rig is named for its sound; here is what inspired each one:
