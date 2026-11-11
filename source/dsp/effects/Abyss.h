@@ -40,6 +40,6 @@ namespace effects
         int distPot = 0, highA = 0, highB = 0, lowA = 0, lowB = 0, midA = 0, midB = 0, freqA = 0, freqB = 0;
         double distKnob = -1.0, highKnob = -1.0, lowKnob = -1.0, middleKnob = -1.0, midFreqKnob = -1.0;
         double period = 1.0 / 384000.0;
-        double gCoupling = 0.0, jCoupling = 0.0, diodeNode = 0.0;   // C027 into the diodes
+        double gCoupling = 0.0, jCoupling = 0.0, diodeNode = 0.0, diodeNodePrev = 0.0;   // C027 into the diodes
     };
 }

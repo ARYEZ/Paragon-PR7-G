@@ -47,6 +47,6 @@ namespace effects
         double gain = -1.0, trebleKnob = -1.0, period = 1.0 / 384000.0;
 
         // The clipper: C9 (1 uF) in series with R13 (1k) into the diodes.
-        double gCoupling = 0.0, jCoupling = 0.0, diodeNode = 0.0;
+        double gCoupling = 0.0, jCoupling = 0.0, diodeNode = 0.0, diodeNodePrev = 0.0;
     };
 }

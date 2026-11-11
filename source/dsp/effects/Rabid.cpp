@@ -51,7 +51,7 @@ namespace effects
     void Rabid::reset() noexcept
     {
         feedback.reset();
-        opAmpOut = jCoupling = jFilterCap = diodeNode = 0.0;
+        opAmpOut = jCoupling = jFilterCap = diodeNode = diodeNodePrev = 0.0;
     }
 
     void Rabid::setDistortion (double knob) noexcept
@@ -92,18 +92,24 @@ namespace effects
         const auto source = opAmpOut - jCoupling / gCoupling;
         const auto gFilter = 1.0 / filterOhms;
         const auto filterShare = gFilter / (gFilter + gFilterCap);   // how the filter node follows the diode node
-        auto v = diodeNode;
+        // Start from where the last two samples were heading (0.82.1): the
+        // signal moves smoothly at the oversampled rate, so fewer steps.
+        auto v = 2.0 * diodeNode - diodeNodePrev;
         for (int iteration = 0; iteration < 20; ++iteration)
         {
             const auto vf = (v * gFilter + jFilterCap) / (gFilter + gFilterCap);
             const auto x = std::clamp (v / diodeThermal, -40.0, 40.0);
-            const auto diode = 2.0 * diodeSaturation * std::sinh (x);
-            const auto slope = 2.0 * diodeSaturation / diodeThermal * std::cosh (x);
+            const auto ex = std::exp (x), exInverse = 1.0 / ex;   // 2 Is sinh and its slope from one exp (0.82.1)
+            const auto diode = diodeSaturation * (ex - exInverse);
+            const auto slope = diodeSaturation / diodeThermal * (ex + exInverse);
             const auto f = (source - v) / sourceR - diode - (v - vf) * gFilter;
             const auto d = -1.0 / sourceR - slope - gFilter * (1.0 - filterShare);
             const auto step = std::clamp (-f / d, -0.1, 0.1);
             v += step;
-            if (std::abs (step) < 1.0e-9)
+            // Done when this step was under 0.1 uV: Newton converges
+            // quadratically, so the next would be about 1e-14 V (0.82.1:
+            // stopping at 1e-9 cost one more full step to see that).
+            if (std::abs (step) < 1.0e-7)
                 break;
         }
         if (! std::isfinite (v))
@@ -116,6 +122,7 @@ namespace effects
         const auto inputCurrent = (source - v) / sourceR;
         jCoupling = 2.0 * inputCurrent + jCoupling;
         jFilterCap = 2.0 * gFilterCap * vf - jFilterCap;
+        diodeNodePrev = diodeNode;
         diodeNode = v;
         return vf;
     }
