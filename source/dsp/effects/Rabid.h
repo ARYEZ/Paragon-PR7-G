@@ -40,6 +40,6 @@ namespace effects
 
         // The clipper: the 4.7 uF in series with 1k, the diodes, and the FILTER's 3.3 nF.
         double gCoupling = 0.0, jCoupling = 0.0, gFilterCap = 0.0, jFilterCap = 0.0;
-        double filterOhms = 1.5e3, diodeNode = 0.0;
+        double filterOhms = 1.5e3, diodeNode = 0.0, diodeNodePrev = 0.0;
     };
 }

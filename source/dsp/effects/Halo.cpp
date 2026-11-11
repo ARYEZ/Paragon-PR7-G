@@ -106,37 +106,65 @@ namespace effects
         const auto emitterG = gTop * (wiperG - gTop) / wiperG;
         const auto emitterExtra = dcOnly ? 0.0 : -gTop * bypassHistory / wiperG;
 
+        // The resistors and capacitors are linear: their part of the Jacobian
+        // and of the currents (linearJacobian v + linearCurrents) is the same
+        // for every Newton step of this sample, so it's built once here and
+        // only the two transistors are added each step (0.82.1: rebuilding it
+        // all every step was most of the drive's time).
+        double linearJacobian[numNodes][numNodes] = {};
+        double linearCurrents[numNodes] = {};   // the current leaving each node with every node at 0 V
+        // A conductance between two nodes (-1 = ground), plus a fixed current from p to q.
+        const auto branch = [&] (int p, int q, double g, double extraAmps)
+        {
+            if (p >= 0)
+            {
+                linearCurrents[p] += extraAmps;
+                linearJacobian[p][p] += g;
+                if (q >= 0)
+                    linearJacobian[p][q] -= g;
+            }
+            if (q >= 0)
+            {
+                linearCurrents[q] -= extraAmps;
+                linearJacobian[q][q] += g;
+                if (p >= 0)
+                    linearJacobian[q][p] -= g;
+            }
+        };
+        // A resistor from a node to a fixed voltage (the supply, the input).
+        const auto toFixed = [&] (int node, double ohms, double fixedVolts)
+        {
+            linearCurrents[node] -= fixedVolts / ohms;
+            linearJacobian[node][node] += 1.0 / ohms;
+        };
+        if (! dcOnly)
+            toFixed (b1, inputOhms, inputSource);   // (C1 blocks DC: no input path at rest)
+        toFixed (c1, q1CollectorOhms, railVolts);
+        toFixed (c2, supplySideOhms + collectorSideOhms, railVolts);
+        branch (e2, b1, 1.0 / feedbackOhms, 0.0);
+        branch (e2, -1, emitterG, emitterExtra);
+        branch (c1, b1, 1.0 / leakageOhms, 0.0);
+        branch (c2, c1, 1.0 / leakageOhms, 0.0);
+        if (! dcOnly)
+            for (const auto& cap : junctions)
+                branch (cap.p, cap.q, cap.g, -cap.history);
+
         for (int iteration = 0; iteration < maxIterations; ++iteration)
         {
-            double jacobian[numNodes][numNodes] = {};
-            double residual[numNodes] = {};   // the current leaving each node
+            double jacobian[numNodes][numNodes];
+            double residual[numNodes];   // the current leaving each node
+            for (int row = 0; row < numNodes; ++row)
+            {
+                auto amps = linearCurrents[row];
+                for (int col = 0; col < numNodes; ++col)
+                {
+                    jacobian[row][col] = linearJacobian[row][col];
+                    amps += linearJacobian[row][col] * v[(size_t) col];
+                }
+                residual[row] = amps;
+            }
             const auto volts = [this] (int node) { return node < 0 ? 0.0 : v[(size_t) node]; };
 
-            // A conductance between two nodes (-1 = ground), plus a fixed current from p to q.
-            const auto branch = [&] (int p, int q, double g, double extraAmps)
-            {
-                const auto amps = g * (volts (p) - volts (q)) + extraAmps;
-                if (p >= 0)
-                {
-                    residual[p] += amps;
-                    jacobian[p][p] += g;
-                    if (q >= 0)
-                        jacobian[p][q] -= g;
-                }
-                if (q >= 0)
-                {
-                    residual[q] -= amps;
-                    jacobian[q][q] += g;
-                    if (p >= 0)
-                        jacobian[q][p] -= g;
-                }
-            };
-            // A resistor from a node to a fixed voltage (the supply, the input).
-            const auto toFixed = [&] (int node, double ohms, double fixedVolts)
-            {
-                residual[node] += (v[(size_t) node] - fixedVolts) / ohms;
-                jacobian[node][node] += 1.0 / ohms;
-            };
             // An Ebers-Moll transistor: the currents into its collector, base and emitter.
             const auto transistor = [&] (int c, int b, int e)
             {
@@ -164,18 +192,6 @@ namespace effects
                                                                          : -(collector[col] + base[col]);
                 }
             };
-
-            if (! dcOnly)
-                toFixed (b1, inputOhms, inputSource);   // (C1 blocks DC: no input path at rest)
-            toFixed (c1, q1CollectorOhms, railVolts);
-            toFixed (c2, supplySideOhms + collectorSideOhms, railVolts);
-            branch (e2, b1, 1.0 / feedbackOhms, 0.0);
-            branch (e2, -1, emitterG, emitterExtra);
-            branch (c1, b1, 1.0 / leakageOhms, 0.0);
-            branch (c2, c1, 1.0 / leakageOhms, 0.0);
-            if (! dcOnly)
-                for (const auto& cap : junctions)
-                    branch (cap.p, cap.q, cap.g, -cap.history);
             transistor (c1, b1, -1);   // Q1, emitter grounded
             transistor (c2, c1, e2);   // Q2, its base on Q1's collector
 

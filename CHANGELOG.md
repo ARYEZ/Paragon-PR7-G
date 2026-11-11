@@ -2,6 +2,31 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.82.1
+
+- **An optimisation round: the drive pedals and the AEON flanger now use far less CPU, with the same sound.** Measured by counting the processor's instructions (the same count every run; this machine's stopwatch timings varied too much between runs to trust), with the pedal on at DRIVE 8:
+
+  | Effect | Before | After | Saved |
+  |---|---|---|---|
+  | COSMONAUT (the fuzz) | 4.49 billion | 1.87 billion | 58% |
+  | RABID | 1.63 billion | 0.70 billion | 57% |
+  | CHIMERA | 2.16 billion | 1.18 billion | 45% |
+  | ABYSS | 3.30 billion | 2.10 billion | 36% |
+  | AEON (MODULATION) | 1.30 billion | 0.86 billion | 34% |
+  | HALO | 3.88 billion | 3.61 billion | 7% |
+  | BANSHEE (untouched, as a check) | 0.59 billion | 0.59 billion | 0% |
+
+  - **Why COSMONAUT was the worst:** every fuzz rig cost about a quarter of a core, against 4% for the average rig. It works out its three transistor stages 384,000 times a second, by guessing and correcting (Newton's method) until the guess is right.
+  - **What changed:**
+    - Each guess now starts from where the signal is heading, not where it was, so about 1.3 guesses a step instead of 3.1 (the same for RABID, CHIMERA and ABYSS).
+    - It stops as soon as the next correction would be far too small to matter, instead of making one more to check.
+    - The diodes' maths uses one exponential instead of two.
+    - The voltage limiter shared by all the drive models uses plain multiplications and one exponential instead of two power functions.
+    - HALO builds the unchanging part of its circuit once per step instead of on every guess.
+  - **Same sound:** every factory rig was rendered with the old and new code and compared sample by sample. Of the 200 rigs that render the same every time, 184 are bit-for-bit identical and the other 16 differ by at most 112 dB below the signal: below what a 16-bit recording can hold. The other 71 rigs use randomness (noise, drift, GLITCH chaos), so they can't be compared that way; they use the same code.
+  - **Not changed:** the window. With DELAY, MODULATION or GLITCH on, their animated displays still take about 17% of a core here, but this machine draws in software; on Windows the plugin draws with the graphics card, where that costs much less. I couldn't measure it on Windows.
+- **Tests:** hidden benchmarks for the next round: the CPU of every factory rig ([rigcpu]), of each drive model and modulation type ([drivecpu]), and a tool that renders every rig to files so two builds can be compared ([rigrender]).
+
 ## 0.82.0
 
 - **A fourteenth album bank, bank T (STEEL MELODY): 15 rigs inspired by the guitar sounds on Soilwork's *Stabbing the Drama*** (2005). **Cleans, effects and leads**: the riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's a melodic metal record where guitar melodies and keyboards trade the hooks, so the rigs lean on harmony and octave leads, CIPHER's synth-like filters, chorus, shimmer and a reverse reverb. Inside the plugin each rig is named for its sound; here is what inspired each one:

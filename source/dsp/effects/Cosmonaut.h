@@ -47,6 +47,7 @@ namespace effects
             double rs = 10.0e3, gCoupling = 0.0, rBase = 100.0e3, gFeedbackCap = 0.0, gDiodeCap = 0.0;
             bool diodes = false;
             double jCoupling = 0.0, jFeedbackCap = 0.0, jDiodeCap = 0.0, vBase = 0.0, iDiode = 0.0;
+            double vBasePrev = 0.0, iDiodePrev = 0.0;   // the step before, to predict the next one's start
         };
 
         Stage input, clip1, clip2;

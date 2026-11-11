@@ -7,6 +7,8 @@
 #include "Parameters.h"
 #include "PluginProcessor.h"
 #include "dsp/TapTempo.h"
+#include "dsp/effects/Drive.h"
+#include "dsp/effects/Modulation.h"
 #include "rigs/UndoHistory.h"
 
 using Catch::Matchers::WithinAbs;
@@ -398,4 +400,112 @@ TEST_CASE ("CPU with everything off", "[.][cpu]")
                 ranged->setValueNotifyingHost (0.0f);
             }
     measure ("every ...On switch off");
+}
+
+// Hidden (run with "[rigcpu]"): the sound's share of one core for every
+// factory rig (no amp model loaded: that's the user's), dearest first, so an
+// optimisation round can see where the time goes. PARAGON_RIGCPU_SECONDS sets
+// how long each is timed (default 2).
+TEST_CASE ("CPU of every factory rig", "[.][rigcpu]")
+{
+    TestRig rig;
+    const auto env = juce::SystemStats::getEnvironmentVariable ("PARAGON_RIGCPU_SECONDS", "2").getDoubleValue();
+    const auto seconds = env > 0.0 ? env : 2.0;
+    std::vector<std::pair<double, juce::String>> costs;
+    for (const auto& entry : rig.processor.getRigLibrary().getEntries())
+    {
+        if (! entry.isFactory)
+            continue;
+        rig.processor.loadRig (entry);
+        rig.play (0.5);   // warm up (and let the last rig's tails go)
+        const auto startTime = juce::Time::getHighResolutionTicks();
+        rig.play (seconds);
+        const auto took = juce::Time::highResolutionTicksToSeconds (juce::Time::getHighResolutionTicks() - startTime);
+        costs.emplace_back (100.0 * took / seconds, entry.rig.getSlotName() + " " + entry.rig.name);
+    }
+    std::sort (costs.begin(), costs.end(), [] (const auto& a, const auto& b) { return a.first > b.first; });
+    double total = 0.0;
+    for (const auto& [cost, name] : costs)
+    {
+        total += cost;
+        std::printf ("%6.2f%%  %s\n", cost, name.toRawUTF8());
+    }
+    std::printf ("%zu rigs, mean %.2f%% of a core\n", costs.size(), total / (double) juce::jmax ((size_t) 1, costs.size()));
+}
+
+// Hidden (run with "[drivecpu]"): each OD / DISTORTION model alone, DRIVE at
+// 3 and 8, and MODULATION's types alone: their share of one core.
+TEST_CASE ("CPU of each drive model and modulation type", "[.][drivecpu]")
+{
+    TestRig rig;
+    // PARAGON_CPU_ONLY=text measures only the settings whose label contains it
+    // (for counting instructions under valgrind, where every run takes long).
+    const auto only = juce::SystemStats::getEnvironmentVariable ("PARAGON_CPU_ONLY", {});
+    const auto measure = [&rig, only] (const juce::String& label)
+    {
+        if (only.isNotEmpty() && ! label.contains (only))
+            return;
+        rig.play (0.5);
+        const auto startTime = juce::Time::getHighResolutionTicks();
+        constexpr double seconds = 3.0;
+        rig.play (seconds);
+        const auto took = juce::Time::highResolutionTicksToSeconds (juce::Time::getHighResolutionTicks() - startTime);
+        std::printf ("%-32s %6.2f%% of a core\n", label.toRawUTF8(), 100.0 * took / seconds);
+    };
+    auto& drive = rig.parameter (ParamIDs::driveModel);
+    rig.parameter (ParamIDs::driveOn).setValueNotifyingHost (1.0f);
+    for (int model = 0; model < effects::Drive::modelNames.size(); ++model)
+        for (const float gain : { 3.0f, 8.0f })
+        {
+            drive.setValueNotifyingHost (drive.convertTo0to1 ((float) model));
+            rig.parameter (ParamIDs::driveGain).setValueNotifyingHost (rig.parameter (ParamIDs::driveGain).convertTo0to1 (gain));
+            measure ("drive " + effects::Drive::modelNames[model] + " at " + juce::String ((int) gain));
+        }
+    rig.parameter (ParamIDs::driveOn).setValueNotifyingHost (0.0f);
+    auto& modType = rig.parameter (ParamIDs::modType);
+    rig.parameter (ParamIDs::modOn).setValueNotifyingHost (1.0f);
+    for (int type = 0; type < effects::Modulation::typeNames.size(); ++type)
+    {
+        modType.setValueNotifyingHost (modType.convertTo0to1 ((float) type));
+        measure ("mod " + effects::Modulation::typeNames[type]);
+    }
+}
+
+// Hidden (run with "[rigrender]"): writes every factory rig's output (a
+// strummed phrase, 2 s, the left channel as 32-bit floats) to the folder in
+// PARAGON_RIGRENDER, one file per rig, so two builds can be compared sample
+// by sample (an optimisation must not change the sound).
+TEST_CASE ("Render every factory rig to files", "[.][rigrender]")
+{
+    const auto folder = juce::File (juce::SystemStats::getEnvironmentVariable ("PARAGON_RIGRENDER", {}));
+    REQUIRE (folder.isDirectory());
+    TestRig rig;
+    for (const auto& entry : rig.processor.getRigLibrary().getEntries())
+    {
+        if (! entry.isFactory)
+            continue;
+        rig.processor.loadRig (entry);
+        rig.processor.reset();
+        rig.phase = 0;
+        juce::AudioBuffer<float> buffer (2, blockSize);
+        juce::MidiBuffer midi;
+        juce::MemoryOutputStream out;
+        const double notes[] = { 82.4, 110.0, 146.8, 196.0, 246.9, 329.6 };
+        for (int b = 0; b < (int) (2.0 * sampleRate / blockSize); ++b)
+        {
+            buffer.clear();
+            for (int i = 0; i < blockSize; ++i)
+            {
+                const auto t = (double) (b * blockSize + i) / sampleRate;
+                const auto pluck = std::fmod (t, 0.5);
+                auto v = 0.0;
+                for (const auto hz : notes)
+                    v += std::sin (juce::MathConstants<double>::twoPi * hz * t);
+                buffer.setSample (0, i, (float) (0.08 * std::exp (-4.0 * pluck) * v));
+            }
+            rig.processor.processBlock (buffer, midi);
+            out.write (buffer.getReadPointer (0), (size_t) blockSize * sizeof (float));
+        }
+        folder.getChildFile (entry.rig.getSlotName() + ".f32").replaceWithData (out.getData(), out.getDataSize());
+    }
 }

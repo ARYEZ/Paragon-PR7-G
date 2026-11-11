@@ -49,7 +49,7 @@ namespace effects
 
     void Cosmonaut::Stage::reset() noexcept
     {
-        jCoupling = jFeedbackCap = jDiodeCap = vBase = iDiode = 0.0;
+        jCoupling = jFeedbackCap = jDiodeCap = vBase = iDiode = vBasePrev = iDiodePrev = 0.0;
     }
 
     double Cosmonaut::Stage::step (double sourceVolts, double extraSourceOhms) noexcept
@@ -62,7 +62,10 @@ namespace effects
         const auto across = 1.0 / feedbackOhms + gFeedbackCap;   // feedback R and C, collector to base
         const auto loop = openLoopGain + 1.0;                      // collector - base = -(A + 1) x base
 
-        auto vb = vBase, id = diodes ? iDiode : 0.0;
+        // Start from where the last two samples were heading, not where the
+        // last one ended (0.82.1): at 8x the signal moves smoothly, so Newton
+        // then needs about 1.3 steps instead of 3.1. The answer is the same.
+        auto vb = 2.0 * vBase - vBasePrev, id = diodes ? 2.0 * iDiode - iDiodePrev : 0.0;
         for (int iteration = 0; iteration < 16; ++iteration)
         {
             // Kirchhoff at the base: the input, the feedback R and C, the diodes and the base resistor.
@@ -77,8 +80,10 @@ namespace effects
 
             // The diodes, in series with their capacitor, carry the same current.
             const auto vd = std::clamp (u - (id + jDiodeCap) / gDiodeCap, -1.5, 1.5);
-            const auto current = 2.0 * diodeSaturation * std::sinh (vd / diodeThermal);
-            const auto slope = 2.0 * diodeSaturation / diodeThermal * std::cosh (vd / diodeThermal);
+            // 2 Is sinh (vd / Vt) and its slope, from one exp (0.82.1: was sinh and cosh).
+            const auto e = std::exp (vd / diodeThermal), inverse = 1.0 / e;
+            const auto current = diodeSaturation * (e - inverse);
+            const auto slope = diodeSaturation / diodeThermal * (e + inverse);
             const auto f2 = id - current;
             const auto d21 = slope * loop, d22 = 1.0 + slope / gDiodeCap;
             const auto determinant = d11 * d22 - d21;
@@ -87,7 +92,10 @@ namespace effects
             dvb = std::clamp (dvb, -0.05, 0.05);   // small steps: the diodes' curve is steep
             vb += dvb;
             id += did;
-            if (std::abs (dvb) < 1.0e-9 && std::abs (f2) < 1.0e-9)
+            // Done when this step was tiny: Newton converges quadratically,
+            // so the next one would be around 1e-14 V (0.82.1: it used to take
+            // one more full iteration to see that).
+            if (std::abs (dvb) < 1.0e-7 && std::abs (did) < 1.0e-9)
                 break;
         }
 
@@ -104,6 +112,8 @@ namespace effects
         jFeedbackCap = 2.0 * gFeedbackCap * u - jFeedbackCap;
         if (diodes)
             jDiodeCap = 2.0 * (id + jDiodeCap) - jDiodeCap;
+        vBasePrev = vBase;
+        iDiodePrev = iDiode;
         vBase = vb;
         iDiode = id;
         return -openLoopGain * vb;

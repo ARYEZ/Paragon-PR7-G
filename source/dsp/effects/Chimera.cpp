@@ -172,7 +172,7 @@ namespace effects
     {
         for (auto* c : { &gainStage, &cleanFeed, &diodeFeed, &treble, &toOutput, &bleed })
             c->reset();
-        jCoupling = diodeNode = 0.0;
+        jCoupling = diodeNode = diodeNodePrev = 0.0;
     }
 
     void Chimera::setGain (double knob) noexcept
@@ -214,15 +214,21 @@ namespace effects
         // virtual ground; Newton finds the diode node.
         const auto sourceR = clipOhms + 1.0 / gCoupling;
         const auto source = stage - jCoupling / gCoupling;
-        auto v = diodeNode;
+        // Start from where the last two samples were heading (0.82.1): the
+        // signal moves smoothly at the oversampled rate, so fewer steps.
+        auto v = 2.0 * diodeNode - diodeNodePrev;
         for (int iteration = 0; iteration < 20; ++iteration)
         {
             const auto x = std::clamp (v / diodeThermal, -40.0, 40.0);
-            const auto f = (source - v) / sourceR - 2.0 * diodeSaturation * std::sinh (x) - v / diodeLoadOhms;
-            const auto d = -1.0 / sourceR - 2.0 * diodeSaturation / diodeThermal * std::cosh (x) - 1.0 / diodeLoadOhms;
+            const auto ex = std::exp (x), exInverse = 1.0 / ex;   // 2 Is sinh and its slope from one exp (0.82.1)
+            const auto f = (source - v) / sourceR - diodeSaturation * (ex - exInverse) - v / diodeLoadOhms;
+            const auto d = -1.0 / sourceR - diodeSaturation / diodeThermal * (ex + exInverse) - 1.0 / diodeLoadOhms;
             const auto step = std::clamp (-f / d, -0.1, 0.1);
             v += step;
-            if (std::abs (step) < 1.0e-9)
+            // Done when this step was under 0.1 uV: Newton converges
+            // quadratically, so the next would be about 1e-14 V (0.82.1:
+            // stopping at 1e-9 cost one more full step to see that).
+            if (std::abs (step) < 1.0e-7)
                 break;
         }
         if (! std::isfinite (v))
@@ -231,6 +237,7 @@ namespace effects
             return 0.0;
         }
         jCoupling = 2.0 * (source - v) / sourceR + jCoupling;
+        diodeNodePrev = diodeNode;
         diodeNode = v;
         return v;
     }
