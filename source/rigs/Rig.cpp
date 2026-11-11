@@ -42,6 +42,7 @@ juce::String Rig::expansionName (int bankIndex)
         "VELVET ALTAR",    // Q
         "SUNKEN DREAM",    // R
         "FUZZ COSMOS",     // S
+        "STEEL MELODY",    // T
     };
     static_assert (std::size (names) == (size_t) (numBanks - numMainBanks), "a name for each expansion bank");
     if (! isExpansionBank (bankIndex) || bankIndex >= numBanks)

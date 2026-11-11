@@ -961,3 +961,10 @@ TEST_CASE ("Bank S, a thirteenth album's guitar sounds: cleans, effects and lead
                           "Erased", "Micro", "Cuts", "Screenager", "Darkshines", "Feeling", "Good", "Megalomania", "Futurism",
                           "Origin", "Of", "Symmetry", "Muse" });
 }
+
+TEST_CASE ("Bank T, a fourteenth album's guitar sounds: cleans, effects and leads that do what they say", "[rigs][album]")
+{
+    checkAlbumBank (19, { "Stabbing", "The", "Drama", "One", "With", "Flies", "Weapon", "Of", "Vanity", "Crestfallen", "Nerve",
+                          "Stalemate", "Distance", "Observation", "Slave", "Fate", "In", "Motion", "Blind", "Eye", "Halo", "If",
+                          "Possible", "Wherever", "Thorns", "May", "Grow", "Killed", "By", "Ignition", "Soilwork" });
+}

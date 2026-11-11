@@ -2,6 +2,38 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.82.0
+
+- **A fourteenth album bank, bank T (STEEL MELODY): 15 rigs inspired by the guitar sounds on Soilwork's *Stabbing the Drama*** (2005). **Cleans, effects and leads**: the riffs are your amp capture's job, and the rigs keep the amp and cab you have loaded. It's a melodic metal record where guitar melodies and keyboards trade the hooks, so the rigs lean on harmony and octave leads, CIPHER's synth-like filters, chorus, shimmer and a reverse reverb. Inside the plugin each rig is named for its sound; here is what inspired each one:
+
+  | Rig | What it does | Inspired by |
+  |---|---|---|
+  | **T01 Twin Harmony Lead** | A second voice a fifth above, boosted, an echo | The album's twin-guitar melodies |
+  | **T02 Synth Glide Lead** | CIPHER's filter opening with each note, chorus, echo: a keyboard-like lead | "Weapon of Vanity" |
+  | **T03 Crystal Arpeggio Clean** | A bright chorus, dotted-eighth echoes, a hall | "The Crestfallen" |
+  | **T04 Shred Echo Lead** | Boosted, an echo that ducks under fast runs, a hall | "Stabbing the Drama" (its solo) |
+  | **T05 Twitch Gate Stutter** | The sound chopped on the sixteenths | "Nerve" |
+  | **T06 Ballad Dimension Clean** | A soft dimension chorus and a plate | "Distance" |
+  | **T07 Industrial Pulse Riff** | CIPHER's resonant filter plucked every sixteenth, lightly crushed | "Observation Slave" |
+  | **T08 Wide Doubled Lead** | Boosted, doubled side to side, an echo | "Fate in Motion" |
+  | **T09 Dark Phase Clean** | A slow phaser into a tape echo | "Blind Eye Halo" |
+  | **T10 Atmosphere Swell Pad** | Volume swells (the pedal) into a shimmer and a cathedral | "If Possible" |
+  | **T11 Octave Melody Lead** | An octave above your line, boosted, an echo | "Stalemate" |
+  | **T12 Radio Intro Clean** | A clean through an old AM radio | "One with the Flies" |
+  | **T13 Sub Octave Groove** | An octave below your riff | "Wherever Thorns May Grow" |
+  | **T14 Wah Solo Lead** | The pedal is a wah, boosted, a plate | The album's solos |
+  | **T15 Reverse Haze Clean** | A reverse reverb swelling in behind each note, a slow chorus | The album's quiet breaks |
+
+  - **What's documented:**
+    - Daniel Bergstrand produced it;
+    - it was recorded in 2004 at Dug Out and then Fascination Street studios in Sweden;
+    - Peter Wichers played lead guitar and Ola Frenning rhythm, with Sven Karlsson on keyboards.
+  - **The sounds are our reading.** I found nothing published on the guitar effects. Every rig and song link is my guess. **I couldn't listen to the album or the rigs here.** Tell me which are off and how.
+  - **T01's harmony is a fixed fifth**, which suits any key; a third would have to follow the key, and the pitch shifter doesn't know the key.
+  - **T10 swells from the heel**, so rock the pedal back first; **T14's pedal is the wah**.
+- **The PRESETS page** has bank T on its own line under EXPANSIONS, named STEEL MELODY (our name).
+- **Tests:** bank T goes through the shared album-bank checks (names free of song titles, each rig doing what its tags say, levels within 6 dB). The check caught a song word in a first draft's name ("Nerve"), which is now "Twitch".
+
 ## 0.81.0
 
 - **The PRESETS page lays out its banks like PR7-K's:**

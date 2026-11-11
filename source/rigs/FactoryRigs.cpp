@@ -93,6 +93,7 @@ namespace
     constexpr float eighthTriplet = 8;   // DELAY / MOD sync: 1/8 triplet
     constexpr int R = 17;                // bank R: an album's guitar sounds (Deftones, White Pony)
     constexpr int S = 18;                // bank S: an album's guitar sounds (Muse, Origin of Symmetry)
+    constexpr int T = 19;                // bank T: an album's guitar sounds (Soilwork, Stabbing the Drama)
 }
 
 std::vector<Rig> makeFactoryRigs()
@@ -2105,6 +2106,125 @@ std::vector<Rig> makeFactoryRigs()
             { expressionTarget, pedalWah },
             { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 6 }, { driveTone, 6 }, { driveLevel, 5 },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+        //======================================================================
+        // Bank T: an album's guitar sounds, inspired by Soilwork's Stabbing
+        // the Drama (2005; the owner's fourteenth album bank). Cleans, effects
+        // and leads: the riffs are the amp capture's job. Documented: Daniel
+        // Bergstrand produced it; recorded at Dug Out and Fascination Street
+        // studios in 2004; Peter Wichers (lead) and Ola Frenning (rhythm) on
+        // guitars, Sven Karlsson on keyboards. Nothing is published on the
+        // guitar effects, so these are our reading of a melodic metal record
+        // where guitar melodies and keyboards trade the hooks.
+
+        // A twin-guitar harmony: a second voice a fifth above, boosted, an echo.
+        make ("Twin Harmony Lead", T, 1, "Album,Lead,Pitch", {
+            { rigLevel, -8 },
+            { fpOn, 1 }, { fpType, pitchShifter }, { fpInterval, 7 }, { fpMix, 0.4f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.18f } }),
+
+        // A keyboard-like lead: CIPHER's ladder filter opening with each note, a chorus, an echo.
+        withCipher (make ("Synth Glide Lead", T, 2, "Album,Lead,Filter", {
+            { rigLevel, 3 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { cipherOn, 1 }, { "cipher1Type", 1 }, { "cipher1Main", 0.35f }, { "cipher1P1", 0.55f },
+            { "cipher1EnvAmount", 0.55f }, { "cipher1Speed", 6 }, { "cipher1Glide", 40 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.4f }, { modMix, 0.35f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+            { { 1, 7 } }),
+
+        // A crystal arpeggio: a bright chorus, dotted-eighth echoes, a hall.
+        make ("Crystal Arpeggio Clean", T, 3, "Album,Clean,Modulation,Delay", {
+            { rigLevel, 5.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.7f }, { modDepth, 0.45f }, { modMix, 0.45f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.65f }, { reverbMix, 0.25f } }),
+
+        // A shred solo: boosted, a ducking echo that stays out of the fast runs, a hall.
+        make ("Shred Echo Lead", T, 4, "Album,Lead,Delay", {
+            { rigLevel, -11 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, ducking }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.2f } }),
+
+        // A stop-start break: the sound chopped on the sixteenths (on the song's grid when your DAW plays).
+        make ("Twitch Gate Stutter", T, 5, "Album,FX,Glitch", {
+            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchDensity, 4 }, { glitchChaos, 0 }, { glitchMix, 1 } }),
+
+        // A ballad clean: a soft dimension chorus and a plate.
+        make ("Ballad Dimension Clean", T, 6, "Album,Clean,Modulation", {
+            { rigLevel, 5 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, dimension }, { modRate, 0.4f }, { modDepth, 0.55f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+
+        // An industrial pulse: CIPHER's resonant band-pass plucked every sixteenth, crushed a little.
+        withCipher (make ("Industrial Pulse Riff", T, 7, "Album,FX,Filter", {
+            { cipherOn, 1 }, { rigLevel, 0 },
+            { "cipher1Type", 2 }, { "cipher1Main", 0.4f }, { "cipher1P1", 0.6f },
+            { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 14 },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 4 }, { lofiNoise, 0 }, { lofiMix, 0.35f } }),
+            { { 1, 7 } }),
+
+        // A wide lead: boosted, doubled side to side, an echo.
+        make ("Wide Doubled Lead", T, 8, "Album,Lead,Modulation", {
+            { rigLevel, -9 },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.6f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
+
+        // A dark clean: a slow phaser into a tape echo, a room.
+        make ("Dark Phase Clean", T, 9, "Album,Clean,Modulation,Delay", {
+            { rigLevel, 10.5f },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, phaser }, { modRate, 0.3f }, { modDepth, 0.6f },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+
+        // An atmospheric swell: volume swells (from the heel) into a shimmer and a cathedral.
+        make ("Atmosphere Swell Pad", T, 10, "Album,Clean,Ambient,Expression", {
+            { rigLevel, 3.5f },
+            { expressionTarget, pedalVolume },
+            { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+
+        // An octave melody: an octave above your line, boosted, an echo.
+        make ("Octave Melody Lead", T, 11, "Album,Lead,Pitch,Octave", {
+            { rigLevel, -9.5f },
+            { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.9f }, { octUp, 0.6f },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
+
+        // A radio intro: a clean through an old AM radio.
+        make ("Radio Intro Clean", T, 12, "Album,Clean,Lo-Fi", {
+            { rigLevel, 8 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 5 }, { lofiNoise, 2 }, { lofiMix, 0.8f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
+
+        // A low-end layer: an octave below your riff, for the heaviest parts.
+        make ("Sub Octave Groove", T, 13, "Album,FX,Pitch,Sub", {
+            { rigLevel, -2 },
+            { octOn, 1 }, { octSubOne, 0.8f }, { octDry, 0.9f }, { octUp, 0 } }),
+
+        // A wah solo: the pedal is a wah, boosted, a plate.
+        make ("Wah Solo Lead", T, 14, "Album,Lead,Wah,Expression", {
+            { rigLevel, -7 },
+            { expressionTarget, pedalWah },
+            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+
+        // A hazy clean: a reverse reverb swelling in behind each note, a slow chorus.
+        make ("Reverse Haze Clean", T, 15, "Album,Clean,Ambient", {
+            { rigLevel, 9 },
+            { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { modOn, 1 }, { modType, chorus }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.35f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.65f }, { reverbMix, 0.45f } }),
     };
 }
 
