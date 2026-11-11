@@ -16,7 +16,7 @@
 // RIG LEVEL for balancing rigs against each other instead.
 struct Rig
 {
-    static constexpr int numBanks = 19;          // A to D, E for the song-inspired rigs, F to N and P to S album banks, O CIPHER
+    static constexpr int numBanks = 20;          // A to D, E for the song-inspired rigs, F to N and P to T album banks, O CIPHER
     static constexpr int maxNumber = 99;
     // The PRESETS page's layout, as on PR7-K: banks A-E on one row, then the
     // expansions (F on: the album banks and CIPHER's) a bank per line, each
@@ -55,7 +55,7 @@ struct Rig
     bool keepAmpAndCab = false;
 
     juce::String getSlotName() const;           // e.g. "A01"
-    static juce::String bankName (int bank);    // "A".."S"
+    static juce::String bankName (int bank);    // "A".."T"
 
     std::unique_ptr<juce::XmlElement> toXml() const;
     // Returns nothing if the XML isn't a rig.

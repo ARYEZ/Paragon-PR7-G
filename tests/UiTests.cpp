@@ -1051,7 +1051,7 @@ TEST_CASE ("PRESETS page: banks A-E on one row, the expansions a bank per line i
 
     const auto& view = browser.getExpansionView();
     const auto count = Rig::numBanks - Rig::numMainBanks;
-    REQUIRE (count == 14);
+    REQUIRE (count == 15);
     REQUIRE (view.getHeight() > 100);
     for (int k = 0; k < count; ++k)
     {
