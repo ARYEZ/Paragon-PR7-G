@@ -33,6 +33,7 @@ Each version's notes appear on its GitHub Release page.
   - **T10 swells from the heel**, so rock the pedal back first; **T14's pedal is the wah**.
 - **The PRESETS page** has bank T on its own line under EXPANSIONS, named STEEL MELODY (our name).
 - **Tests:** bank T goes through the shared album-bank checks (names free of song titles, each rig doing what its tags say, levels within 6 dB). The check caught a song word in a first draft's name ("Nerve"), which is now "Twitch".
+- **Build:** the Linux build's package download now gives up and retries when Ubuntu's servers stall, switching to other official Ubuntu mirrors (this release's first builds hung there for over half an hour, then GitHub's Ubuntu mirror stopped answering); nothing in the plugin changes.
 
 ## 0.81.0
 

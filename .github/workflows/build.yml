@@ -34,14 +34,34 @@ jobs:
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
+        # A stalled Ubuntu mirror once hung this step for over half an hour (0.82.0), and the session can't
+        # cancel or re-run jobs: so each try gives up after 5 minutes, apt retries its downloads, and the
+        # step tries three times before failing (in 20 minutes at worst, not the job's 6 hours).
+        timeout-minutes: 20
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build xvfb \
-            libasound2-dev libjack-jackd2-dev ladspa-sdk \
-            libfreetype-dev libfontconfig1-dev \
-            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
-            libxrandr-dev libxrender-dev libxi-dev \
-            libegl-dev libglu1-mesa-dev mesa-common-dev
+          APT="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for attempt in 1 2 3; do
+            if sudo timeout 300 apt-get $APT update &&
+               sudo timeout 300 apt-get $APT install -y ninja-build xvfb \
+                 libasound2-dev libjack-jackd2-dev ladspa-sdk \
+                 libfreetype-dev libfontconfig1-dev \
+                 libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
+                 libxrandr-dev libxrender-dev libxi-dev \
+                 libegl-dev libglu1-mesa-dev mesa-common-dev; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed or stalled; retrying"
+            sudo dpkg --configure -a || true   # finish anything a killed install left half done
+            # 0.82.0: GitHub's own Ubuntu mirror and archive.ubuntu.com both stopped answering for a while,
+            # so the retries use other official Ubuntu mirrors (the runner reads its mirrors from this list).
+            printf '%s\n' http://mirrors.edge.kernel.org/ubuntu/ http://mirror.math.princeton.edu/pub/ubuntu/ \
+              http://mirrors.mit.edu/ubuntu/ | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+            for list in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+              [ -f "$list" ] && sudo sed -i -E 's#https?://(azure\.)?archive\.ubuntu\.com/ubuntu/?#http://mirrors.edge.kernel.org/ubuntu/#g' "$list"
+            done
+            sleep 10
+          done
+          exit 1
 
       - name: Configure
         shell: bash
