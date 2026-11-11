@@ -18,6 +18,7 @@
 #include "ui/Finish.h"
 #include "ui/LedDisplay.h"
 #include "ui/PerformanceControls.h"
+#include "ui/RigBrowser.h"
 #include "ui/SignalChain.h"
 
 using Catch::Matchers::WithinAbs;
@@ -1038,4 +1039,36 @@ TEST_CASE ("A screen draws the same whatever colour was set before it (its kept 
         for (int x = 0; x < opaque.getWidth(); ++x)
             worst = juce::jmax (worst, std::abs ((int) opaque.getPixelAt (x, y).getRed() - (int) faint.getPixelAt (x, y).getRed()));
     CHECK (worst == 0);
+}
+
+TEST_CASE ("PRESETS page: banks A-E on one row, the expansions a bank per line in a list that scrolls", "[ui][rigs]")
+{
+    // The PR7-K layout (the owner's request): each album bank (and CIPHER's) on a line of its own with
+    // its name, so any number of banks fits.
+    ParagonX1AudioProcessor processor;
+    RigBrowser browser (processor);
+    browser.setSize (1052, 556);   // as on the PRESETS page
+
+    const auto& view = browser.getExpansionView();
+    const auto count = Rig::numBanks - Rig::numMainBanks;
+    REQUIRE (count == 14);
+    REQUIRE (view.getHeight() > 100);
+    for (int k = 0; k < count; ++k)
+    {
+        const auto* button = browser.getExpansionButton (k);
+        INFO (Rig::bankName (Rig::numMainBanks + k));
+        // Every bank a full line with its name, none squeezed or two to a row.
+        CHECK (button->getHeight() >= 20);
+        CHECK (button->getWidth() > 120);
+        CHECK (button->getX() == 0);
+        CHECK (Rig::expansionName (Rig::numMainBanks + k).isNotEmpty());
+        if (k > 0)
+            CHECK (button->getY() > browser.getExpansionButton (k - 1)->getBottom());
+    }
+    CHECK (Rig::expansionName (14) == "CIPHER");
+    CHECK (Rig::expansionName (4).isEmpty());   // A-E have none
+
+    // Choosing the last bank scrolls it into view.
+    browser.showFilter (0, Rig::numBanks - 1);
+    CHECK (view.getViewArea().contains (browser.getExpansionButton (count - 1)->getBounds()));
 }
