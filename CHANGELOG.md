@@ -2,6 +2,15 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.82.2
+
+- **AURORA is 10% less bright.** Full pearl white was too much to look at for long, almost dazzling. Now the pearl is drawn at 90% of its old brightness: still clearly a white pearl unit, without the glare. Pure white becomes 230 out of 255.
+  - All of the pearl is dimmed the same: the chassis, the face, the panels, the pedal's bay, the rack unit and the expression pedal, shine and highlights included.
+  - The lettering, the red printed lines, the badge, the neon rings, the keys, the knobs and the screens keep their own colours, so they stand out a little more against the softer pearl.
+  - The same 10% PR7-B settled on (chosen from mock-ups of 10%, 15% and 25% less; 25% looked grey).
+  - **OBSIDIAN is unchanged**, to the pixel.
+- **Tests:** a new test checks every pearl pixel comes out at 90% on AURORA, and that OBSIDIAN draws exactly as before.
+
 ## 0.82.1
 
 - **An optimisation round: the drive pedals and the AEON flanger now use far less CPU, with the same sound.** Measured by counting the processor's instructions (the same count every run; this machine's stopwatch timings varied too much between runs to trust), with the pedal on at DRIVE 8:
