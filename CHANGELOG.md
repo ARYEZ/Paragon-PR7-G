@@ -2,6 +2,31 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.89.0
+
+- **The OCTAVER gains an ANALOG switch, modelled on the BOSS OC-2 Octave** (1982), built from its factory schematic (via Hobby-Hour), which you sent. With it off (the default) the OCTAVER is as before, so your rigs sound the same.
+  - **The controls:** 2 DOWN, 1 DOWN and DRY are the OC-2's OCT 2, OCT 1 and DIRECT, mixed through its own passive mixer. 1 UP is hidden while ANALOG is on: the OC-2 has no octave up.
+  - **How it makes octaves:** it hears the note's pitch through a low-pass filter at about 700 Hz, two peak followers and two comparators. Logic flip-flops then divide that pitch by 2 and by 4.
+  - **The octaves aren't synthesised:** they're your guitar, flipped up and down at half (and a quarter of) the note's pitch, then smoothed (about 320 Hz for OCT 1, 150 Hz for OCT 2). So they follow how hard you play.
+  - **Its trick:** before each switch, a capacitor and a germanium diode shift the wave up, and the switch turns that shift into a strong square wave an octave down: the OC-2's thick, synth-like octave. Play softer and the diode does less, so the octaves (OCT 2 most of all) fade faster than your playing, as on the pedal.
+  - **A trace of your original note** leaks into the octave (about 26 dB down), because the switch stage isn't quite symmetric (+0.50× one way, -0.57× the other, from its resistors).
+  - **Like the pedal, it wants single notes.** Chords, fading notes and very high notes confuse its tracking, which is part of its sound.
+  - **Measured here:** OCT 1 about 8 dB under the note, OCT 2 about 5 dB under it, tracking from the low E to the 12th fret of the high E.
+- **What's our reading:**
+  - the switches and flip-flops are ideal (they switch within a sample, at 4× the rate);
+  - the germanium diodes are a typical small-signal part;
+  - DRY at full plays your guitar at its own level, so switching ANALOG on and off doesn't jump in level. The real pedal is about 4 dB louder there.
+- **Why a switch, not a list:** a STYLE list would have squeezed the PITCH panel's knobs below their full size.
+- **I couldn't listen to it here.** Tell me how it tracks and growls under your fingers.
+- **CPU:** about 7% of a core while ANALOG is on.
+- **Tests** against the circuit:
+  - the octaves (one and two down), and the small trace of the note;
+  - DRY at unity, and 1 UP doing nothing;
+  - the octave following your playing level;
+  - tracking across the neck;
+  - silence staying silent;
+  - the passive mixer.
+
 ## 0.88.0
 
 - **A new DELAY type, Brigade, modelled on the BOSS DM-2 Analog Delay** (1981), from its factory schematic and an old service manual's adjustment notes (via Hobby-Hour), which you sent.

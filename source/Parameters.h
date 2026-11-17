@@ -202,6 +202,7 @@ namespace ParamIDs
     inline constexpr auto octSubOne      = "octSubOne";
     inline constexpr auto octDry         = "octDry";
     inline constexpr auto octUp          = "octUp";
+    inline constexpr auto octAnalog      = "octAnalog";        // the OCTAVER's ANALOG switch (PR7-G 0.89.0)
     inline constexpr auto freezeOn       = "freezeOn";         // FREEZE
     inline constexpr auto freezeLevel    = "freezeLevel";
     inline constexpr auto freezeAttack   = "freezeAttack";     // ms

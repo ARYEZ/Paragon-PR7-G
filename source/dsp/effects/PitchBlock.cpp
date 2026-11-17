@@ -22,6 +22,10 @@ namespace effects
         for (auto* level : { &subTwoLevel, &subOneLevel, &dryLevel, &upLevel })
             level->reset (sampleRate, 0.05);
         octaverBypass.prepare (sampleRate, maxBlockSize);
+        analogOctave.prepare (sampleRate, maxBlockSize);
+        analogDirect.assign ((size_t) maxBlockSize, 0.0f);
+        analogOne.assign ((size_t) maxBlockSize, 0.0f);
+        analogTwo.assign ((size_t) maxBlockSize, 0.0f);
 
         recent.assign ((size_t) (recentSeconds * sampleRate), 0.0f);
         frozen.assign (recent.size(), 0.0f);
@@ -62,9 +66,30 @@ namespace effects
         subOneLevel.setTargetValue (juce::jlimit (0.0f, 1.0f, settings.subOne));
         dryLevel.setTargetValue (juce::jlimit (0.0f, 1.0f, settings.dry));
         upLevel.setTargetValue (juce::jlimit (0.0f, 1.0f, settings.upOne));
+        if (settings.analog != wasAnalog)
+        {
+            // A different style: start it from silence rather than from what it last held.
+            wasAnalog = settings.analog;
+            analogOctave.reset();
+            for (auto* shifter : { &downTwo, &downOne, &upOneShifter })
+                shifter->reset();
+        }
         octaverBypass.process (monoBlock, settings.octaverOn, [&] (juce::dsp::AudioBlock<float> block)
         {
             auto* x = block.getChannelPointer (0);
+            if (settings.analog)
+            {
+                // ANALOG: the pedal's three voices, through its passive mixer.
+                const auto count = (int) block.getNumSamples();
+                analogOctave.process (x, analogDirect.data(), analogOne.data(), analogTwo.data(), count);
+                for (int i = 0; i < count; ++i)
+                {
+                    upLevel.skip (1);
+                    x[i] = AnalogOctave::mix (analogDirect[(size_t) i], analogOne[(size_t) i], analogTwo[(size_t) i],
+                                              dryLevel.getNextValue(), subOneLevel.getNextValue(), subTwoLevel.getNextValue());
+                }
+                return;
+            }
             for (size_t i = 0; i < block.getNumSamples(); ++i)
             {
                 const auto in = x[i];

@@ -7,6 +7,7 @@
 #include "dsp/effects/PitchShifter.h"
 #include "dsp/effects/Modulation.h"
 #include "dsp/effects/Delay.h"
+#include "dsp/effects/AnalogOctave.h"
 #include "dsp/effects/Reverb.h"
 #include "dsp/effects/Glitch.h"
 #include "dsp/effects/TalkBox.h"
@@ -3179,3 +3180,76 @@ TEST_CASE ("Brigade: the compact analog delay's circuit", "[effects][delay][brig
         CHECK_THAT (dB (rms (out, 0.22, 0.28) / rms (burst, 0.02, 0.08)), WithinAbs (0.0, 1.5));
     }
 }
+
+TEST_CASE ("OCTAVER ANALOG: the brown octave pedal's flip-flop octaves", "[effects][pitch][analogoctave]")
+{
+    const auto run = [] (float twoDown, float oneDown, float dry, const std::vector<float>& in)
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::octOn, 1.0f);
+        rig.set (ParamIDs::octAnalog, 1.0f);
+        rig.set (ParamIDs::octSubTwo, twoDown);
+        rig.set (ParamIDs::octSubOne, oneDown);
+        rig.set (ParamIDs::octDry, dry);
+        rig.set (ParamIDs::octUp, 1.0f);   // ANALOG has no octave up: this must do nothing
+        return rig.runMono (in);
+    };
+    const auto note = sine (220.0, 0.3f, 1.0);
+
+    SECTION ("1 DOWN (its OCT 1): the note an octave down, with a trace of the note itself")
+    {
+        const auto out = run (0.0f, 1.0f, 0.0f, note);
+        const auto octave = dB (levelAt (out, 110.0, 0.5) / 0.3f), leak = dB (levelAt (out, 220.0, 0.5) / 0.3f);
+        CAPTURE (octave, leak);
+        CHECK (octave > -12.0f);
+        CHECK (leak < octave - 12.0f);
+        CHECK (leak > -40.0f);   // the switch stage is +0.50x one way, -0.57x the other: not quite cancelled
+    }
+
+    SECTION ("2 DOWN (its OCT 2): two octaves down")
+    {
+        const auto out = run (1.0f, 0.0f, 0.0f, note);
+        const auto twoDown = dB (levelAt (out, 55.0, 0.5) / 0.3f), oneDown = dB (levelAt (out, 110.0, 0.5) / 0.3f);
+        CAPTURE (twoDown, oneDown);
+        CHECK (twoDown > -10.0f);
+        CHECK (oneDown < twoDown - 12.0f);
+    }
+
+    SECTION ("DRY (its DIRECT) at full alone plays the guitar at its own level; 1 UP does nothing")
+    {
+        const auto out = run (0.0f, 0.0f, 1.0f, note);
+        CHECK_THAT (dB (levelAt (out, 220.0, 0.5) / 0.3f), WithinAbs (0.0, 0.3));
+        CHECK (levelAt (out, 440.0, 0.5) < 0.01f * levelAt (out, 220.0, 0.5));
+    }
+
+    SECTION ("The octave is the guitar itself, flipped: it follows how hard you play")
+    {
+        const auto loud = run (0.0f, 1.0f, 0.0f, note), soft = run (0.0f, 1.0f, 0.0f, sine (220.0, 0.03f, 1.0));
+        CAPTURE (dB (levelAt (loud, 110.0, 0.5)), dB (levelAt (soft, 110.0, 0.5)));
+        CHECK (dB (levelAt (soft, 110.0, 0.5)) < dB (levelAt (loud, 110.0, 0.5)) - 15.0f);
+    }
+
+    SECTION ("It tracks from the low E to the 12th fret of the high E")
+    {
+        for (const auto hz : { 82.4, 330.0, 659.0 })
+        {
+            INFO (hz << " Hz");
+            const auto out = run (0.0f, 1.0f, 0.0f, sine (hz, 0.3f, 1.0));
+            CHECK (dB (levelAt (out, hz / 2.0, 0.5) / 0.3f) > -12.0f);
+        }
+    }
+
+    SECTION ("Silence in, silence out")
+    {
+        CHECK (rms (run (1.0f, 1.0f, 1.0f, silence (1.0)), 0.2) < 1.0e-6f);
+    }
+
+    SECTION ("The passive mixer: each pot through 100k into one node, as the pedal's")
+    {
+        using effects::AnalogOctave;
+        CHECK_THAT (AnalogOctave::mix ((float) AnalogOctave::inputGain, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f), WithinAbs (1.0, 1.0e-6));
+        // All three up: each a third of the node.
+        CHECK_THAT (AnalogOctave::mix (1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f), WithinAbs (3.0 / AnalogOctave::inputGain, 1.0e-6));
+    }
+}
+

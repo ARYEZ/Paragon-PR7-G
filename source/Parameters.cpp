@@ -431,6 +431,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     layout.add (makeFloat (ParamIDs::cipherFollowHold, "Cipher Follower Hold", skewed (0.0f, 1000.0f, 100.0f, 1.0f), 0.0f, v38, asMs));
     layout.add (makeFloat (ParamIDs::cipherFollowDecay, "Cipher Follower Decay", skewed (1.0f, 5000.0f, 300.0f, 1.0f), 200.0f, v38, asTime));
     layout.add (makeFloat (ParamIDs::cipherFollowGate, "Cipher Follower Gate", { -90.0f, -6.0f, 0.1f }, -60.0f, v38, asDb));
+
+    // PR7-G 0.89.0: the OCTAVER's ANALOG switch (off: the shifters, as before).
+    constexpr int v39 = 39;
+    layout.add (makeSwitch (ParamIDs::octAnalog, "Octaver Analog", v39, false));
     // Added in PR7-G 0.76.0: CIPHER's macros, all at 0 (where every
     // assigned knob sits at its own setting).
     for (int macro = 1; macro <= ParamIDs::cipherNumMacros; ++macro)

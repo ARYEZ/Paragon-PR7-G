@@ -355,8 +355,9 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     // RATIO, or Daybreak's COMP, DETAIL, MIX and INTENSITY.
     panels[pitchBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "TUNING", { { ParamIDs::pitchTune, "TUNING" } } },
-        { "OCTAVER", { { ParamIDs::octOn, "ON" }, { ParamIDs::octSubTwo, "2 DOWN" }, { ParamIDs::octSubOne, "1 DOWN" },
-                       { ParamIDs::octDry, "DRY" }, { ParamIDs::octUp, "1 UP" } } },
+        { "OCTAVER", { { ParamIDs::octOn, "ON" }, { ParamIDs::octAnalog, "ANALOG" }, { ParamIDs::octSubTwo, "2 DOWN" }, { ParamIDs::octSubOne, "1 DOWN" },
+                       { ParamIDs::octDry, "DRY" },
+                       { ParamIDs::octUp, "1 UP", [this] { return rawValue (ParamIDs::octAnalog) < 0.5f; } } } },   // ANALOG has no octave up
         { "FREEZE", { { ParamIDs::freezeOn, "FREEZE" }, { ParamIDs::freezeLevel, "LEVEL" }, { ParamIDs::freezeAttack, "ATTACK" },
                       { ParamIDs::freezeRelease, "RELEASE" } } } });
     const auto compIs = [this] (effects::CompGate::Type type)
