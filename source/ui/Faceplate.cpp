@@ -149,8 +149,8 @@ namespace
     // Drive::modelNames' order).
     const char* driveKind (int model)
     {
-        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION", "ASYMMETRIC OVERDRIVE" };
-        static_assert (std::size (kinds) == 8);   // one per Drive::modelNames entry
+        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION", "ASYMMETRIC OVERDRIVE", "HARD-CLIP DISTORTION", "HEAVY METAL DISTORTION" };
+        static_assert (std::size (kinds) == 10);   // one per Drive::modelNames entry
         return kinds[(size_t) juce::jlimit (0, (int) std::size (kinds) - 1, model)];
     }
 }
@@ -549,6 +549,10 @@ void Faceplate::paintDrive (juce::Graphics& g, juce::Rectangle<float> header, ju
     {
         knobs.insert (knobs.end(), { { ParamIDs::driveHigh, "HIGH" }, { ParamIDs::driveLow, "LOW" },
                                      { ParamIDs::driveMiddle, "MIDDLE" }, { ParamIDs::driveMidFreq, "MID FREQ" } });
+    }
+    else if (model == (int) effects::Drive::Model::grinder)   // COLOR MIX
+    {
+        knobs.insert (knobs.end(), { { ParamIDs::driveLow, "LOW" }, { ParamIDs::driveHigh, "HIGH" } });
     }
     else if (! halo && model != (int) effects::Drive::Model::amber)   // Halo and Amber, as their originals, have no tone control
     {

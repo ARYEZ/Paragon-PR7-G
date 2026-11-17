@@ -2,6 +2,36 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.83.0
+
+- **Three new OD / DISTORTION models, modelled on BOSS compact pedals** (the first of the BOSS list: the DM-2 delay and CE-2 chorus come next). Each is built from the original pedal's schematic, part by part, under a name of its own:
+
+  | Model | Modelled on | Controls | What it does |
+  |---|---|---|---|
+  | **AMBER** | the 1977 BOSS OD-1 Over Drive | DRIVE, LEVEL | The first overdrive pedal. One diode clips one half of the wave and two the other, so the halves clip at different heights: even harmonics and a warm, amp-like push. A low cut at 338 Hz before the drive and a fixed treble roll-off at 884 Hz make it thin and mid-focused. No tone control, as the original. |
+  | **EMBER** | the BOSS DS-1 Distortion | DRIVE, TONE, LEVEL | A high-gain transistor booster into an op-amp stage, then two diodes clipping hard to ground. Its TONE stack scoops the mids (about 7 dB under the lows and 4 dB under the highs at noon) and leans bright or dark either way. |
+  | **GRINDER** | the 1983 BOSS HM-2 Heavy Metal | DRIVE (its DIST), HIGH, LOW (its COLOR MIX), LEVEL | Two transistor stages and an op-amp with uneven soft clipping, germanium diodes in series with the signal, then two silicon diodes clipping hard. Its COLOR MIX are resonant boosts: LOW around 87 Hz, HIGH two peaks at once around 960 Hz and 1.28 kHz. All up, they boost hard enough to clip the EQ too: the "chainsaw". |
+
+  - **Where the circuits come from:**
+    - AMBER: Electric Druid's redrawing of the original OD-1 schematic;
+    - EMBER: ElectroSmash's analysis of the DS-1 (its DS1-A circuit), which you sent;
+    - GRINDER: the HM-2's original factory schematic (via Hobby-Hour), which you sent.
+  - **What's our reading:**
+    - GRINDER's two transistor stages are modelled as inverting stages with gains worked out from their resistors and bias, not solved transistor by transistor.
+    - The germanium diodes' exact part isn't named on the schematic, so they're a typical small-signal germanium diode. With 10k either side of them they add grit around the zero crossings and only take about 2 dB off the quietest playing; they don't work as the strong noise gate they're sometimes described as.
+    - BOSS's special pot tapers on the HM-2 (its "D" and "G" tapers) aren't published, so DIST and COLOR MIX turn evenly.
+    - Where ElectroSmash simplifies (they describe the DS-1's scoop as about 20 dB at 500 Hz), the model follows the parts: the stack itself gives the shallower, lower-mid scoop above.
+  - **No trademarked names on the models**; "modelled on" is only here in the notes.
+  - **I couldn't listen to them here.** They are built and checked against the circuits, but tell me how they feel under your fingers and where they're off.
+  - **CPU:** AMBER about 5% of a core, EMBER and GRINDER about 9% each (about what ABYSS costs).
+- **Tests** for each, against its circuit:
+  - the gains match the schematics (AMBER's drive stage 8 to 220; EMBER's booster 56 and op-amp 1 to 22; GRINDER's op-amp 1.7 to 5.7);
+  - AMBER's 2nd harmonic sits 20 dB under the note (uneven clipping);
+  - AMBER's bass cut and fixed treble roll-off;
+  - EMBER's hard clipping, mid scoop and TONE range;
+  - GRINDER's COLOR MIX: flat at noon, each pot boosting and cutting its own bands by more than 12 dB without touching the other's;
+  - more DRIVE, more distortion; aliasing kept down at full gain; each about your guitar's own level with its knobs at noon.
+
 ## 0.82.1
 
 - **An optimisation round: the drive pedals and the AEON flanger now use far less CPU, with the same sound.** Measured by counting the processor's instructions (the same count every run; this machine's stopwatch timings varied too much between runs to trust), with the pedal on at DRIVE 8:

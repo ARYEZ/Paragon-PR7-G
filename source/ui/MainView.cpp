@@ -390,13 +390,16 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     // Skyline adds its pedal's ATTACK and GATE; Abyss has its own EQ in place of TONE.
     const auto isSkyline = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::skyline; };
     const auto isAbyss = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::abyss; };
+    // Grinder's COLOR MIX is LOW and HIGH (the same knobs as Abyss's), with no TONE.
+    const auto isGrinder = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::grinder; };
+    const auto hasLowHigh = [isAbyss, isGrinder] { return isAbyss() || isGrinder(); };
     panels[driveBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "OVERDRIVE", { { ParamIDs::driveOn, "ON" }, { ParamIDs::driveModel, "MODEL" }, { ParamIDs::driveGain, "DRIVE" },
                          // Halo and Amber have no tone control, as their originals have none.
-                         { ParamIDs::driveTone, "TONE", [this, isAbyss] {
+                         { ParamIDs::driveTone, "TONE", [this, hasLowHigh] {
                              const auto model = juce::roundToInt (rawValue (ParamIDs::driveModel));
-                             return ! isAbyss() && model != (int) effects::Drive::Model::halo && model != (int) effects::Drive::Model::amber; }, true },
-                         { ParamIDs::driveHigh, "HIGH", isAbyss, true }, { ParamIDs::driveLow, "LOW", isAbyss, true },
+                             return ! hasLowHigh() && model != (int) effects::Drive::Model::halo && model != (int) effects::Drive::Model::amber; }, true },
+                         { ParamIDs::driveHigh, "HIGH", hasLowHigh, true }, { ParamIDs::driveLow, "LOW", hasLowHigh, true },
                          { ParamIDs::driveMiddle, "MIDDLE", isAbyss, true }, { ParamIDs::driveMidFreq, "MID FREQ", isAbyss, true },
                          { ParamIDs::driveAttack, "ATTACK", isSkyline, true }, { ParamIDs::driveGate, "GATE", isSkyline, true },
                          { ParamIDs::driveLevel, "LEVEL" } } } });

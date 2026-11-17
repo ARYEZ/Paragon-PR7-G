@@ -2,6 +2,8 @@
 
 #include "Abyss.h"
 #include "Amber.h"
+#include "Ember.h"
+#include "Grinder.h"
 #include "Chimera.h"
 #include "Cosmonaut.h"
 #include "Halo.h"
@@ -66,12 +68,21 @@ namespace effects
     // AMBER is modelled on the 1977 compact overdrive that started the
     // category, with its asymmetric diodes (see Amber.h; PR7-G 0.83.0). It has
     // no tone control either, so TONE isn't used.
+    //
+    // EMBER is modelled on the 1978 compact distortion (the orange one): its
+    // transistor booster, op-amp stage, hard-clipping diodes and mid-scooped
+    // TONE stack (see Ember.h; PR7-G 0.83.0).
+    //
+    // GRINDER is modelled on the 1983 compact heavy metal pedal: two transistor
+    // stages, soft and hard clippers with germanium diodes in series, and the
+    // COLOR MIX EQ's gyrator boosts (see Grinder.h; PR7-G 0.83.0). LOW and HIGH
+    // are its COLOR MIX; TONE isn't used.
     class Drive
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss, amber };
-        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss", "Amber" };
+        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss, amber, ember, grinder };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss", "Amber", "Ember", "Grinder" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -108,6 +119,8 @@ namespace effects
         void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processHalo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processAmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processEmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processGrinder (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
@@ -128,6 +141,9 @@ namespace effects
         Cosmonaut cosmonaut;
         Halo halo;
         Amber amber;
+        Ember ember;
+        Grinder grinder;
+        juce::SmoothedValue<float> colourLow, colourHigh;   // Grinder's COLOR MIX
         juce::SmoothedValue<float> fuzzGain, fuzzTone, fuzzLevel;
         Model lastModel = Model::screamer;
         BypassFade bypass;
