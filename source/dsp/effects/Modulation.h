@@ -78,6 +78,10 @@ namespace effects
         // Carbonite's delay in ms, for a DEPTH (0 to 1) and a point in the
         // LFO's sweep (-1 to 1) (for tests).
         static float carboniteDelayMs (float depth, float lfo) noexcept;
+        // Carbonite's RATE: the block's RATE held to the pedal's 0.32 to 3.56 Hz.
+        static float carboniteRateHz (float rateHz) noexcept;
+        // Carbonite's chip: how it rounds off a loud signal (volts in, volts out).
+        static float carboniteChip (float volts) noexcept;
 
         // Hadron: where each phase stage's turn sits (its 90-degree point),
         // in Hz, for the LFO's voltage at the transistors' gates (for tests).
@@ -150,7 +154,7 @@ namespace effects
         // Carbonite: the same kind of chorus path, with its own filters.
         struct CarbonitePath
         {
-            Biquad inputHighPass, emphasis, antiAlias1, antiAlias2, reconstruct1, reconstruct2, deEmphasis;
+            Biquad inputHighPass, emphasis, antiAlias1, antiAlias2, reconstruct1, reconstruct2, chorusLowCut, deEmphasis;
         };
         CarbonitePath carbonitePaths[maxChannels];
 

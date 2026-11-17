@@ -1115,6 +1115,40 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (carbonite < vortex - 8.0f);
     }
 
+    SECTION ("Carbonite: its chorus loses its deep bass on the way into the mixer (0.033 uF into 47k: 103 Hz)")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto chorusAt = [&] (double hz)
+        {
+            const auto tone = sine (hz, 0.1f, 1.0);
+            return rms (minus (rig.run (tone)[0], tone), 0.5);
+        };
+        // A first-order cut at 103 Hz: about -7 dB at 40 Hz (with the 48 Hz input cut, more).
+        const auto at40 = dB (chorusAt (40.0) / chorusAt (1000.0));
+        const auto at400 = dB (chorusAt (400.0) / chorusAt (1000.0));
+        CHECK (at40 < -9.0f);
+        CHECK (at400 > -1.5f);
+    }
+
+    SECTION ("Carbonite: RATE runs 0.32 to 3.56 Hz, as the pedal's (its pot over 10k, 47k / (4 x 0.1 uF x 33k x 1M) flat out)")
+    {
+        CHECK_THAT (effects::Modulation::carboniteRateHz (10.0f), WithinAbs (3.56, 0.01));
+        CHECK_THAT (effects::Modulation::carboniteRateHz (0.05f), WithinAbs (0.324, 0.002));
+        CHECK_THAT (effects::Modulation::carboniteRateHz (1.0f), WithinAbs (1.0, 1.0e-6));
+    }
+
+    SECTION ("Carbonite: the chip rounds off 0.78 V rms by 0.5%, its data sheet's figure")
+    {
+        constexpr int n = 4800;
+        const auto amplitude = 0.78 * std::sqrt (2.0);
+        std::vector<float> out (n);
+        for (int i = 0; i < n; ++i)
+            out[(size_t) i] = effects::Modulation::carboniteChip ((float) (amplitude * std::sin (juce::MathConstants<double>::twoPi * 100.0 * i / sampleRate)));
+        const auto fundamental = levelAt (out, 100.0, 0.0), third = levelAt (out, 300.0, 0.0);
+        CHECK_THAT (third / fundamental, WithinAbs (0.005, 0.0005));
+    }
+
     SECTION ("Carbonite: DEPTH bends the pitch")
     {
         rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);

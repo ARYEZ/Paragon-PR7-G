@@ -2,6 +2,18 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.85.0
+
+- **Carbonite (MOD's CE-2) upgraded against the circuit.** Carbonite has been our model of the BOSS CE-2 since 0.37.0. Checking it part by part against ElectroSmash's analysis you sent showed four places it differed from the pedal:
+  - **Its chorus now loses its deep bass, as the pedal's does.** On the pedal the chorus reaches the output mixer through a 0.033 µF capacitor into 47k (C14, R22): a cut below about 103 Hz, on the chorus only (your dry sound keeps all its bass). Carbonite only cut below 48 Hz, so low notes wobbled more than on a real CE-2.
+  - **RATE now covers the pedal's range, 0.32 to 3.56 Hz,** worked out from its parts: the LFO's RATE pot over a 10k resistor, and 3.56 Hz flat out (ElectroSmash's figure). Until now this was a guess using the block's usual range (0.05 to 10 Hz). Settings outside the range now stop at its ends, as the pedal's knob does.
+  - **The delay chip rounds off loud notes only as much as its data sheet says:** 0.5% distortion at 0.78 V rms. The old figure was an estimate with about four times that, so loud, bright playing comes through the chorus cleaner now.
+  - **The rounding-off now happens at the chip,** after the filter that feeds it, as in the circuit. It used to come before that filter.
+- **What already matched and stays as it was:** the pre- and de-emphasis, the filters around the chip (within about 1 dB of the exact circuit up to 15 kHz), the 50/50 mix, and the delay times (3.4 ms, sweeping 2.2 to 4.5 ms at full DEPTH, from a clock measured on a real pedal). One analysis online gives 8.5 to 10.75 ms instead; the measurement is the better source, so it stays.
+- **Your saved rigs:** a rig that uses Carbonite will sound slightly different, mostly thinner chorus bass and a cleaner sound on loud notes, and its RATE stops at 0.32 or 3.56 Hz if it was set outside that. No factory rig uses Carbonite.
+- **Tests:** the chorus's bass cut (well down at 40 Hz, flat by 400 Hz), the RATE range, and the chip's 0.5% at 0.78 V rms.
+- I couldn't listen to it here. Tell me if it sounds off.
+
 ## 0.84.0
 
 - **A new DELAY type, 12-Bit, modelled on the BOSS DD-2 Digital Delay** (1983, the first compact digital delay, later reissued unchanged as the DD-3). It's built from the pedal's factory circuit diagram (via Hobby-Hour), which you sent, stage by stage:

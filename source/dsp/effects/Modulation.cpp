@@ -80,9 +80,26 @@ namespace effects
             // which is much of why this chorus sounds warmer and darker.
             constexpr float lowCutHz = 48.0f, filterHz = 6600.0f;
 
-            // How hard a loud signal can drive the chip before it rounds off
-            // (estimated, as the Vortex's).
-            constexpr float headroom = 2.2f;
+            // How hard the chip rounds off a loud signal: its data sheet gives
+            // 0.5% distortion (typical) at 0.78 V rms. A soft curve,
+            // h tanh (x / h), has a third harmonic of x^2 / (12 h^2) times
+            // the note, so h = 0.78 sqrt 2 / sqrt (12 x 0.005) = 4.5 V. (Until
+            // PR7-G 0.85.0 an estimate, 2.2 V: about four times the distortion.)
+            // Where the curve goes past that point is ours.
+            constexpr float headroom = 0.78f * 1.41421356f / 0.24494897f;
+
+            // The chorus reaches the output mixer through C14 (0.033 uF) into
+            // R22 (47k) at the op-amp's virtual earth: a high-pass at 103 Hz
+            // on the chorus only (from the circuit; added in 0.85.0).
+            constexpr float chorusLowCutHz = 1.0f / (juce::MathConstants<float>::twoPi * 47.0e3f * 0.033e-6f);
+
+            // RATE: the LFO's square wave reaches its integrator through the
+            // RATE pot (100k) over R31 (10k) to the bias, so the pot passes
+            // between 10k / 110k of it and all of it. Flat out, R30 / (4 C19
+            // R29 R32) = 47k / (4 x 0.1 uF x 33k x 1M) = 3.56 Hz (ElectroSmash);
+            // so 0.32 to 3.56 Hz (from the circuit; added in 0.85.0).
+            constexpr float fastestHz = 47.0e3f / (4.0f * 0.1e-6f * 33.0e3f * 1.0e6f);
+            constexpr float slowestHz = fastestHz * 10.0e3f / 110.0e3f;
 
             // The clock, measured on a real pedal: about 150 kHz with DEPTH
             // down (1024 stages / (2 x 150 kHz) = 3.4 ms); 128 to 185 kHz at
@@ -255,6 +272,7 @@ namespace effects
             setLowPass (path.antiAlias2, sampleRate, carbonite::filterHz, 1.0f);
             path.reconstruct1.copyCoefficients (path.antiAlias1);
             path.reconstruct2.copyCoefficients (path.antiAlias2);
+            setFirstOrderHighPass (path.chorusLowCut, sampleRate, carbonite::chorusLowCutHz);
         }
         vortexEq = 1.0e9f;   // forces the EQ's coefficients to be worked out
         updateVortexEq (0.0f);
@@ -441,18 +459,29 @@ namespace effects
         return 1024.0f / (2.0f * clockKHz);
     }
 
+    float Modulation::carboniteRateHz (float rateHz) noexcept
+    {
+        return juce::jlimit (carbonite::slowestHz, carbonite::fastestHz, rateHz);
+    }
+
+    float Modulation::carboniteChip (float volts) noexcept
+    {
+        return carbonite::headroom * std::tanh (volts / carbonite::headroom);
+    }
+
     void Modulation::processCarbonite (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
     {
         // The pedal: the guitar, plus the chorus path (a low cut, pre-emphasis,
         // the filter into the chip, the chip's swept delay, the filter out of
-        // it, de-emphasis), mixed 50/50 at full level. Only RATE and DEPTH;
+        // it, the 103 Hz cut into the mixer, de-emphasis), mixed 50/50 at
+        // full level. Only RATE (0.32 to 3.56 Hz, as the pedal's) and DEPTH;
         // one input and one output, so each side runs through its own copy.
         const auto msToSamples = (float) sampleRate * 0.001f;
         const auto numChannels = (int) block.getNumChannels();
 
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
-            const auto lfo = triangle (advanceLfo (settings.rateHz));
+            const auto lfo = triangle (advanceLfo (carboniteRateHz (settings.rateHz)));
             const auto delaySamples = carboniteDelayMs (depth.getNextValue(), lfo) * msToSamples;
             mix.skip (1);
 
@@ -461,11 +490,10 @@ namespace effects
                 auto& path = carbonitePaths[ch];
                 auto* samples = block.getChannelPointer ((size_t) ch);
                 auto x = path.emphasis.process (path.inputHighPass.process (samples[i]));
-                x = carbonite::headroom * std::tanh (x / carbonite::headroom);
-                x = path.antiAlias2.process (path.antiAlias1.process (x));
+                x = carboniteChip (path.antiAlias2.process (path.antiAlias1.process (x)));   // the chip, after the filter that feeds it
                 delayLine.pushSample (ch, x);
                 x = delayLine.popSample (ch, delaySamples);
-                x = path.reconstruct2.process (path.reconstruct1.process (x));
+                x = path.chorusLowCut.process (path.reconstruct2.process (path.reconstruct1.process (x)));
                 samples[i] += path.deEmphasis.process (x);
             }
         }
