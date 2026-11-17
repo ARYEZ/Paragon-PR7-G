@@ -3053,3 +3053,129 @@ TEST_CASE ("Sapphire: the blues overdrive's two transistor op-amp stages, diodes
         CHECK_THAT (level, WithinAbs (0.0, 2.0));
     }
 }
+
+TEST_CASE ("Brigade: the compact analog delay's circuit", "[effects][delay][brigade]")
+{
+    using effects::Brigade;
+    const auto runPedal = [] (const std::vector<float>& input, double seconds, double feedbackKnob)
+    {
+        Brigade pedal;
+        pedal.prepare (sampleRate, blockSize);
+        pedal.setTime (seconds);
+        pedal.setFeedback (feedbackKnob);
+        auto samples = input;
+        for (size_t start = 0; start < samples.size(); start += blockSize)
+            pedal.process (samples.data() + start, (int) std::min<size_t> (blockSize, samples.size() - start));
+        return samples;
+    };
+
+    SECTION ("The clock: 6.8 kHz at 300 ms (the service notes' setting), 102 kHz at 20 ms")
+    {
+        CHECK_THAT (Brigade::clockFor (0.3), WithinAbs (6826.7, 1.0));
+        CHECK_THAT (Brigade::clockFor (0.02), WithinAbs (102400.0, 1.0));
+        CHECK_THAT (Brigade::clockFor (1.0), WithinAbs (6826.7, 1.0));   // 300 ms is as long as it goes
+    }
+
+    SECTION ("Repeats come at the set time, 20 to 300 ms, and no longer")
+    {
+        auto burst = sine (500.0, 0.3f, 0.05);
+        burst.resize ((size_t) (0.6 * sampleRate), 0.0f);
+        for (const auto [seconds, expected] : { std::pair { 0.02, 0.02 }, { 0.15, 0.15 }, { 0.3, 0.3 }, { 0.8, 0.3 } })
+        {
+            INFO (seconds << " s");
+            const auto out = runPedal (burst, seconds, 0.0);
+            size_t first = 0;
+            for (size_t i = 0; i < out.size(); ++i)
+                if (std::abs (out[i]) > 0.05f) { first = i; break; }
+            CHECK_THAT ((double) first / sampleRate, WithinAbs (expected, 0.002));
+        }
+    }
+
+    SECTION ("The compander gives back what went in, loud or quiet")
+    {
+        for (const auto level : { 0.3f, 0.03f, 0.003f })
+        {
+            INFO (level);
+            const auto out = runPedal (sine (500.0, level, 1.0), 0.15, 0.0);
+            CHECK_THAT (dB (levelAt (out, 500.0, 0.5) / level), WithinAbs (0.0, 0.7));
+        }
+    }
+
+    SECTION ("Dark repeats: smooth filters at 3.2 kHz either side of the chip")
+    {
+        const auto gainAt = [&] (double hz)
+        {
+            const auto out = runPedal (sine (hz, 0.1f, 1.0), 0.05, 0.0);
+            return dB (levelAt (out, hz, 0.5) / 0.1f);
+        };
+        CAPTURE (gainAt (200.0), gainAt (1000.0), gainAt (3200.0), gainAt (6000.0));
+        CHECK_THAT (gainAt (1000.0), WithinAbs (0.0, 1.0));
+        CHECK (gainAt (3200.0) < -4.0f);    // both filters' 3 dB points together
+        CHECK (gainAt (6000.0) < -35.0f);
+        CHECK (gainAt (2000.0) < 0.5f);     // no lift: the smooth version, not the drawn one's ringing
+    }
+
+    SECTION ("At 300 ms the chip samples at 6.8 kHz and treble folds back as grit; at 50 ms it doesn't")
+    {
+        // 3 kHz at 300 ms comes back with an image at 6.83 - 3 = 3.83 kHz.
+        const auto in = sine (3000.0, 0.2f, 1.5);
+        const auto slow = runPedal (in, 0.3, 0.0), fast = runPedal (in, 0.05, 0.0);
+        const auto image = 2048.0 / 0.3 - 3000.0;
+        CAPTURE (dB (levelAt (slow, image, 0.8) / levelAt (slow, 3000.0, 0.8)), dB (levelAt (fast, image, 0.8) / levelAt (fast, 3000.0, 0.8)));
+        CHECK (dB (levelAt (slow, image, 0.8) / levelAt (slow, 3000.0, 0.8)) > -20.0f);
+        CHECK (dB (levelAt (fast, image, 0.8) / levelAt (fast, 3000.0, 0.8)) < -50.0f);
+    }
+
+    SECTION ("INTENSITY: each repeat loses bass (0.1 uF into 22k), and 95% dies away")
+    {
+        auto phrase = sine (220.0, 0.4f, 0.2);
+        phrase.resize ((size_t) (5.0 * sampleRate), 0.0f);
+        CHECK (rms (runPedal (phrase, 0.05, 0.95), 4.5) < 1.0e-3f);
+        // A 60 Hz note fades faster through the repeats than a 600 Hz one.
+        const auto fadeOf = [&] (double hz)
+        {
+            auto note = sine (hz, 0.3f, 0.1);
+            note.resize ((size_t) (1.2 * sampleRate), 0.0f);
+            const auto out = runPedal (note, 0.1, 0.8);
+            return dB (rms (out, 0.5, 0.6) / rms (out, 0.1, 0.2));
+        };
+        CAPTURE (fadeOf (60.0), fadeOf (600.0));
+        CHECK (fadeOf (60.0) < fadeOf (600.0) - 6.0f);
+    }
+
+    SECTION ("cpu")
+    {
+        if (std::getenv ("PARAGON_CPU_ONLY") != nullptr)
+        {
+            const auto in = sine (440.0, 0.3f, 10.0);
+            const auto t0 = juce::Time::getMillisecondCounterHiRes();
+            runPedal (in, 0.2, 0.5);
+            WARN ("Brigade: " << (juce::Time::getMillisecondCounterHiRes() - t0) / 10000.0 * 100.0 << "% of a core");
+        }
+    }
+
+    SECTION ("The chip rounds off 0 dBm by 1%, as its data sheet says")
+    {
+        const auto amplitude = 0.775 * std::sqrt (2.0);
+        std::vector<float> out (4800);
+        for (size_t i = 0; i < out.size(); ++i)
+            out[i] = (float) Brigade::chip (amplitude * std::sin (juce::MathConstants<double>::twoPi * 100.0 * (double) i / sampleRate));
+        CHECK_THAT (levelAt (out, 300.0, 0.0) / levelAt (out, 100.0, 0.0), WithinAbs (0.01, 0.001));
+    }
+
+    SECTION ("In the plugin: DELAY's Brigade type repeats at its TIME")
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::delayOn, 1.0f);
+        rig.set (ParamIDs::delayType, (float) effects::Delay::Type::brigade);
+        rig.set (ParamIDs::delaySync, 0.0f);
+        rig.set (ParamIDs::delayTime, 200.0f);
+        rig.set (ParamIDs::delayFeedback, 0.0f);
+        rig.set (ParamIDs::delayMix, 1.0f);
+        auto burst = sine (500.0, 0.3f, 0.1);
+        burst.resize ((size_t) (0.5 * sampleRate), 0.0f);
+        const auto out = rig.runMono (burst);
+        CHECK (rms (out, 0.12, 0.19) < 0.003f);
+        CHECK_THAT (dB (rms (out, 0.22, 0.28) / rms (burst, 0.02, 0.08)), WithinAbs (0.0, 1.5));
+    }
+}

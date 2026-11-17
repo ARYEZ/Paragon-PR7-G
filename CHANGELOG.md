@@ -2,6 +2,34 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.88.0
+
+- **A new DELAY type, Brigade, modelled on the BOSS DM-2 Analog Delay** (1981), from its factory schematic and an old service manual's adjustment notes (via Hobby-Hour), which you sent.
+  - **The bucket-brigade chip and its clock.** The DM-2's delay chip (an MN3005, 4096 stages) passes the signal along one stage per half clock, so the delay time is set by the clock speed. The service notes set the clock to 6.8 kHz at the longest REPEAT RATE, which gives 301 ms (the specified maximum is 300 ms); at 20 ms it runs at 102 kHz.
+    - At long delays the chip samples at only 6.8 kHz, so the filters around it cut steeply near 3 kHz: that's where the DM-2's dark repeats come from. What still gets past folds back as a little grit, as on the pedal.
+    - Turning TIME while repeats ring bends their pitch, as on the pedal.
+  - **The compander:** an NE570 compressor before the chip and expander after, both following the level over 2.2 ms (from the parts).
+  - **Pre- and de-emphasis** as the CE-2's, so your direct sound stays flat.
+  - **Each repeat loses a little more bass:** INTENSITY feeds back through 0.1 µF into 22k, a cut below about 72 Hz on every pass.
+  - **The chip rounds off loud signals** by 1% at 0 dBm, the figure for the MN3005 and the service notes' test level.
+  - **The controls:** TIME is 20 to 300 ms (longer settings, or synced notes longer than 300 ms, stop at 300 ms, the pedal's limit). FEEDBACK is its INTENSITY and MIX is its ECHO, both turning like the pedal's own pots. TONE and PING-PONG are hidden: the pedal has neither and is mono.
+- **What's our reading, and why:**
+  - **The filters around the chip.** As drawn, the schematic's values lift the repeats by about 9 dB around 2 kHz, which would make them ring and build up there. That doesn't match how a DM-2 behaves, so a misprinted or misread value is the likelier explanation. As you chose, they're smooth filters instead, of the same steepness (3rd order in, 5th order out) at 3.2 kHz, where the drawn ones fall 3 dB.
+  - **How strongly INTENSITY feeds back at full:** set to the edge of self-oscillation, where a real DM-2 is said to sit. DELAY's FEEDBACK stops at 95%, as on every type, so the repeats always die away.
+  - **The compander's levels:** the same reading as 12-Bit's.
+  - **Not modelled:** the chip's own hiss and leftover clock tone.
+- **I couldn't listen to it here.** Tell me how it compares with a DM-2 you know.
+- **CPU:** about 3% of a core.
+- **Tests** against the circuit:
+  - the clock: 6.8 kHz at 300 ms, 102 kHz at 20 ms;
+  - repeats land at the set time (and stop at 300 ms);
+  - the compander gives back the level that went in;
+  - the band: no lift, more than 4 dB down at 3.2 kHz, more than 35 dB down at 6 kHz;
+  - treble folds back at 300 ms but not at 50 ms;
+  - each repeat loses bass, and 95% feedback dies away;
+  - the chip's 1%;
+  - the type at work in the plugin.
+
 ## 0.87.0
 
 - **A new OD / DISTORTION model, SAPPHIRE, modelled on the BOSS BD-2 Blues Driver** (1995). It's built from the pedal's factory schematic (via Hobby-Hour), which you sent, stage by stage. Controls: DRIVE (its GAIN), TONE and LEVEL.

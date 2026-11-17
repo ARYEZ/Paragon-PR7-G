@@ -454,8 +454,12 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     };
     panels[modBlock] = modPanel ("MODULATION", ParamIDs::modIds);
     panels[mod2Block] = modPanel ("MODULATION 2", ParamIDs::mod2Ids);
-    // 12-Bit is the pedal: no TONE, and mono (no ping-pong).
-    const auto notTwelveBit = [this] { return juce::roundToInt (rawValue (ParamIDs::delayType)) != (int) effects::Delay::Type::twelveBit; };
+    // 12-Bit and Brigade are pedals: no TONE, and mono (no ping-pong).
+    const auto notTwelveBit = [this]
+    {
+        const auto type = juce::roundToInt (rawValue (ParamIDs::delayType));
+        return type != (int) effects::Delay::Type::twelveBit && type != (int) effects::Delay::Type::brigade;
+    };
     panels[delayBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "DELAY", { { ParamIDs::delayOn, "ON" }, { ParamIDs::delayType, "TYPE" }, { ParamIDs::delaySync, "SYNC" },
                      { ParamIDs::delayTime, "TIME", [this] { return rawValue (ParamIDs::delaySync) < 0.5f; } },

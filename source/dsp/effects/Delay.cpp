@@ -56,6 +56,7 @@ namespace effects
 
         ducker.prepare (sampleRate);
         twelveBit.prepare (sampleRate, maxBlockSize);
+        brigade.prepare (sampleRate, maxBlockSize);
         twelveBitWork.setSize (2, maxBlockSize);
         resetState();
         tail.prepare (sampleRate, maxDelaySeconds * 2.0 + 0.5);   // reverse plays a chunk late, so allow for that
@@ -76,6 +77,7 @@ namespace effects
         driftCountdown = 0;
         ducker.reset();
         twelveBit.reset();
+        brigade.reset();
     }
 
     float Delay::delaySeconds (const Settings& settings, double bpm) noexcept
@@ -123,7 +125,12 @@ namespace effects
 
         if (settings.type == Type::twelveBit)
         {
-            processTwelveBit (block, settings, bpm);
+            processPedal (twelveBit, block, settings, bpm);
+            return;
+        }
+        if (settings.type == Type::brigade)
+        {
+            processPedal (brigade, block, settings, bpm);
             return;
         }
 
@@ -315,7 +322,8 @@ namespace effects
         }
     }
 
-    void Delay::processTwelveBit (juce::dsp::AudioBlock<float> block, const Settings& settings, double bpm) noexcept
+    template <typename Pedal>
+    void Delay::processPedal (Pedal& pedal, juce::dsp::AudioBlock<float> block, const Settings& settings, double bpm) noexcept
     {
         const auto numChannels = (int) block.getNumChannels();
         const auto numSamples = (int) block.getNumSamples();
@@ -323,8 +331,8 @@ namespace effects
         auto* gains = twelveBitWork.getWritePointer (1);
 
         // The pedal sets its own clock and F.BACK; the shared glides just keep pace.
-        twelveBit.setTime (delaySeconds (settings, bpm));
-        twelveBit.setFeedback (juce::jlimit (0.0f, 0.95f, settings.feedback));
+        pedal.setTime (delaySeconds (settings, bpm));
+        pedal.setFeedback (juce::jlimit (0.0f, 0.95f, settings.feedback));
         delaySamples.skip (numSamples);
         feedback.skip (numSamples);
 
@@ -340,10 +348,10 @@ namespace effects
             }
             mono[i] = sum / (float) juce::jmax (1, numChannels) * send.getNextValue();
             const auto duckGain = duckAmount > 0.0f ? ducker.next (level, duckAmount) : 1.0f;
-            gains[i] = (float) TwelveBit::levelGain (mix.getNextValue()) * duckGain;
+            gains[i] = (float) Pedal::levelGain (mix.getNextValue()) * duckGain;
         }
 
-        twelveBit.process (mono, numSamples);
+        pedal.process (mono, numSamples);
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
