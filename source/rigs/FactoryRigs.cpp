@@ -38,7 +38,7 @@ namespace
     constexpr float syncOff = 0, quarter = 3, eighth = 6, dottedEighth = 7;
     // Modulation types (index into effects::Modulation::typeNames).
     constexpr float chorus = 0, flanger = 1, tremolo = 3, dimension = 4, uniVibe = 5, rotary = 6, vibrato = 7,
-                    harmonicTremolo = 8, autoPan = 9, doubler = 10;
+                    harmonicTremolo = 8, autoPan = 9, doubler = 10, carbonite = 11;
     // FILTER / PITCH types.
     constexpr float autoWah = 0, pitchShifter = 1, whammyWah = 2, talkBoxType = 3;
     constexpr float pedalTalkBox = 8;   // the expression pedal's TALK BOX setting
@@ -109,8 +109,9 @@ std::vector<Rig> makeFactoryRigs()
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.4f }, { reverbMix, 0.2f } }),
 
         make ("Chorus Clean", A, 3, "Clean,Modulation", {
+            { rigLevel, 1.5f },   // Carbonite (0.86.0): its 50/50 mix at full level came out a touch quieter here
             { compOn, 1 }, { compThreshold, -22 }, { compRatio, 3 }, { compLevel, 2 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.5f }, { modMix, 0.5f },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.6f }, { modDepth, 0.5f }, { modMix, 0.5f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbMix, 0.25f } }),
 
         make ("Edge of Breakup", A, 4, "Crunch,Drive", {
@@ -381,8 +382,9 @@ std::vector<Rig> makeFactoryRigs()
             { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 5 }, { lofiNoise, 5 }, { lofiLevel, 1 } }),
 
         make ("Cassette Dreams", D, 7, "Lo-Fi,Ambient", {
+            { rigLevel, 2 },   // Carbonite (0.86.0): its 50/50 mix at full level came out a touch quieter here
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.4f }, { modDepth, 0.4f }, { modMix, 0.35f },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.4f }, { modDepth, 0.4f }, { modMix, 0.35f },
             { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
             { reverbOn, 1 }, { reverbType, digital }, { reverbSize, 0.8f }, { reverbMix, 0.35f },
             { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 5 }, { lofiNoise, 4 } }),
@@ -1763,7 +1765,7 @@ std::vector<Rig> makeFactoryRigs()
         make ("Velvet Chorus Clean", Q, 1, "Album,Clean,Modulation", {
             { rigLevel, 5 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.5f }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
 
         // A ritual swell: volume swells (from the heel) into a shimmer and a cathedral.
@@ -1877,7 +1879,7 @@ std::vector<Rig> makeFactoryRigs()
         make ("Underwater Chorus Clean", R, 1, "Album,Clean,Modulation", {
             { rigLevel, 3 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.35f }, { modDepth, 0.7f }, { modMix, 0.5f }, { modStereo, 1 },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.35f }, { modDepth, 0.7f }, { modMix, 0.5f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, analogDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.28f } }),
 
@@ -1938,7 +1940,7 @@ std::vector<Rig> makeFactoryRigs()
         make ("Night Drive Chorus Clean", R, 9, "Album,Clean,Modulation,Delay", {
             { rigLevel, 6.5f },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.5f }, { modMix, 0.45f }, { modStereo, 1 },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.6f }, { modDepth, 0.5f }, { modMix, 0.45f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
             { delayPingPong, 1 },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.65f }, { reverbMix, 0.25f } }),

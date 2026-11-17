@@ -2,6 +2,23 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.86.0
+
+- **Five factory rigs now use Carbonite** (MOD's CE-2) instead of Vortex. Until now no factory rig used it at all: Carbonite arrived in 0.37.0, after the early banks were made, and later rigs kept picking Vortex. These five suit a warm, vintage, darker chorus:
+
+  | Rig | Bank |
+  |---|---|
+  | Chorus Clean | A |
+  | Cassette Dreams | D |
+  | Velvet Chorus Clean | Q |
+  | Underwater Chorus Clean | R |
+  | Night Drive Chorus Clean | R |
+
+  - **What changes in them:** a warmer, darker chorus with its deep bass left dry (as the pedal's). It's mono, so the three album rigs lose Vortex's chorus-left, dry-right width; their delays and reverbs still spread the sound. MIX no longer applies: the pedal mixes 50/50, as Carbonite does.
+  - **Levels kept:** Carbonite's full-level 50/50 mix made Chorus Clean about 1.5 dB and Cassette Dreams about 2 dB quieter, so each has its level raised by that much. Both now play within half a dB of before. The other three moved less than 1 dB and are unchanged.
+  - Your own saved rigs are untouched.
+  - I couldn't listen to them here. Tell me if one sounded better on Vortex, and I'll put it back.
+
 ## 0.85.0
 
 - **Carbonite (MOD's CE-2) upgraded against the circuit.** Carbonite has been our model of the BOSS CE-2 since 0.37.0. Checking it part by part against ElectroSmash's analysis you sent showed four places it differed from the pedal:
