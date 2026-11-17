@@ -2,6 +2,34 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.87.0
+
+- **A new OD / DISTORTION model, SAPPHIRE, modelled on the BOSS BD-2 Blues Driver** (1995). It's built from the pedal's factory schematic (via Hobby-Hour), which you sent, stage by stage. Controls: DRIVE (its GAIN), TONE and LEVEL.
+  - **Its two gain stages are op-amps built from transistors** (two JFETs and a PNP each), not op-amp chips, and GAIN turns both at once (a dual 250k pot).
+    - **Stage 1** boosts only above about 700 Hz, about 16× to 180×. The bass stays at unity, which is why the BD-2 stays tight and clear in the low end.
+    - **Stage 2** gives about 16× to 130× above 72 Hz.
+  - **Between them:** a filter network into four diodes clipping to ground at about ±1.2 V.
+  - **After them:** a fixed treble shelf (about 6 dB off the top), TONE (a 10k pot between two 0.018 µF capacitors: about 13 dB of treble range), LEVEL, and a last op-amp stage whose feedback works against a resonant network around a transistor, which shapes the mids.
+  - **How it behaves (measured here):**
+    - With DRIVE down and soft playing it's nearly clean (3rd harmonic 62 dB down); dig in and it breaks up.
+    - At TONE noon it's even from 700 Hz to 4 kHz, with the bass about 7 dB under the mids.
+  - **The pot tapers are printed on the schematic** (audio for GAIN and LEVEL, linear for TONE), so they follow the pedal rather than a guess.
+- **What's our reading:**
+  - **The transistor op-amps** are modelled as ideal op-amps whose outputs level off unevenly at +3.6 V and -3.8 V. That's our estimate from the circuit (a PNP pulls the output up, a 2.2k resistor pulls it down); it isn't solved transistor by transistor.
+  - **Warmth:** much of the real pedal's "amp-like" character is said to come from these stages clipping unevenly. In this model they add only a little even-harmonic warmth (2nd harmonic about 40 dB down), so the real pedal may sound warmer, rounder, when pushed. Tell me if it feels too clean or too symmetrical next to one you know.
+  - **The diodes** (1SS133) are modelled as 1N4148-class silicon diodes.
+- **No trademarked names on the model**; "modelled on" is only here in the notes.
+- **I couldn't listen to it here.** It's built and checked against the circuit, but tell me how it feels under your fingers.
+- **CPU:** about 8% of a core, about the same as EMBER and GRINDER.
+- **Tests** against the circuit:
+  - each stage's gain range matches the schematic;
+  - clean when played softly at low DRIVE, breaking up when played hard;
+  - more DRIVE, more distortion;
+  - the bass sits well under the mids;
+  - TONE's range is more than 10 dB;
+  - aliasing stays low at full DRIVE;
+  - its level at noon is near the guitar's own.
+
 ## 0.86.0
 
 - **Five factory rigs now use Carbonite** (MOD's CE-2) instead of Vortex. Until now no factory rig used it at all: Carbonite arrived in 0.37.0, after the early banks were made, and later rigs kept picking Vortex. These five suit a warm, vintage, darker chorus:

@@ -19,6 +19,7 @@ namespace effects
         constexpr float cosmonautOutputScale = 0.25f;  // the same for the fuzzes, at SUSTAIN noon
         constexpr float emberOutputScale = 1.62f;       // the same for Ember, at DIST, TONE noon
         constexpr float grinderOutputScale = 0.437f;     // the same for Grinder, at DIST noon, COLOR MIX flat
+        constexpr float sapphireOutputScale = 0.138f;    // the same for Sapphire, at GAIN and TONE noon
         constexpr float amberOutputScale = 0.37f;      // the same for Amber, at DRIVE noon
         constexpr float haloOutputScale = 1.04f;       // the same for Halo, at FUZZ noon (the original's output is a low tap)
 
@@ -73,6 +74,7 @@ namespace effects
         amber.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         ember.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
         grinder.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
+        sapphire.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         colourLow.reset (sampleRate, 0.02);
         colourHigh.reset (sampleRate, 0.02);
         bypass.prepare (sampleRate, maxBlockSize);
@@ -99,6 +101,7 @@ namespace effects
                 amber.reset();
                 ember.reset();
                 grinder.reset();
+                sapphire.reset();
             }
 
             switch (settings.model)
@@ -113,6 +116,7 @@ namespace effects
                 case Model::amber:    processAmber (block, settings); break;
                 case Model::ember:    processEmber (block, settings); break;
                 case Model::grinder:  processGrinder (block, settings); break;
+                case Model::sapphire: processSapphire (block, settings); break;
             }
         });
     }
@@ -384,5 +388,28 @@ namespace effects
         auto* samples = block.getChannelPointer (0);
         for (int i = 0; i < numSamples; ++i)
             samples[i] = (float) grinder.equalise (samples[i]) * fuzzLevel.getNextValue();
+    }
+
+    void Drive::processSapphire (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // GAIN (DRIVE) and TONE are the pedal's pots, gliding per block; LEVEL
+        // stands in for its level pot.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzTone.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.tone) / 10.0f);
+        fuzzLevel.setTargetValue (sapphireOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        sapphire.setGain (fuzzGain.skip (numSamples));
+        sapphire.setTone (fuzzTone.skip (numSamples));
+
+        // The gain stages and diodes at 8x the rate; the shelf, TONE and last stage after.
+        auto upsampled = oversampling.processSamplesUp (block);
+        auto* fast = upsampled.getChannelPointer (0);
+        for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
+            fast[i] = (float) sapphire.drive (fast[i]);
+        oversampling.processSamplesDown (block);
+
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] = (float) sapphire.finish (samples[i]) * fuzzLevel.getNextValue();
     }
 }
