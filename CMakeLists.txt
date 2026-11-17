@@ -64,6 +64,7 @@ target_sources(ParagonX1
         source/dsp/effects/Chimera.cpp
         source/dsp/effects/Cosmonaut.cpp
         source/dsp/effects/Halo.cpp
+        source/dsp/effects/Amber.cpp
         source/dsp/effects/Rabid.cpp
         source/dsp/effects/Delay.cpp
         source/dsp/effects/Drive.cpp

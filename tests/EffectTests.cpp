@@ -2551,3 +2551,91 @@ TEST_CASE ("PitchShifter: clean from two octaves down to two up, steady or glidi
             CHECK (dB (shifted / original) > 20.0f);
         }
 }
+
+TEST_CASE ("Amber: the first compact overdrive's asymmetric diodes, its low cut, DRIVE and fixed filter", "[effects][drive]")
+{
+    EffectRig rig;
+    rig.set (ParamIDs::driveOn, 1.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::amber);
+
+    SECTION ("The drive stage's gain is the schematic's: 8 at DRIVE 0, 220 at 10")
+    {
+        CHECK_THAT (effects::Amber::stageGain (0.0), WithinAbs (1.0 + 33.0 / 4.7, 0.01));
+        CHECK_THAT (effects::Amber::stageGain (1.0), WithinAbs (1.0 + 1033.0 / 4.7, 0.1));
+    }
+
+    SECTION ("One diode one way, two the other: strong even harmonics, unlike a symmetric clipper")
+    {
+        rig.set (ParamIDs::driveGain, 6.0f);
+        const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
+        REQUIRE (allFinite (output));
+        const auto fundamental = levelAt (output, 220.0);
+        CAPTURE (dB (levelAt (output, 440.0) / fundamental), dB (levelAt (output, 660.0) / fundamental));
+        CHECK (dB (levelAt (output, 440.0) / fundamental) > -25.0f);
+        // A symmetric clipper (RABID) keeps the 2nd harmonic under -35 dB on the same note.
+    }
+
+    SECTION ("The 338 Hz low cut and the 720 Hz ground leg: the bass gets far less than the mids")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.002f, 0.5);   // quiet enough not to clip
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CAPTURE (dB (gainAt (100.0)), dB (gainAt (1000.0)));
+        CHECK (dB (gainAt (100.0)) < dB (gainAt (1000.0)) - 15.0f);
+    }
+
+    SECTION ("The fixed 884 Hz filter darkens the top: 5 kHz well under 1 kHz")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.002f, 0.5);
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CAPTURE (dB (gainAt (5000.0)), dB (gainAt (1000.0)));
+        CHECK (dB (gainAt (5000.0)) < dB (gainAt (1000.0)) - 8.0f);   // about 10 dB: the stage's gain still rises a little above 720 Hz
+    }
+
+    SECTION ("More DRIVE, more distortion")
+    {
+        const auto harmonics = [&] (float drive)
+        {
+            rig.set (ParamIDs::driveGain, drive);
+            const auto output = rig.runMono (sine (220.0, 0.05f, 0.5));
+            return dB ((levelAt (output, 440.0) + levelAt (output, 660.0)) / levelAt (output, 220.0));
+        };
+        CHECK (harmonics (9.0f) > harmonics (1.0f) + 6.0f);
+    }
+
+    SECTION ("TONE does nothing: the original has none")
+    {
+        const auto play = [&] (float tone)
+        {
+            EffectRig r;
+            r.set (ParamIDs::driveOn, 1.0f);
+            r.set (ParamIDs::driveModel, (float) effects::Drive::Model::amber);
+            r.set (ParamIDs::driveTone, tone);
+            return r.runMono (sine (220.0, 0.2f, 0.3));
+        };
+        CHECK (maxAbsDifference (play (0.0f), play (10.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("Aliasing stays down at full DRIVE")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
+        CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
+    }
+
+    SECTION ("At noon, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CAPTURE (level);
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+}

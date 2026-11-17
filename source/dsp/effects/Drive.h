@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Abyss.h"
+#include "Amber.h"
 #include "Chimera.h"
 #include "Cosmonaut.h"
 #include "Halo.h"
@@ -61,12 +62,16 @@ namespace effects
     // whole circuit solved as it is (see Halo.h; PR7-G 0.50.0, replacing
     // PR7-G's earlier, generic FACE FUZZ in the same place in the list).
     // DRIVE is its FUZZ; it has no tone control, so TONE isn't used.
+    //
+    // AMBER is modelled on the 1977 compact overdrive that started the
+    // category, with its asymmetric diodes (see Amber.h; PR7-G 0.83.0). It has
+    // no tone control either, so TONE isn't used.
     class Drive
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss };
-        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss" };
+        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss, amber };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss", "Amber" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -102,6 +107,7 @@ namespace effects
         void processScreamer (juce::dsp::AudioBlock<float> block, const Settings& settings, float lowCutHz, float gate) noexcept;
         void processCosmonaut (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processHalo (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processAmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
@@ -121,6 +127,7 @@ namespace effects
         // The fuzzes' circuits.
         Cosmonaut cosmonaut;
         Halo halo;
+        Amber amber;
         juce::SmoothedValue<float> fuzzGain, fuzzTone, fuzzLevel;
         Model lastModel = Model::screamer;
         BypassFade bypass;

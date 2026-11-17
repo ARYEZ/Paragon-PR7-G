@@ -392,9 +392,10 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     const auto isAbyss = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::abyss; };
     panels[driveBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "OVERDRIVE", { { ParamIDs::driveOn, "ON" }, { ParamIDs::driveModel, "MODEL" }, { ParamIDs::driveGain, "DRIVE" },
-                         // Halo has no tone control, as the original has none.
+                         // Halo and Amber have no tone control, as their originals have none.
                          { ParamIDs::driveTone, "TONE", [this, isAbyss] {
-                             return ! isAbyss() && juce::roundToInt (rawValue (ParamIDs::driveModel)) != (int) effects::Drive::Model::halo; }, true },
+                             const auto model = juce::roundToInt (rawValue (ParamIDs::driveModel));
+                             return ! isAbyss() && model != (int) effects::Drive::Model::halo && model != (int) effects::Drive::Model::amber; }, true },
                          { ParamIDs::driveHigh, "HIGH", isAbyss, true }, { ParamIDs::driveLow, "LOW", isAbyss, true },
                          { ParamIDs::driveMiddle, "MIDDLE", isAbyss, true }, { ParamIDs::driveMidFreq, "MID FREQ", isAbyss, true },
                          { ParamIDs::driveAttack, "ATTACK", isSkyline, true }, { ParamIDs::driveGate, "GATE", isSkyline, true },
