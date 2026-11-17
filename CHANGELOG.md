@@ -2,6 +2,88 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.86.0
+
+- **Five factory rigs now use Carbonite** (MOD's CE-2) instead of Vortex. Until now no factory rig used it at all: Carbonite arrived in 0.37.0, after the early banks were made, and later rigs kept picking Vortex. These five suit a warm, vintage, darker chorus:
+
+  | Rig | Bank |
+  |---|---|
+  | Chorus Clean | A |
+  | Cassette Dreams | D |
+  | Velvet Chorus Clean | Q |
+  | Underwater Chorus Clean | R |
+  | Night Drive Chorus Clean | R |
+
+  - **What changes in them:** a warmer, darker chorus with its deep bass left dry (as the pedal's). It's mono, so the three album rigs lose Vortex's chorus-left, dry-right width; their delays and reverbs still spread the sound. MIX no longer applies: the pedal mixes 50/50, as Carbonite does.
+  - **Levels kept:** Carbonite's full-level 50/50 mix made Chorus Clean about 1.5 dB and Cassette Dreams about 2 dB quieter, so each has its level raised by that much. Both now play within half a dB of before. The other three moved less than 1 dB and are unchanged.
+  - Your own saved rigs are untouched.
+  - I couldn't listen to them here. Tell me if one sounded better on Vortex, and I'll put it back.
+
+## 0.85.0
+
+- **Carbonite (MOD's CE-2) upgraded against the circuit.** Carbonite has been our model of the BOSS CE-2 since 0.37.0. Checking it part by part against ElectroSmash's analysis you sent showed four places it differed from the pedal:
+  - **Its chorus now loses its deep bass, as the pedal's does.** On the pedal the chorus reaches the output mixer through a 0.033 µF capacitor into 47k (C14, R22): a cut below about 103 Hz, on the chorus only (your dry sound keeps all its bass). Carbonite only cut below 48 Hz, so low notes wobbled more than on a real CE-2.
+  - **RATE now covers the pedal's range, 0.32 to 3.56 Hz,** worked out from its parts: the LFO's RATE pot over a 10k resistor, and 3.56 Hz flat out (ElectroSmash's figure). Until now this was a guess using the block's usual range (0.05 to 10 Hz). Settings outside the range now stop at its ends, as the pedal's knob does.
+  - **The delay chip rounds off loud notes only as much as its data sheet says:** 0.5% distortion at 0.78 V rms. The old figure was an estimate with about four times that, so loud, bright playing comes through the chorus cleaner now.
+  - **The rounding-off now happens at the chip,** after the filter that feeds it, as in the circuit. It used to come before that filter.
+- **What already matched and stays as it was:** the pre- and de-emphasis, the filters around the chip (within about 1 dB of the exact circuit up to 15 kHz), the 50/50 mix, and the delay times (3.4 ms, sweeping 2.2 to 4.5 ms at full DEPTH, from a clock measured on a real pedal). One analysis online gives 8.5 to 10.75 ms instead; the measurement is the better source, so it stays.
+- **Your saved rigs:** a rig that uses Carbonite will sound slightly different, mostly thinner chorus bass and a cleaner sound on loud notes, and its RATE stops at 0.32 or 3.56 Hz if it was set outside that. No factory rig uses Carbonite.
+- **Tests:** the chorus's bass cut (well down at 40 Hz, flat by 400 Hz), the RATE range, and the chip's 0.5% at 0.78 V rms.
+- I couldn't listen to it here. Tell me if it sounds off.
+
+## 0.84.0
+
+- **A new DELAY type, 12-Bit, modelled on the BOSS DD-2 Digital Delay** (1983, the first compact digital delay, later reissued unchanged as the DD-3). It's built from the pedal's factory circuit diagram (via Hobby-Hour), which you sent, stage by stage:
+  - **The 12-bit converter and its memory.** The memory is always 1,024, 4,096 or 16,384 samples long (the pedal's S, M and L ranges), and the time comes from the clock speed. So the sample rate runs between 20.5 and 82 kHz depending on TIME: at the long end of each range (50, 200, 800 ms) the treble above about 10 kHz folds back down as grit, as on the pedal; at the short end it's clean. Turning TIME while repeats ring bends their pitch, as on the pedal.
+  - **The compander**: a 2:1 compressor before the converter and a 1:2 expander after. It's how 12 bits sound quiet: the converter's steps get turned down with quiet playing, and their faint noise rises and falls with your notes.
+  - **The filters as drawn.** Pre-emphasis before and de-emphasis after (the direct sound passes through both, so it stays flat), plus a 6-pole filter before the converter and a 4-pole one after. Built from their parts, they give the repeats a lift of about 5 dB around 7-8 kHz before a steep cut, gone by 12 kHz. That lift is our reading of the schematic's values: BOSS only specify "40 Hz to 7 kHz".
+  - **The controls.** TIME is 12.5 to 800 ms: longer settings (or synced notes longer than 800 ms) stop at 800 ms, the pedal's limit. FEEDBACK is its F.BACK, and MIX is its E.LEVEL (at full, the repeat is as loud as your playing). Both turn like the pedal's own pots, loaded by what follows them. The pedal's full F.BACK sets it singing on its own; DELAY's FEEDBACK stops at 95%, as on every type, where repeats always die away.
+  - **What it doesn't have:** TONE and PING-PONG are hidden for this type, because the pedal has neither and is mono (stereo playing goes in as the two sides' average, and the repeats come out on both). The HOLD mode isn't built.
+- **Can it be perfect?** As close as a schematic gets you, but not perfect:
+  - The controller chip's inside workings are unpublished. The memory sizes and ranges above are worked out from its three memory chips and the specification.
+  - Our reading, not the schematic's: the level where the compander has unity gain, where the converter clips (+/-2.5 V, half its 5 V supply), how far the compressor can turn up (40 dB), and that the repeats come back the same way up as your playing.
+  - I couldn't listen to it, or to a real DD-2, here. Tell me how it compares if you know the pedal.
+- **CPU:** about 3% of a core.
+- **Fix in the tests:** the album-bank tests now build their plugins the way a DAW does (on the heap). Two of them keep two plugins at once, which overflowed Windows' smaller stack once 12-Bit's memory was added. 12-Bit's memory now lives on the heap too.
+- **Tests** against the circuit:
+  - repeats land at the set time (12.5, 300 and 800 ms, and longer stops at 800);
+  - the compander gives back the level that went in, from loud playing down to -70 dB, within 0.5 dB;
+  - the band: flat in the bass, the lift near 7 kHz, more than 18 dB down at 12 kHz;
+  - a 9 kHz note at 800 ms comes back with its 11.48 kHz fold-over, and at 100 ms without it;
+  - full F.BACK sustains on its own, while 95% dies away;
+  - the pots' loading, and the type at work in the plugin.
+- Next: the DC-2 Dimension C (you sent its schematic), the DM-2 and the CE-2.
+
+## 0.83.0
+
+- **Three new OD / DISTORTION models, modelled on BOSS compact pedals** (the first of the BOSS list: the DM-2 delay and CE-2 chorus come next). Each is built from the original pedal's schematic, part by part, under a name of its own:
+
+  | Model | Modelled on | Controls | What it does |
+  |---|---|---|---|
+  | **AMBER** | the 1977 BOSS OD-1 Over Drive | DRIVE, LEVEL | The first overdrive pedal. One diode clips one half of the wave and two the other, so the halves clip at different heights: even harmonics and a warm, amp-like push. A low cut at 338 Hz before the drive and a fixed treble roll-off at 884 Hz make it thin and mid-focused. No tone control, as the original. |
+  | **EMBER** | the BOSS DS-1 Distortion | DRIVE, TONE, LEVEL | A high-gain transistor booster into an op-amp stage, then two diodes clipping hard to ground. Its TONE stack scoops the mids (about 7 dB under the lows and 4 dB under the highs at noon) and leans bright or dark either way. |
+  | **GRINDER** | the 1983 BOSS HM-2 Heavy Metal | DRIVE (its DIST), HIGH, LOW (its COLOR MIX), LEVEL | Two transistor stages and an op-amp with uneven soft clipping, germanium diodes in series with the signal, then two silicon diodes clipping hard. Its COLOR MIX are resonant boosts: LOW around 87 Hz, HIGH two peaks at once around 960 Hz and 1.28 kHz. All up, they boost hard enough to clip the EQ too: the "chainsaw". |
+
+  - **Where the circuits come from:**
+    - AMBER: Electric Druid's redrawing of the original OD-1 schematic;
+    - EMBER: ElectroSmash's analysis of the DS-1 (its DS1-A circuit), which you sent;
+    - GRINDER: the HM-2's original factory schematic (via Hobby-Hour), which you sent.
+  - **What's our reading:**
+    - GRINDER's two transistor stages are modelled as inverting stages with gains worked out from their resistors and bias, not solved transistor by transistor.
+    - The germanium diodes' exact part isn't named on the schematic, so they're a typical small-signal germanium diode. With 10k either side of them they add grit around the zero crossings and only take about 2 dB off the quietest playing; they don't work as the strong noise gate they're sometimes described as.
+    - BOSS's special pot tapers on the HM-2 (its "D" and "G" tapers) aren't published, so DIST and COLOR MIX turn evenly.
+    - Where ElectroSmash simplifies (they describe the DS-1's scoop as about 20 dB at 500 Hz), the model follows the parts: the stack itself gives the shallower, lower-mid scoop above.
+  - **No trademarked names on the models**; "modelled on" is only here in the notes.
+  - **I couldn't listen to them here.** They are built and checked against the circuits, but tell me how they feel under your fingers and where they're off.
+  - **CPU:** AMBER about 5% of a core, EMBER and GRINDER about 9% each (about what ABYSS costs).
+- **Tests** for each, against its circuit:
+  - the gains match the schematics (AMBER's drive stage 8 to 220; EMBER's booster 56 and op-amp 1 to 22; GRINDER's op-amp 1.7 to 5.7);
+  - AMBER's 2nd harmonic sits 20 dB under the note (uneven clipping);
+  - AMBER's bass cut and fixed treble roll-off;
+  - EMBER's hard clipping, mid scoop and TONE range;
+  - GRINDER's COLOR MIX: flat at noon, each pot boosting and cutting its own bands by more than 12 dB without touching the other's;
+  - more DRIVE, more distortion; aliasing kept down at full gain; each about your guitar's own level with its knobs at noon.
+
 ## 0.82.1
 
 - **An optimisation round: the drive pedals and the AEON flanger now use far less CPU, with the same sound.** Measured by counting the processor's instructions (the same count every run; this machine's stopwatch timings varied too much between runs to trust), with the pedal on at DRIVE 8:

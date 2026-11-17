@@ -390,12 +390,16 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     // Skyline adds its pedal's ATTACK and GATE; Abyss has its own EQ in place of TONE.
     const auto isSkyline = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::skyline; };
     const auto isAbyss = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::abyss; };
+    // Grinder's COLOR MIX is LOW and HIGH (the same knobs as Abyss's), with no TONE.
+    const auto isGrinder = [this] { return juce::roundToInt (rawValue (ParamIDs::driveModel)) == (int) effects::Drive::Model::grinder; };
+    const auto hasLowHigh = [isAbyss, isGrinder] { return isAbyss() || isGrinder(); };
     panels[driveBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "OVERDRIVE", { { ParamIDs::driveOn, "ON" }, { ParamIDs::driveModel, "MODEL" }, { ParamIDs::driveGain, "DRIVE" },
-                         // Halo has no tone control, as the original has none.
-                         { ParamIDs::driveTone, "TONE", [this, isAbyss] {
-                             return ! isAbyss() && juce::roundToInt (rawValue (ParamIDs::driveModel)) != (int) effects::Drive::Model::halo; }, true },
-                         { ParamIDs::driveHigh, "HIGH", isAbyss, true }, { ParamIDs::driveLow, "LOW", isAbyss, true },
+                         // Halo and Amber have no tone control, as their originals have none.
+                         { ParamIDs::driveTone, "TONE", [this, hasLowHigh] {
+                             const auto model = juce::roundToInt (rawValue (ParamIDs::driveModel));
+                             return ! hasLowHigh() && model != (int) effects::Drive::Model::halo && model != (int) effects::Drive::Model::amber; }, true },
+                         { ParamIDs::driveHigh, "HIGH", hasLowHigh, true }, { ParamIDs::driveLow, "LOW", hasLowHigh, true },
                          { ParamIDs::driveMiddle, "MIDDLE", isAbyss, true }, { ParamIDs::driveMidFreq, "MID FREQ", isAbyss, true },
                          { ParamIDs::driveAttack, "ATTACK", isSkyline, true }, { ParamIDs::driveGate, "GATE", isSkyline, true },
                          { ParamIDs::driveLevel, "LEVEL" } } } });
@@ -450,11 +454,13 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     };
     panels[modBlock] = modPanel ("MODULATION", ParamIDs::modIds);
     panels[mod2Block] = modPanel ("MODULATION 2", ParamIDs::mod2Ids);
+    // 12-Bit is the pedal: no TONE, and mono (no ping-pong).
+    const auto notTwelveBit = [this] { return juce::roundToInt (rawValue (ParamIDs::delayType)) != (int) effects::Delay::Type::twelveBit; };
     panels[delayBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "DELAY", { { ParamIDs::delayOn, "ON" }, { ParamIDs::delayType, "TYPE" }, { ParamIDs::delaySync, "SYNC" },
                      { ParamIDs::delayTime, "TIME", [this] { return rawValue (ParamIDs::delaySync) < 0.5f; } },
-                     { ParamIDs::delayFeedback, "FEEDBACK" }, { ParamIDs::delayTone, "TONE" }, { ParamIDs::delayMix, "MIX" }, { ParamIDs::delayDuck, "DUCK" },
-                     { ParamIDs::delayPingPong, "PING-PONG" } } } });
+                     { ParamIDs::delayFeedback, "FEEDBACK" }, { ParamIDs::delayTone, "TONE", notTwelveBit }, { ParamIDs::delayMix, "MIX" }, { ParamIDs::delayDuck, "DUCK" },
+                     { ParamIDs::delayPingPong, "PING-PONG", notTwelveBit } } } });
     panels[reverbBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "REVERB", { { ParamIDs::reverbOn, "ON" }, { ParamIDs::reverbType, "TYPE" }, { ParamIDs::reverbSize, "SIZE" },
                       { ParamIDs::reverbPreDelay, "PRE-DELAY" }, { ParamIDs::reverbTone, "TONE" }, { ParamIDs::reverbMix, "MIX" },

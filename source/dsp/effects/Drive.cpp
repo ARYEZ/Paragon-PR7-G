@@ -17,6 +17,9 @@ namespace effects
         constexpr float diodeVolts = 0.6f;         // about where a silicon diode starts conducting
         constexpr float screamerOutputScale = 0.35f;   // so LEVEL 0 dB is roughly the guitar's own level
         constexpr float cosmonautOutputScale = 0.25f;  // the same for the fuzzes, at SUSTAIN noon
+        constexpr float emberOutputScale = 1.62f;       // the same for Ember, at DIST, TONE noon
+        constexpr float grinderOutputScale = 0.437f;     // the same for Grinder, at DIST noon, COLOR MIX flat
+        constexpr float amberOutputScale = 0.37f;      // the same for Amber, at DRIVE noon
         constexpr float haloOutputScale = 1.04f;       // the same for Halo, at FUZZ noon (the original's output is a low tap)
 
         float onePoleCoefficient (double rate, float hz)
@@ -67,6 +70,11 @@ namespace effects
         chimera.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         abyss.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
         halo.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
+        amber.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
+        ember.prepare (sampleRate * (double) oversampling.getOversamplingFactor());
+        grinder.prepare (sampleRate * (double) oversampling.getOversamplingFactor(), sampleRate);
+        colourLow.reset (sampleRate, 0.02);
+        colourHigh.reset (sampleRate, 0.02);
         bypass.prepare (sampleRate, maxBlockSize);
     }
 
@@ -88,6 +96,9 @@ namespace effects
                 clipLowPassState = toneState = outputCouplingState = 0.0f;
                 cosmonaut.reset();
                 halo.reset();
+                amber.reset();
+                ember.reset();
+                grinder.reset();
             }
 
             switch (settings.model)
@@ -99,6 +110,9 @@ namespace effects
                 case Model::rabid:    processRabid (block, settings); break;
                 case Model::chimera:  processChimera (block, settings); break;
                 case Model::abyss:    processAbyss (block, settings); break;
+                case Model::amber:    processAmber (block, settings); break;
+                case Model::ember:    processEmber (block, settings); break;
+                case Model::grinder:  processGrinder (block, settings); break;
             }
         });
     }
@@ -301,5 +315,74 @@ namespace effects
         auto* samples = block.getChannelPointer (0);
         for (int i = 0; i < (int) block.getNumSamples(); ++i)
             samples[i] *= fuzzLevel.getNextValue();
+    }
+
+    void Drive::processAmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // DRIVE is the pedal's 1M audio-taper pot, gliding per block so turning
+        // it doesn't click; LEVEL stands in for its 10k level pot. The original
+        // has no tone control, so TONE does nothing here.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzLevel.setTargetValue (amberOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        amber.setDrive (fuzzGain.skip (numSamples));
+
+        // The low cut and the drive stage at 8x the rate, against aliasing.
+        auto upsampled = oversampling.processSamplesUp (block);
+        auto* fast = upsampled.getChannelPointer (0);
+        for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
+            fast[i] = (float) amber.clip (fast[i]);
+        oversampling.processSamplesDown (block);
+
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] = (float) amber.finish (samples[i]) * fuzzLevel.getNextValue();
+    }
+
+    void Drive::processEmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // DIST and TONE are the pedal's pots, gliding per block so turning them
+        // doesn't click; LEVEL stands in for its level pot.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        fuzzTone.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.tone) / 10.0f);
+        fuzzLevel.setTargetValue (emberOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        ember.setDistortion (fuzzGain.skip (numSamples));
+        ember.setTone (fuzzTone.skip (numSamples));
+
+        // The whole circuit at 8x the rate (the TONE stack loads the diodes).
+        auto upsampled = oversampling.processSamplesUp (block);
+        auto* fast = upsampled.getChannelPointer (0);
+        for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
+            fast[i] = (float) ember.process (fast[i]);
+        oversampling.processSamplesDown (block);
+
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] *= fuzzLevel.getNextValue();
+    }
+
+    void Drive::processGrinder (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
+    {
+        // DIST and COLOR MIX (LOW and HIGH) are the pedal's pots, gliding per
+        // block; LEVEL stands in for its level pot. TONE isn't used.
+        fuzzGain.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.drive) / 10.0f);
+        colourLow.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.low) / 10.0f);
+        colourHigh.setTargetValue (juce::jlimit (0.0f, 10.0f, settings.high) / 10.0f);
+        fuzzLevel.setTargetValue (grinderOutputScale * juce::Decibels::decibelsToGain (settings.levelDb));
+        const auto numSamples = (int) block.getNumSamples();
+        grinder.setDistortion (fuzzGain.skip (numSamples));
+        grinder.setColour (colourLow.skip (numSamples), colourHigh.skip (numSamples));
+
+        // The gain stages and clippers at 8x the rate; the COLOR MIX EQ after.
+        auto upsampled = oversampling.processSamplesUp (block);
+        auto* fast = upsampled.getChannelPointer (0);
+        for (size_t i = 0; i < upsampled.getNumSamples(); ++i)
+            fast[i] = (float) grinder.clip (fast[i]);
+        oversampling.processSamplesDown (block);
+
+        auto* samples = block.getChannelPointer (0);
+        for (int i = 0; i < numSamples; ++i)
+            samples[i] = (float) grinder.equalise (samples[i]) * fuzzLevel.getNextValue();
     }
 }

@@ -74,20 +74,23 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     toe: the interval, as far as six octaves down) and eight harmonies (your note plus a voice the pedal moves between two intervals);
     or a **Talk Box**: the amp's sound, after the cab, shaped into vowels (oo to ee) by the expression pedal (TALK BOX),
     with RESONANCE and MIX.
-  - **2 OD / Distortion:** seven models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
+  - **2 OD / Distortion:** ten models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
     **Rabid**, modelled on the ProCo RAT 2, slow op-amp and all; **Cosmonaut**, modelled stage by stage on the '90s green Russian
     Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); **Halo**, modelled on the germanium Fuzz Face of
     1966-68, its whole two-transistor circuit solved as it is (warm and round, cleaning up as you pick softer; FUZZ and LEVEL);
     **Skyline**, inspired by the Horizon Devices
     Precision Drive: the Tube Screamer circuit with an 8-way ATTACK switch for how much bass reaches the clipping, and a gate;
     **Chimera**, modelled on the Klon Centaur: germanium clipping blended with a clean feed, the "transparent" overdrive;
-    and **Abyss**, modelled on the Boss MT-2 Metal Zone, with its own HIGH, LOW, MIDDLE and MID FREQ. Drive, tone, level; 8x oversampled to avoid harsh aliasing.
+    **Abyss**, modelled on the Boss MT-2 Metal Zone, with its own HIGH, LOW, MIDDLE and MID FREQ;
+    **Amber**, modelled on the Boss OD-1 (asymmetric diodes, no tone control); **Ember**, modelled on the Boss DS-1 (hard clipping,
+    mid-scooped TONE); and **Grinder**, modelled on the Boss HM-2 Heavy Metal, with its COLOR MIX as LOW and HIGH.
+    Drive, tone, level; 8x oversampled to avoid harsh aliasing.
   - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Prism (a wide stereo chorus), Nebula (a throbbing
     phase vibrato), rotary speaker, vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and
-    optional ping-pong; it comes in eight types: Digital (the original), Analog, Tape, Mod, Reverse,
-    Multi-Tap, Shimmer and Ducking. The reverb comes in eight types: Room, Hall, Cathedral, Plate, Spring,
+    optional ping-pong; it comes in nine types: Digital (the original), Analog, Tape, Mod, Reverse,
+    Multi-Tap, Shimmer, Ducking and 12-Bit (modelled on the 1983 BOSS DD-2). The reverb comes in eight types: Room, Hall, Cathedral, Plate, Spring,
     Digital, Reverse and Classic (the original), with SIZE, PRE-DELAY, TONE and MIX. Both have a DUCK knob that tucks
     the repeats or reverb under your playing and lets them swell back in the gaps. Both let their
     tails ring out when switched off.

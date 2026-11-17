@@ -149,8 +149,8 @@ namespace
     // Drive::modelNames' order).
     const char* driveKind (int model)
     {
-        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION" };
-        static_assert (std::size (kinds) == 7);
+        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION", "ASYMMETRIC OVERDRIVE", "HARD-CLIP DISTORTION", "HEAVY METAL DISTORTION" };
+        static_assert (std::size (kinds) == 10);   // one per Drive::modelNames entry
         return kinds[(size_t) juce::jlimit (0, (int) std::size (kinds) - 1, model)];
     }
 }
@@ -550,7 +550,11 @@ void Faceplate::paintDrive (juce::Graphics& g, juce::Rectangle<float> header, ju
         knobs.insert (knobs.end(), { { ParamIDs::driveHigh, "HIGH" }, { ParamIDs::driveLow, "LOW" },
                                      { ParamIDs::driveMiddle, "MIDDLE" }, { ParamIDs::driveMidFreq, "MID FREQ" } });
     }
-    else if (! halo)   // Halo, as the original, has just FUZZ and its volume
+    else if (model == (int) effects::Drive::Model::grinder)   // COLOR MIX
+    {
+        knobs.insert (knobs.end(), { { ParamIDs::driveLow, "LOW" }, { ParamIDs::driveHigh, "HIGH" } });
+    }
+    else if (! halo && model != (int) effects::Drive::Model::amber)   // Halo and Amber, as their originals, have no tone control
     {
         knobs.push_back ({ ParamIDs::driveTone, "TONE" });
         if (model == (int) effects::Drive::Model::skyline)
@@ -863,8 +867,8 @@ void Faceplate::paintDelay (juce::Graphics& g, juce::Rectangle<float> header, ju
 {
     // The delay's TYPE as its name; its repeats on a screen; TIME in digits.
     static const char* names[] = { "DIGITAL DELAY", "ANALOG DELAY", "TAPE ECHO", "MOD DELAY", "REVERSE DELAY",
-                                   "MULTI-TAP", "SHIMMER DELAY", "DUCKING DELAY" };
-    static_assert (std::size (names) == 8);
+                                   "MULTI-TAP", "SHIMMER DELAY", "DUCKING DELAY", "12-BIT DELAY" };
+    static_assert (std::size (names) == 9);
     const auto type = juce::jlimit (0, (int) std::size (names) - 1, juce::roundToInt (raw (ParamIDs::delayType)));
     nameplate (g, header, names[type], "ECHO");
     const auto on = isOn();

@@ -1115,6 +1115,40 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
         CHECK (carbonite < vortex - 8.0f);
     }
 
+    SECTION ("Carbonite: its chorus loses its deep bass on the way into the mixer (0.033 uF into 47k: 103 Hz)")
+    {
+        rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
+        rig.set (ParamIDs::modDepth, 0.0f);
+        const auto chorusAt = [&] (double hz)
+        {
+            const auto tone = sine (hz, 0.1f, 1.0);
+            return rms (minus (rig.run (tone)[0], tone), 0.5);
+        };
+        // A first-order cut at 103 Hz: about -7 dB at 40 Hz (with the 48 Hz input cut, more).
+        const auto at40 = dB (chorusAt (40.0) / chorusAt (1000.0));
+        const auto at400 = dB (chorusAt (400.0) / chorusAt (1000.0));
+        CHECK (at40 < -9.0f);
+        CHECK (at400 > -1.5f);
+    }
+
+    SECTION ("Carbonite: RATE runs 0.32 to 3.56 Hz, as the pedal's (its pot over 10k, 47k / (4 x 0.1 uF x 33k x 1M) flat out)")
+    {
+        CHECK_THAT (effects::Modulation::carboniteRateHz (10.0f), WithinAbs (3.56, 0.01));
+        CHECK_THAT (effects::Modulation::carboniteRateHz (0.05f), WithinAbs (0.324, 0.002));
+        CHECK_THAT (effects::Modulation::carboniteRateHz (1.0f), WithinAbs (1.0, 1.0e-6));
+    }
+
+    SECTION ("Carbonite: the chip rounds off 0.78 V rms by 0.5%, its data sheet's figure")
+    {
+        constexpr int n = 4800;
+        const auto amplitude = 0.78 * std::sqrt (2.0);
+        std::vector<float> out (n);
+        for (int i = 0; i < n; ++i)
+            out[(size_t) i] = effects::Modulation::carboniteChip ((float) (amplitude * std::sin (juce::MathConstants<double>::twoPi * 100.0 * i / sampleRate)));
+        const auto fundamental = levelAt (out, 100.0, 0.0), third = levelAt (out, 300.0, 0.0);
+        CHECK_THAT (third / fundamental, WithinAbs (0.005, 0.0005));
+    }
+
     SECTION ("Carbonite: DEPTH bends the pitch")
     {
         rig.set (ParamIDs::modType, (float) effects::Modulation::Type::carbonite);
@@ -2550,4 +2584,385 @@ TEST_CASE ("PitchShifter: clean from two octaves down to two up, steady or glidi
             CAPTURE (ratio, glide, dB (shifted / 0.3f), dB (original / 0.3f));
             CHECK (dB (shifted / original) > 20.0f);
         }
+}
+
+TEST_CASE ("Amber: the first compact overdrive's asymmetric diodes, its low cut, DRIVE and fixed filter", "[effects][drive]")
+{
+    EffectRig rig;
+    rig.set (ParamIDs::driveOn, 1.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::amber);
+
+    SECTION ("The drive stage's gain is the schematic's: 8 at DRIVE 0, 220 at 10")
+    {
+        CHECK_THAT (effects::Amber::stageGain (0.0), WithinAbs (1.0 + 33.0 / 4.7, 0.01));
+        CHECK_THAT (effects::Amber::stageGain (1.0), WithinAbs (1.0 + 1033.0 / 4.7, 0.1));
+    }
+
+    SECTION ("One diode one way, two the other: strong even harmonics, unlike a symmetric clipper")
+    {
+        rig.set (ParamIDs::driveGain, 6.0f);
+        const auto output = rig.runMono (sine (220.0, 0.2f, 0.5));
+        REQUIRE (allFinite (output));
+        const auto fundamental = levelAt (output, 220.0);
+        CAPTURE (dB (levelAt (output, 440.0) / fundamental), dB (levelAt (output, 660.0) / fundamental));
+        CHECK (dB (levelAt (output, 440.0) / fundamental) > -25.0f);
+        // A symmetric clipper (RABID) keeps the 2nd harmonic under -35 dB on the same note.
+    }
+
+    SECTION ("The 338 Hz low cut and the 720 Hz ground leg: the bass gets far less than the mids")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.002f, 0.5);   // quiet enough not to clip
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CAPTURE (dB (gainAt (100.0)), dB (gainAt (1000.0)));
+        CHECK (dB (gainAt (100.0)) < dB (gainAt (1000.0)) - 15.0f);
+    }
+
+    SECTION ("The fixed 884 Hz filter darkens the top: 5 kHz well under 1 kHz")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.002f, 0.5);
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CAPTURE (dB (gainAt (5000.0)), dB (gainAt (1000.0)));
+        CHECK (dB (gainAt (5000.0)) < dB (gainAt (1000.0)) - 8.0f);   // about 10 dB: the stage's gain still rises a little above 720 Hz
+    }
+
+    SECTION ("More DRIVE, more distortion")
+    {
+        const auto harmonics = [&] (float drive)
+        {
+            rig.set (ParamIDs::driveGain, drive);
+            const auto output = rig.runMono (sine (220.0, 0.05f, 0.5));
+            return dB ((levelAt (output, 440.0) + levelAt (output, 660.0)) / levelAt (output, 220.0));
+        };
+        CHECK (harmonics (9.0f) > harmonics (1.0f) + 6.0f);
+    }
+
+    SECTION ("TONE does nothing: the original has none")
+    {
+        const auto play = [&] (float tone)
+        {
+            EffectRig r;
+            r.set (ParamIDs::driveOn, 1.0f);
+            r.set (ParamIDs::driveModel, (float) effects::Drive::Model::amber);
+            r.set (ParamIDs::driveTone, tone);
+            return r.runMono (sine (220.0, 0.2f, 0.3));
+        };
+        CHECK (maxAbsDifference (play (0.0f), play (10.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("Aliasing stays down at full DRIVE")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
+        CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
+    }
+
+    SECTION ("At noon, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CAPTURE (level);
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+}
+
+TEST_CASE ("Ember: the compact distortion's booster, op-amp gain, hard clipping and mid-scooped TONE", "[effects][drive]")
+{
+    EffectRig rig;
+    rig.set (ParamIDs::driveOn, 1.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::ember);
+
+    SECTION ("The gains are ElectroSmash's: the booster 56 in the treble, the op-amp 1 to 22")
+    {
+        CHECK_THAT (effects::Ember::boosterTrebleGain(), WithinAbs (56.0, 1.0));
+        CHECK_THAT (effects::Ember::opAmpGain (0.0), WithinAbs (1.0, 1.0e-9));
+        CHECK_THAT (effects::Ember::opAmpGain (1.0), WithinAbs (1.0 + 100.0 / 4.7, 0.01));
+    }
+
+    SECTION ("The diodes clip hard: strong odd harmonics")
+    {
+        rig.set (ParamIDs::driveGain, 6.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto output = rig.runMono (sine (220.0, 0.1f, 0.5));
+        REQUIRE (allFinite (output));
+        const auto fundamental = levelAt (output, 220.0);
+        CAPTURE (dB (levelAt (output, 440.0) / fundamental), dB (levelAt (output, 660.0) / fundamental));
+        CHECK (dB (levelAt (output, 660.0) / fundamental) > -20.0f);
+    }
+
+    SECTION ("TONE up brightens it")
+    {
+        const auto trebleShare = [&] (float tone)
+        {
+            rig.set (ParamIDs::driveGain, 5.0f);
+            rig.set (ParamIDs::driveTone, tone);
+            const auto output = rig.runMono (sine (220.0, 0.1f, 0.5));
+            return dB ((levelAt (output, 2860.0) + levelAt (output, 3300.0)) / levelAt (output, 220.0));
+        };
+        CAPTURE (trebleShare (0.0f), trebleShare (10.0f));
+        CHECK (trebleShare (10.0f) > trebleShare (0.0f) + 10.0f);
+    }
+
+    SECTION ("At TONE noon the stack scoops the mids: 500 Hz under 3 kHz")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.0005f, 0.5);   // quiet enough not to clip, even after the booster
+            return rms (rig.runMono (input), 0.2) / rms (input, 0.2);
+        };
+        CAPTURE (dB (gainAt (500.0)), dB (gainAt (3000.0)));
+        // The stack solved alone gives about -7.4 dB at 100 Hz, -14.6 dB at 700 Hz
+        // and -10.3 dB at 3 kHz (ElectroSmash's "-20 dB at 500 Hz" is a
+        // simplification); the booster also cuts the bass, so test against the treble.
+        CHECK (dB (gainAt (500.0)) < dB (gainAt (3000.0)) - 3.0f);
+    }
+
+    SECTION ("Aliasing stays down at full DIST")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
+        CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
+    }
+
+    SECTION ("At noon, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CAPTURE (level);
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+}
+
+TEST_CASE ("Grinder: the heavy metal pedal's gain, germanium gate and COLOR MIX boosts", "[effects][drive]")
+{
+    SECTION ("Op-amp 1b's gain is the schematic's: 1.7 at DIST 0, 5.7 at 10")
+    {
+        CHECK_THAT (effects::Grinder::opAmpGain (0.0), WithinAbs (1.0 + 220.0 / 297.0, 0.01));
+        CHECK_THAT (effects::Grinder::opAmpGain (1.0), WithinAbs (1.0 + 220.0 / 47.0, 0.01));
+    }
+
+    SECTION ("COLOR MIX: flat at noon; LOW boosts and cuts around 87 Hz, HIGH around 1 kHz")
+    {
+        const auto gainAt = [] (double low, double high, double hz)
+        {
+            effects::Grinder g;
+            g.prepare (8.0 * sampleRate, sampleRate);
+            g.setColour (low, high);
+            double in = 0.0, out = 0.0;
+            for (int n = 0; n < (int) sampleRate; ++n)
+            {
+                const auto x = 0.01 * std::sin (juce::MathConstants<double>::twoPi * hz * n / sampleRate);
+                const auto y = g.equalise (x);
+                if (n > (int) (0.5 * sampleRate)) { in += x * x; out += y * y; }
+            }
+            return (float) (10.0 * std::log10 (out / in));
+        };
+        for (const auto hz : { 87.0, 1000.0, 4000.0 })
+        {
+            CAPTURE (hz);
+            CHECK_THAT (gainAt (0.5, 0.5, hz), WithinAbs (0.0, 1.0));
+        }
+        CAPTURE (gainAt (1.0, 0.5, 87.0), gainAt (0.0, 0.5, 87.0), gainAt (0.5, 1.0, 1100.0), gainAt (0.5, 0.0, 1100.0));
+        CHECK (gainAt (1.0, 0.5, 87.0) > 12.0f);     // LOW up
+        CHECK (gainAt (0.0, 0.5, 87.0) < -12.0f);    // LOW down
+        CHECK (gainAt (0.5, 1.0, 1100.0) > 12.0f);   // HIGH up: the two mid peaks
+        CHECK (gainAt (0.5, 0.0, 1100.0) < -12.0f);
+        CHECK (std::abs (gainAt (1.0, 0.5, 1100.0)) < 3.0f);   // LOW leaves the mids
+        CHECK (std::abs (gainAt (0.5, 1.0, 87.0)) < 3.0f);     // HIGH leaves the lows
+    }
+
+    EffectRig rig;
+    rig.set (ParamIDs::driveOn, 1.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::grinder);
+    rig.set (ParamIDs::driveLow, 5.0f);
+    rig.set (ParamIDs::driveHigh, 5.0f);
+
+    SECTION ("The germanium diodes in series give the quietest signals less gain (crossover grit)")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        const auto gainFor = [&] (float amplitude)
+        {
+            const auto input = sine (440.0, amplitude, 0.5);
+            return dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        };
+        // Below the silicon diodes' clipping: 1e-5 V barely opens the germanium
+        // pair, 5e-3 V (about 0.24 V at the pair) opens it. With 10k on each side
+        // and a 68k load, the pair can only take about 2 dB off the quietest
+        // playing: grit around the zero crossings, not the strong gate it's
+        // sometimes described as.
+        CAPTURE (gainFor (1.0e-5f), gainFor (5.0e-3f));
+        CHECK (gainFor (1.0e-5f) < gainFor (5.0e-3f) - 1.5f);
+    }
+
+    SECTION ("More DIST, more distortion")
+    {
+        const auto harmonics = [&] (float drive)
+        {
+            rig.set (ParamIDs::driveGain, drive);
+            const auto output = rig.runMono (sine (220.0, 0.002f, 0.5));
+            return dB ((levelAt (output, 660.0) + levelAt (output, 1100.0)) / levelAt (output, 220.0));
+        };
+        CAPTURE (harmonics (0.0f), harmonics (10.0f));
+        CHECK (harmonics (10.0f) > harmonics (0.0f) + 3.0f);
+    }
+
+    SECTION ("TONE does nothing: COLOR MIX is its tone")
+    {
+        const auto play = [&] (float tone)
+        {
+            EffectRig r;
+            r.set (ParamIDs::driveOn, 1.0f);
+            r.set (ParamIDs::driveModel, (float) effects::Drive::Model::grinder);
+            r.set (ParamIDs::driveTone, tone);
+            return r.runMono (sine (220.0, 0.2f, 0.3));
+        };
+        CHECK (maxAbsDifference (play (0.0f), play (10.0f)) < 1.0e-6f);
+    }
+
+    SECTION ("Aliasing stays down at full DIST")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
+        CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
+    }
+
+    SECTION ("At noon with COLOR MIX flat, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CAPTURE (level);
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+}
+
+TEST_CASE ("12-Bit: the compact digital delay's circuit", "[effects][delay][twelvebit]")
+{
+    using effects::TwelveBit;
+    // The pedal by itself (E.LEVEL full): what comes out for a signal in.
+    const auto runPedal = [] (const std::vector<float>& input, double seconds, double feedbackKnob)
+    {
+        TwelveBit pedal;
+        pedal.prepare (sampleRate, blockSize);
+        pedal.setTime (seconds);
+        pedal.setFeedback (feedbackKnob);
+        auto samples = input;
+        for (size_t start = 0; start < samples.size(); start += blockSize)
+            pedal.process (samples.data() + start, (int) std::min<size_t> (blockSize, samples.size() - start));
+        return samples;
+    };
+
+    SECTION ("The ranges: memory and clock as the pedal's S, M and L")
+    {
+        CHECK (TwelveBit::memoryFor (0.0125) == 1024);
+        CHECK (TwelveBit::memoryFor (0.1) == 4096);
+        CHECK (TwelveBit::memoryFor (0.8) == 16384);
+        CHECK_THAT (TwelveBit::clockFor (0.8), WithinAbs (20480.0, 1.0));
+        CHECK_THAT (TwelveBit::clockFor (0.2), WithinAbs (81920.0, 1.0));
+        CHECK_THAT (TwelveBit::clockFor (2.0), WithinAbs (20480.0, 1.0));   // 800 ms is as long as it goes
+    }
+
+    SECTION ("Repeats come at the set time, 12.5 to 800 ms, and no longer")
+    {
+        auto burst = sine (1000.0, 0.3f, 0.05);
+        burst.resize ((size_t) (1.0 * sampleRate), 0.0f);
+        for (const auto [seconds, expected] : { std::pair { 0.0125, 0.0125 }, { 0.3, 0.3 }, { 0.8, 0.8 }, { 1.5, 0.8 } })
+        {
+            INFO (seconds << " s");
+            const auto out = runPedal (burst, seconds, 0.0);
+            size_t first = 0;
+            for (size_t i = 0; i < out.size(); ++i)
+                if (std::abs (out[i]) > 0.05f) { first = i; break; }
+            CHECK_THAT ((double) first / sampleRate, WithinAbs (expected, 0.001));
+        }
+    }
+
+    SECTION ("The compander gives back what went in, loud or quiet (its steps turned down with it)")
+    {
+        for (const auto level : { 0.3f, 0.03f, 0.003f, 0.0003f })
+        {
+            INFO (level);
+            const auto out = runPedal (sine (1000.0, level, 1.0), 0.3, 0.0);
+            CHECK_THAT (dB (levelAt (out, 1000.0, 0.5) / level), WithinAbs (0.0, 0.5));
+        }
+    }
+
+    SECTION ("Its band, from the filters as drawn: a lift around 7 kHz, then a steep cut")
+    {
+        const auto gainAt = [&] (double hz)
+        {
+            const auto out = runPedal (sine (hz, 0.2f, 1.2), 0.3, 0.0);
+            return dB (levelAt (out, hz, 0.6) / 0.2f);
+        };
+        CHECK_THAT (gainAt (100.0), WithinAbs (0.0, 1.0));
+        const auto at7k = gainAt (7000.0);
+        CHECK (at7k > 3.0f);
+        CHECK (at7k < 7.0f);
+        CHECK (gainAt (12000.0) < -18.0f);
+    }
+
+    SECTION ("At the long end of a range the clock is slow enough for the treble to fold back as grit")
+    {
+        // 9 kHz at 800 ms: sampled at 20.48 kHz, it comes back with an image
+        // at 11.48 kHz. At 100 ms (40.96 kHz) there's none.
+        const auto in = sine (9000.0, 0.2f, 2.0);
+        const auto slow = runPedal (in, 0.8, 0.0), fast = runPedal (in, 0.1, 0.0);
+        CHECK (dB (levelAt (slow, 11480.0, 1.0) / 0.2f) > -15.0f);
+        CHECK (dB (levelAt (fast, 11480.0, 1.0) / 0.2f) < -60.0f);
+    }
+
+    SECTION ("F.BACK: full sets it singing on its own; 95% (DELAY's FEEDBACK top) dies away")
+    {
+        auto phrase = sine (220.0, 0.5f, 0.25);
+        phrase.resize ((size_t) (5.0 * sampleRate), 0.0f);
+        CHECK (rms (runPedal (phrase, 0.0125, 0.95), 4.5) < 1.0e-3f);
+        CHECK (rms (runPedal (phrase, 0.0125, 1.0), 4.5) > 0.05f);
+    }
+
+    SECTION ("cpu")
+    {
+        if (std::getenv ("PARAGON_CPU_ONLY") != nullptr)
+        {
+            const auto in = sine (440.0, 0.3f, 10.0);
+            const auto t0 = juce::Time::getMillisecondCounterHiRes();
+            runPedal (in, 0.3, 0.5);
+            WARN ("12-Bit: " << (juce::Time::getMillisecondCounterHiRes() - t0) / 10000.0 * 100.0 << "% of a core");
+        }
+    }
+
+    SECTION ("E.LEVEL and F.BACK are loaded by what follows them, as real pots are")
+    {
+        CHECK_THAT (TwelveBit::levelGain (1.0), WithinAbs (1.0, 1.0e-9));
+        CHECK_THAT (TwelveBit::levelGain (0.5), WithinAbs (0.5 * 33.0 / 45.5, 1.0e-9));
+        CHECK (TwelveBit::feedbackGain (0.5) < 0.5);
+    }
+
+    SECTION ("In the plugin: DELAY's 12-Bit type repeats at its TIME")
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::delayOn, 1.0f);
+        rig.set (ParamIDs::delayType, (float) effects::Delay::Type::twelveBit);
+        rig.set (ParamIDs::delaySync, 0.0f);
+        rig.set (ParamIDs::delayTime, 250.0f);
+        rig.set (ParamIDs::delayFeedback, 0.0f);
+        rig.set (ParamIDs::delayMix, 1.0f);
+        auto burst = sine (1000.0, 0.3f, 0.1);
+        burst.resize ((size_t) (0.6 * sampleRate), 0.0f);
+        const auto out = rig.runMono (burst);
+        CHECK (rms (out, 0.15, 0.24) < 0.003f);   // nothing between the note and its echo
+        CHECK_THAT (dB (rms (out, 0.27, 0.33) / rms (burst, 0.02, 0.08)), WithinAbs (0.0, 1.0));
+    }
 }
