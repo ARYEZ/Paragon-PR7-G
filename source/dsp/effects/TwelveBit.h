@@ -3,7 +3,7 @@
 #include "Circuit.h"
 #include "EffectUtils.h"
 
-#include <array>
+#include <vector>
 #include <cstdint>
 
 namespace effects
@@ -94,7 +94,7 @@ namespace effects
         double lastCompressed = 0.0;
 
         // The converter and memory: the clock's phase, the held output, the steps.
-        std::array<std::int16_t, 16384> memory {};
+        std::vector<std::int16_t> memory = std::vector<std::int16_t> (16384, 0);   // on the heap: 32 KB is too much for a plugin object that hosts (and tests) may keep on the stack
         int writeIndex = 0, length = 16384;
         double clock = 20480.0, clockTarget = 20480.0, clockGlide = 0.0, phase = 0.0;
         double held = 0.0;

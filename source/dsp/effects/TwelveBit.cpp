@@ -114,7 +114,7 @@ namespace effects
                          &reconstruction[0], &reconstruction[1], &expanderCut, &deEmphasis, &feedbackCoupling })
             f->reset();
         compressorLevel = expanderLevel = fedBack = lastCompressed = held = phase = 0.0;
-        memory.fill (0);
+        std::fill (memory.begin(), memory.end(), (std::int16_t) 0);
         writeIndex = 0;
         clock = clockTarget;
         clockSettled = false;

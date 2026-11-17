@@ -47,7 +47,10 @@ namespace
         }
 
         TempRigFolder temp;
-        ParagonX1AudioProcessor processor;
+        // On the heap, as a DAW keeps it: the processor is large, and the
+        // album tests keep two at once, which overflowed Windows' 1 MB stack.
+        std::unique_ptr<ParagonX1AudioProcessor> owned = std::make_unique<ParagonX1AudioProcessor>();
+        ParagonX1AudioProcessor& processor = *owned;
     };
 
     const juce::File exampleModels { PARAGON_NAM_EXAMPLE_MODELS };

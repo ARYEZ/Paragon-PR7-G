@@ -15,6 +15,7 @@ Each version's notes appear on its GitHub Release page.
   - Our reading, not the schematic's: the level where the compander has unity gain, where the converter clips (+/-2.5 V, half its 5 V supply), how far the compressor can turn up (40 dB), and that the repeats come back the same way up as your playing.
   - I couldn't listen to it, or to a real DD-2, here. Tell me how it compares if you know the pedal.
 - **CPU:** about 3% of a core.
+- **Fix in the tests:** the album-bank tests now build their plugins the way a DAW does (on the heap). Two of them keep two plugins at once, which overflowed Windows' smaller stack once 12-Bit's memory was added. 12-Bit's memory now lives on the heap too.
 - **Tests** against the circuit:
   - repeats land at the set time (12.5, 300 and 800 ms, and longer stops at 800);
   - the compander gives back the level that went in, from loud playing down to -70 dB, within 0.5 dB;
