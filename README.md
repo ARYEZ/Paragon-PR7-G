@@ -74,7 +74,7 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     toe: the interval, as far as six octaves down) and eight harmonies (your note plus a voice the pedal moves between two intervals);
     or a **Talk Box**: the amp's sound, after the cab, shaped into vowels (oo to ee) by the expression pedal (TALK BOX),
     with RESONANCE and MIX.
-  - **2 OD / Distortion:** ten models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
+  - **2 OD / Distortion:** eleven models: **Banshee**, modelled on a classic green overdrive pedal's circuit;
     **Rabid**, modelled on the ProCo RAT 2, slow op-amp and all; **Cosmonaut**, modelled stage by stage on the '90s green Russian
     Big Muff (a wall of fuzz with a fat, less-clipped bottom end and the mid-scooping tone stack); **Halo**, modelled on the germanium Fuzz Face of
     1966-68, its whole two-transistor circuit solved as it is (warm and round, cleaning up as you pick softer; FUZZ and LEVEL);
@@ -83,7 +83,8 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     **Chimera**, modelled on the Klon Centaur: germanium clipping blended with a clean feed, the "transparent" overdrive;
     **Abyss**, modelled on the Boss MT-2 Metal Zone, with its own HIGH, LOW, MIDDLE and MID FREQ;
     **Amber**, modelled on the Boss OD-1 (asymmetric diodes, no tone control); **Ember**, modelled on the Boss DS-1 (hard clipping,
-    mid-scooped TONE); and **Grinder**, modelled on the Boss HM-2 Heavy Metal, with its COLOR MIX as LOW and HIGH.
+    mid-scooped TONE); **Grinder**, modelled on the Boss HM-2 Heavy Metal, with its COLOR MIX as LOW and HIGH; and
+    **Sapphire**, modelled on the Boss BD-2 Blues Driver (two transistor op-amp stages with GAIN in both, diodes between them).
     Drive, tone, level; 8x oversampled to avoid harsh aliasing.
   - **3 Modulation:** twelve types: Vortex (chorus), AEON (flanger), Hadron (phaser), Razor (tremolo), Prism (a wide stereo chorus), Nebula (a throbbing
     phase vibrato), rotary speaker, vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.

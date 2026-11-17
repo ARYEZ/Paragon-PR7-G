@@ -2966,3 +2966,90 @@ TEST_CASE ("12-Bit: the compact digital delay's circuit", "[effects][delay][twel
         CHECK_THAT (dB (rms (out, 0.27, 0.33) / rms (burst, 0.02, 0.08)), WithinAbs (0.0, 1.0));
     }
 }
+
+TEST_CASE ("Sapphire: the blues overdrive's two transistor op-amp stages, diodes and TONE", "[effects][drive]")
+{
+    EffectRig rig;
+    rig.set (ParamIDs::driveOn, 1.0f);
+    rig.set (ParamIDs::driveModel, (float) effects::Drive::Model::sapphire);
+
+    SECTION ("The gains are the schematic's: stage 1 is 1 + (22k + GAIN) / 1.5k, stage 2 1 + (33k + GAIN) / 2.2k")
+    {
+        CHECK_THAT (effects::Sapphire::stageOneGain (0.0), WithinAbs (1.0 + 22.0 / 1.5, 0.01));
+        CHECK_THAT (effects::Sapphire::stageOneGain (1.0), WithinAbs (1.0 + 272.0 / 1.5, 0.01));
+        CHECK_THAT (effects::Sapphire::stageTwoGain (0.0), WithinAbs (1.0 + 33.0 / 2.2, 0.01));
+        CHECK_THAT (effects::Sapphire::stageTwoGain (1.0), WithinAbs (1.0 + 283.0 / 2.2, 0.01));
+    }
+
+    SECTION ("GAIN down: clean when played softly, breaking up when played hard")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto thirdAt = [&] (float amplitude)
+        {
+            const auto output = rig.runMono (sine (220.0, amplitude, 0.5));
+            return dB (levelAt (output, 660.0) / levelAt (output, 220.0));
+        };
+        CAPTURE (thirdAt (0.003f), thirdAt (0.3f));
+        CHECK (thirdAt (0.003f) < -50.0f);
+        CHECK (thirdAt (0.3f) > -35.0f);
+    }
+
+    SECTION ("More GAIN, more distortion")
+    {
+        const auto thirdWith = [&] (float gain)
+        {
+            rig.set (ParamIDs::driveGain, gain);
+            rig.set (ParamIDs::driveTone, 5.0f);
+            const auto output = rig.runMono (sine (440.0, 0.3f, 0.5));
+            return dB (levelAt (output, 1320.0) / levelAt (output, 440.0));
+        };
+        CAPTURE (thirdWith (0.0f), thirdWith (10.0f));
+        CHECK (thirdWith (10.0f) > thirdWith (0.0f) + 5.0f);
+    }
+
+    SECTION ("Stage 1 leaves the bass at unity: the lows sit well under the mids")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto gainAt = [&] (double hz)
+        {
+            const auto input = sine (hz, 0.001f, 0.5);
+            return dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        };
+        CAPTURE (gainAt (100.0), gainAt (1000.0), gainAt (4000.0));
+        CHECK (gainAt (100.0) < gainAt (1000.0) - 6.0f);
+        CHECK_THAT (gainAt (4000.0) - gainAt (1000.0), WithinAbs (0.0, 1.5));   // TONE noon: even through the upper mids
+    }
+
+    SECTION ("TONE: more than 10 dB of treble between its ends")
+    {
+        rig.set (ParamIDs::driveGain, 0.0f);
+        const auto trebleWith = [&] (float tone)
+        {
+            rig.set (ParamIDs::driveTone, tone);
+            const auto input = sine (4000.0, 0.001f, 0.5);
+            return dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        };
+        CAPTURE (trebleWith (0.0f), trebleWith (10.0f));
+        CHECK (trebleWith (10.0f) > trebleWith (0.0f) + 10.0f);
+    }
+
+    SECTION ("Aliasing stays down at full GAIN")
+    {
+        rig.set (ParamIDs::driveGain, 10.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto output = rig.runMono (sine (5000.0, 0.5f, 0.5));
+        CHECK (dB (levelAt (output, 13000.0) / levelAt (output, 5000.0)) < -45.0f);
+    }
+
+    SECTION ("At noon, near the guitar's own level")
+    {
+        rig.set (ParamIDs::driveGain, 5.0f);
+        rig.set (ParamIDs::driveTone, 5.0f);
+        const auto input = sine (440.0, 0.3f, 0.5);
+        const auto level = dB (rms (rig.runMono (input), 0.2) / rms (input, 0.2));
+        CAPTURE (level);
+        CHECK_THAT (level, WithinAbs (0.0, 2.0));
+    }
+}

@@ -149,8 +149,8 @@ namespace
     // Drive::modelNames' order).
     const char* driveKind (int model)
     {
-        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION", "ASYMMETRIC OVERDRIVE", "HARD-CLIP DISTORTION", "HEAVY METAL DISTORTION" };
-        static_assert (std::size (kinds) == 10);   // one per Drive::modelNames entry
+        static const char* kinds[] = { "DISTORTION", "OVERDRIVE", "FUZZ", "GERMANIUM FUZZ", "TIGHT OVERDRIVE", "TRANSPARENT OVERDRIVE", "METAL DISTORTION", "ASYMMETRIC OVERDRIVE", "HARD-CLIP DISTORTION", "HEAVY METAL DISTORTION", "BLUES OVERDRIVE" };
+        static_assert (std::size (kinds) == 11);   // one per Drive::modelNames entry
         return kinds[(size_t) juce::jlimit (0, (int) std::size (kinds) - 1, model)];
     }
 }

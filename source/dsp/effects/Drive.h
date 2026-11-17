@@ -4,6 +4,7 @@
 #include "Amber.h"
 #include "Ember.h"
 #include "Grinder.h"
+#include "Sapphire.h"
 #include "Chimera.h"
 #include "Cosmonaut.h"
 #include "Halo.h"
@@ -77,12 +78,16 @@ namespace effects
     // stages, soft and hard clippers with germanium diodes in series, and the
     // COLOR MIX EQ's gyrator boosts (see Grinder.h; PR7-G 0.83.0). LOW and HIGH
     // are its COLOR MIX; TONE isn't used.
+    //
+    // SAPPHIRE is modelled on the 1995 compact blues overdrive (the blue one):
+    // two op-amps built from transistors with GAIN in both, diodes between
+    // them, its TONE and a mid-shaping last stage (see Sapphire.h; PR7-G 0.87.0).
     class Drive
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss, amber, ember, grinder };
-        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss", "Amber", "Ember", "Grinder" };
+        enum class Model { rabid, screamer, muff, halo, skyline, chimera, abyss, amber, ember, grinder, sapphire };
+        static inline const juce::StringArray modelNames { "Rabid", "Banshee", "Cosmonaut", "Halo", "Skyline", "Chimera", "Abyss", "Amber", "Ember", "Grinder", "Sapphire" };
 
         // Skyline's ATTACK positions: the capacitor in nF, position 1 to 8.
         // Saved by number: only append.
@@ -121,6 +126,7 @@ namespace effects
         void processAmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processEmber (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
         void processGrinder (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
+        void processSapphire (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept;
 
         double sampleRate = 48000.0;
         juce::dsp::Oversampling<float> oversampling;
@@ -143,6 +149,7 @@ namespace effects
         Amber amber;
         Ember ember;
         Grinder grinder;
+        Sapphire sapphire;
         juce::SmoothedValue<float> colourLow, colourHigh;   // Grinder's COLOR MIX
         juce::SmoothedValue<float> fuzzGain, fuzzTone, fuzzLevel;
         Model lastModel = Model::screamer;
