@@ -2,6 +2,28 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.84.0
+
+- **A new DELAY type, 12-Bit, modelled on the BOSS DD-2 Digital Delay** (1983, the first compact digital delay, later reissued unchanged as the DD-3). It's built from the pedal's factory circuit diagram (via Hobby-Hour), which you sent, stage by stage:
+  - **The 12-bit converter and its memory.** The memory is always 1,024, 4,096 or 16,384 samples long (the pedal's S, M and L ranges), and the time comes from the clock speed. So the sample rate runs between 20.5 and 82 kHz depending on TIME: at the long end of each range (50, 200, 800 ms) the treble above about 10 kHz folds back down as grit, as on the pedal; at the short end it's clean. Turning TIME while repeats ring bends their pitch, as on the pedal.
+  - **The compander**: a 2:1 compressor before the converter and a 1:2 expander after. It's how 12 bits sound quiet: the converter's steps get turned down with quiet playing, and their faint noise rises and falls with your notes.
+  - **The filters as drawn.** Pre-emphasis before and de-emphasis after (the direct sound passes through both, so it stays flat), plus a 6-pole filter before the converter and a 4-pole one after. Built from their parts, they give the repeats a lift of about 5 dB around 7-8 kHz before a steep cut, gone by 12 kHz. That lift is our reading of the schematic's values: BOSS only specify "40 Hz to 7 kHz".
+  - **The controls.** TIME is 12.5 to 800 ms: longer settings (or synced notes longer than 800 ms) stop at 800 ms, the pedal's limit. FEEDBACK is its F.BACK, and MIX is its E.LEVEL (at full, the repeat is as loud as your playing). Both turn like the pedal's own pots, loaded by what follows them. The pedal's full F.BACK sets it singing on its own; DELAY's FEEDBACK stops at 95%, as on every type, where repeats always die away.
+  - **What it doesn't have:** TONE and PING-PONG are hidden for this type, because the pedal has neither and is mono (stereo playing goes in as the two sides' average, and the repeats come out on both). The HOLD mode isn't built.
+- **Can it be perfect?** As close as a schematic gets you, but not perfect:
+  - The controller chip's inside workings are unpublished. The memory sizes and ranges above are worked out from its three memory chips and the specification.
+  - Our reading, not the schematic's: the level where the compander has unity gain, where the converter clips (+/-2.5 V, half its 5 V supply), how far the compressor can turn up (40 dB), and that the repeats come back the same way up as your playing.
+  - I couldn't listen to it, or to a real DD-2, here. Tell me how it compares if you know the pedal.
+- **CPU:** about 3% of a core.
+- **Tests** against the circuit:
+  - repeats land at the set time (12.5, 300 and 800 ms, and longer stops at 800);
+  - the compander gives back the level that went in, from loud playing down to -70 dB, within 0.5 dB;
+  - the band: flat in the bass, the lift near 7 kHz, more than 18 dB down at 12 kHz;
+  - a 9 kHz note at 800 ms comes back with its 11.48 kHz fold-over, and at 100 ms without it;
+  - full F.BACK sustains on its own, while 95% dies away;
+  - the pots' loading, and the type at work in the plugin.
+- Next: the DC-2 Dimension C (you sent its schematic), the DM-2 and the CE-2.
+
 ## 0.83.0
 
 - **Three new OD / DISTORTION models, modelled on BOSS compact pedals** (the first of the BOSS list: the DM-2 delay and CE-2 chorus come next). Each is built from the original pedal's schematic, part by part, under a name of its own:

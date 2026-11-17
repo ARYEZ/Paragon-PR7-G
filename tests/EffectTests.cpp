@@ -2814,3 +2814,121 @@ TEST_CASE ("Grinder: the heavy metal pedal's gain, germanium gate and COLOR MIX 
         CHECK_THAT (level, WithinAbs (0.0, 2.0));
     }
 }
+
+TEST_CASE ("12-Bit: the compact digital delay's circuit", "[effects][delay][twelvebit]")
+{
+    using effects::TwelveBit;
+    // The pedal by itself (E.LEVEL full): what comes out for a signal in.
+    const auto runPedal = [] (const std::vector<float>& input, double seconds, double feedbackKnob)
+    {
+        TwelveBit pedal;
+        pedal.prepare (sampleRate, blockSize);
+        pedal.setTime (seconds);
+        pedal.setFeedback (feedbackKnob);
+        auto samples = input;
+        for (size_t start = 0; start < samples.size(); start += blockSize)
+            pedal.process (samples.data() + start, (int) std::min<size_t> (blockSize, samples.size() - start));
+        return samples;
+    };
+
+    SECTION ("The ranges: memory and clock as the pedal's S, M and L")
+    {
+        CHECK (TwelveBit::memoryFor (0.0125) == 1024);
+        CHECK (TwelveBit::memoryFor (0.1) == 4096);
+        CHECK (TwelveBit::memoryFor (0.8) == 16384);
+        CHECK_THAT (TwelveBit::clockFor (0.8), WithinAbs (20480.0, 1.0));
+        CHECK_THAT (TwelveBit::clockFor (0.2), WithinAbs (81920.0, 1.0));
+        CHECK_THAT (TwelveBit::clockFor (2.0), WithinAbs (20480.0, 1.0));   // 800 ms is as long as it goes
+    }
+
+    SECTION ("Repeats come at the set time, 12.5 to 800 ms, and no longer")
+    {
+        auto burst = sine (1000.0, 0.3f, 0.05);
+        burst.resize ((size_t) (1.0 * sampleRate), 0.0f);
+        for (const auto [seconds, expected] : { std::pair { 0.0125, 0.0125 }, { 0.3, 0.3 }, { 0.8, 0.8 }, { 1.5, 0.8 } })
+        {
+            INFO (seconds << " s");
+            const auto out = runPedal (burst, seconds, 0.0);
+            size_t first = 0;
+            for (size_t i = 0; i < out.size(); ++i)
+                if (std::abs (out[i]) > 0.05f) { first = i; break; }
+            CHECK_THAT ((double) first / sampleRate, WithinAbs (expected, 0.001));
+        }
+    }
+
+    SECTION ("The compander gives back what went in, loud or quiet (its steps turned down with it)")
+    {
+        for (const auto level : { 0.3f, 0.03f, 0.003f, 0.0003f })
+        {
+            INFO (level);
+            const auto out = runPedal (sine (1000.0, level, 1.0), 0.3, 0.0);
+            CHECK_THAT (dB (levelAt (out, 1000.0, 0.5) / level), WithinAbs (0.0, 0.5));
+        }
+    }
+
+    SECTION ("Its band, from the filters as drawn: a lift around 7 kHz, then a steep cut")
+    {
+        const auto gainAt = [&] (double hz)
+        {
+            const auto out = runPedal (sine (hz, 0.2f, 1.2), 0.3, 0.0);
+            return dB (levelAt (out, hz, 0.6) / 0.2f);
+        };
+        CHECK_THAT (gainAt (100.0), WithinAbs (0.0, 1.0));
+        const auto at7k = gainAt (7000.0);
+        CHECK (at7k > 3.0f);
+        CHECK (at7k < 7.0f);
+        CHECK (gainAt (12000.0) < -18.0f);
+    }
+
+    SECTION ("At the long end of a range the clock is slow enough for the treble to fold back as grit")
+    {
+        // 9 kHz at 800 ms: sampled at 20.48 kHz, it comes back with an image
+        // at 11.48 kHz. At 100 ms (40.96 kHz) there's none.
+        const auto in = sine (9000.0, 0.2f, 2.0);
+        const auto slow = runPedal (in, 0.8, 0.0), fast = runPedal (in, 0.1, 0.0);
+        CHECK (dB (levelAt (slow, 11480.0, 1.0) / 0.2f) > -15.0f);
+        CHECK (dB (levelAt (fast, 11480.0, 1.0) / 0.2f) < -60.0f);
+    }
+
+    SECTION ("F.BACK: full sets it singing on its own; 95% (DELAY's FEEDBACK top) dies away")
+    {
+        auto phrase = sine (220.0, 0.5f, 0.25);
+        phrase.resize ((size_t) (5.0 * sampleRate), 0.0f);
+        CHECK (rms (runPedal (phrase, 0.0125, 0.95), 4.5) < 1.0e-3f);
+        CHECK (rms (runPedal (phrase, 0.0125, 1.0), 4.5) > 0.05f);
+    }
+
+    SECTION ("cpu")
+    {
+        if (std::getenv ("PARAGON_CPU_ONLY") != nullptr)
+        {
+            const auto in = sine (440.0, 0.3f, 10.0);
+            const auto t0 = juce::Time::getMillisecondCounterHiRes();
+            runPedal (in, 0.3, 0.5);
+            WARN ("12-Bit: " << (juce::Time::getMillisecondCounterHiRes() - t0) / 10000.0 * 100.0 << "% of a core");
+        }
+    }
+
+    SECTION ("E.LEVEL and F.BACK are loaded by what follows them, as real pots are")
+    {
+        CHECK_THAT (TwelveBit::levelGain (1.0), WithinAbs (1.0, 1.0e-9));
+        CHECK_THAT (TwelveBit::levelGain (0.5), WithinAbs (0.5 * 33.0 / 45.5, 1.0e-9));
+        CHECK (TwelveBit::feedbackGain (0.5) < 0.5);
+    }
+
+    SECTION ("In the plugin: DELAY's 12-Bit type repeats at its TIME")
+    {
+        EffectRig rig;
+        rig.set (ParamIDs::delayOn, 1.0f);
+        rig.set (ParamIDs::delayType, (float) effects::Delay::Type::twelveBit);
+        rig.set (ParamIDs::delaySync, 0.0f);
+        rig.set (ParamIDs::delayTime, 250.0f);
+        rig.set (ParamIDs::delayFeedback, 0.0f);
+        rig.set (ParamIDs::delayMix, 1.0f);
+        auto burst = sine (1000.0, 0.3f, 0.1);
+        burst.resize ((size_t) (0.6 * sampleRate), 0.0f);
+        const auto out = rig.runMono (burst);
+        CHECK (rms (out, 0.15, 0.24) < 0.003f);   // nothing between the note and its echo
+        CHECK_THAT (dB (rms (out, 0.27, 0.33) / rms (burst, 0.02, 0.08)), WithinAbs (0.0, 1.0));
+    }
+}

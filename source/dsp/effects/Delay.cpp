@@ -55,6 +55,8 @@ namespace effects
         mix.reset (sampleRate, 0.05);
 
         ducker.prepare (sampleRate);
+        twelveBit.prepare (sampleRate, maxBlockSize);
+        twelveBitWork.setSize (2, maxBlockSize);
         resetState();
         tail.prepare (sampleRate, maxDelaySeconds * 2.0 + 0.5);   // reverse plays a chunk late, so allow for that
         wet.setSize (maxChannels, maxBlockSize);
@@ -73,6 +75,7 @@ namespace effects
         wowPhase = flutterPhase = drift = driftTarget = 0.0f;
         driftCountdown = 0;
         ducker.reset();
+        twelveBit.reset();
     }
 
     float Delay::delaySeconds (const Settings& settings, double bpm) noexcept
@@ -117,6 +120,12 @@ namespace effects
         send.setTargetValue (settings.on ? 1.0f : 0.0f);
         feedback.setTargetValue (juce::jlimit (0.0f, 0.95f, settings.feedback));
         mix.setTargetValue (settings.mix);
+
+        if (settings.type == Type::twelveBit)
+        {
+            processTwelveBit (block, settings, bpm);
+            return;
+        }
 
         const auto type = settings.type;
         const auto ms = (float) sampleRate * 0.001f;
@@ -296,6 +305,54 @@ namespace effects
             const auto gain = mixNow * duckGain;
             for (int ch = 0; ch < numChannels; ++ch)
                 block.getChannelPointer ((size_t) ch)[i] += heard[ch] * gain;
+        }
+
+        if (! settings.on)
+        {
+            juce::dsp::AudioBlock<const float> wetBlock (wet.getArrayOfReadPointers(), (size_t) numChannels, (size_t) numSamples);
+            if (tail.isFinished (wetBlock))
+                running = false;
+        }
+    }
+
+    void Delay::processTwelveBit (juce::dsp::AudioBlock<float> block, const Settings& settings, double bpm) noexcept
+    {
+        const auto numChannels = (int) block.getNumChannels();
+        const auto numSamples = (int) block.getNumSamples();
+        auto* mono = twelveBitWork.getWritePointer (0);
+        auto* gains = twelveBitWork.getWritePointer (1);
+
+        // The pedal sets its own clock and F.BACK; the shared glides just keep pace.
+        twelveBit.setTime (delaySeconds (settings, bpm));
+        twelveBit.setFeedback (juce::jlimit (0.0f, 0.95f, settings.feedback));
+        delaySamples.skip (numSamples);
+        feedback.skip (numSamples);
+
+        const auto duckAmount = juce::jlimit (0.0f, 1.0f, settings.duck);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            auto sum = 0.0f, level = 0.0f;
+            for (int ch = 0; ch < numChannels; ++ch)
+            {
+                const auto sample = block.getChannelPointer ((size_t) ch)[i];
+                sum += sample;
+                level = juce::jmax (level, std::abs (sample));
+            }
+            mono[i] = sum / (float) juce::jmax (1, numChannels) * send.getNextValue();
+            const auto duckGain = duckAmount > 0.0f ? ducker.next (level, duckAmount) : 1.0f;
+            gains[i] = (float) TwelveBit::levelGain (mix.getNextValue()) * duckGain;
+        }
+
+        twelveBit.process (mono, numSamples);
+
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            auto* out = block.getChannelPointer ((size_t) ch);
+            for (int i = 0; i < numSamples; ++i)
+            {
+                out[i] += mono[i] * gains[i];
+                wet.setSample (ch, i, mono[i]);
+            }
         }
 
         if (! settings.on)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PitchShifter.h"
+#include "TwelveBit.h"
 
 namespace effects
 {
@@ -20,6 +21,9 @@ namespace effects
     //   ducking    Digital with DUCK preset high: repeats tuck under your
     //              playing and swell back in the gaps (DUCK works on every
     //              type; this keeps rigs that used the type sounding the same)
+    //   twelveBit  modelled on the 1983 compact digital delay, from its circuit
+    //              (see TwelveBit.h): 12.5 to 800 ms, mono, no TONE or
+    //              ping-pong (the pedal has neither), MIX is its E.LEVEL
     //
     // Echo time is either free (milliseconds) or locked to the DAW's tempo.
     // Ping-pong bounces repeats between the left and right speakers.
@@ -41,8 +45,8 @@ namespace effects
         static constexpr float maxDelaySeconds = 2.5f;
 
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Type { digital, analog, tape, mod, reverse, multiTap, shimmer, ducking };
-        static inline const juce::StringArray typeNames { "Digital", "Analog", "Tape", "Mod", "Reverse", "Multi-Tap", "Shimmer", "Ducking" };
+        enum class Type { digital, analog, tape, mod, reverse, multiTap, shimmer, ducking, twelveBit };
+        static inline const juce::StringArray typeNames { "Digital", "Analog", "Tape", "Mod", "Reverse", "Multi-Tap", "Shimmer", "Ducking", "12-Bit" };
 
         struct Settings
         {
@@ -65,6 +69,7 @@ namespace effects
 
     private:
         void resetState() noexcept;
+        void processTwelveBit (juce::dsp::AudioBlock<float> block, const Settings& settings, double bpm) noexcept;
 
         // A circular buffer read from behind its write position, for the
         // reverse and shimmer types.
@@ -100,6 +105,10 @@ namespace effects
 
         // Shimmer: an octave-up pitch shifter in the feedback loop, per side.
         std::array<PitchShifter, maxChannels> shimmerShifters;
+
+        // 12-Bit: the pedal, fed the channels' average; its output and MIX x DUCK per sample.
+        TwelveBit twelveBit;
+        juce::AudioBuffer<float> twelveBitWork;
 
         // DUCK (and the Ducking type, which is Digital with DUCK preset).
         Ducker ducker;

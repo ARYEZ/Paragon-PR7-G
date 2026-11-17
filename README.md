@@ -89,8 +89,8 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     phase vibrato), rotary speaker, vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and
-    optional ping-pong; it comes in eight types: Digital (the original), Analog, Tape, Mod, Reverse,
-    Multi-Tap, Shimmer and Ducking. The reverb comes in eight types: Room, Hall, Cathedral, Plate, Spring,
+    optional ping-pong; it comes in nine types: Digital (the original), Analog, Tape, Mod, Reverse,
+    Multi-Tap, Shimmer, Ducking and 12-Bit (modelled on the 1983 BOSS DD-2). The reverb comes in eight types: Room, Hall, Cathedral, Plate, Spring,
     Digital, Reverse and Classic (the original), with SIZE, PRE-DELAY, TONE and MIX. Both have a DUCK knob that tucks
     the repeats or reverb under your playing and lets them swell back in the gaps. Both let their
     tails ring out when switched off.
