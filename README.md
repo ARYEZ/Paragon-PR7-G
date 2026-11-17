@@ -57,8 +57,8 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     (FFT) effects** (each adds its FFT size as latency, reported to the DAW). Since 0.76.0: eight **MACROS** (each moves
     any knobs by its own depth and curve; the expression pedal can play MACRO 1) and bank **O**, 15 CIPHER rigs.
   - **Pitch** (first in the signal chain; no footswitch): **TUNING** retunes the whole guitar (-12 to +12 semitones: D
-    standard, B, a capo...), the **OCTAVER** blends two octaves down, one down, the dry guitar and one up (POG-style,
-    chords track too), and **FREEZE** holds what you just played as an endless pad you can play over (with LEVEL,
+    standard, B, a capo...), the **OCTAVER** blends two octaves down, one down, the dry guitar and one up (normally
+    POG-style, chords track too; with ANALOG on, modelled on the BOSS OC-2, flip-flop octaves from single notes), and **FREEZE** holds what you just played as an endless pad you can play over (with LEVEL,
     ATTACK and RELEASE).
   - **Glitch** (in the signal chain; no footswitch): granular glitch effects in five MODEs (the fifth, **Killswitch**,
     cuts the end of each step to silence, like flicking a guitar's toggle switch in time): **Pitch Delay** (echoes that each
@@ -90,8 +90,8 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
     phase vibrato), rotary speaker, vibrato, harmonic tremolo, auto-pan, doubler and Carbonite (a warmer, darker vintage chorus). SYNC locks the rate to the tapped or DAW tempo.
   - **4 Reverb / Delay:** switches both; each also has its own ON switch. The delay syncs to your
     DAW's tempo (or set SYNC to Off for milliseconds), has a tone control for darker repeats, and
-    optional ping-pong; it comes in nine types: Digital (the original), Analog, Tape, Mod, Reverse,
-    Multi-Tap, Shimmer, Ducking and 12-Bit (modelled on the 1983 BOSS DD-2). The reverb comes in eight types: Room, Hall, Cathedral, Plate, Spring,
+    optional ping-pong; it comes in ten types: Digital (the original), Analog, Tape, Mod, Reverse,
+    Multi-Tap, Shimmer, Ducking, 12-Bit (modelled on the 1983 BOSS DD-2) and Brigade (modelled on the 1981 BOSS DM-2). The reverb comes in eight types: Room, Hall, Cathedral, Plate, Spring,
     Digital, Reverse and Classic (the original), with SIZE, PRE-DELAY, TONE and MIX. Both have a DUCK knob that tucks
     the repeats or reverb under your playing and lets them swell back in the gaps. Both let their
     tails ring out when switched off.

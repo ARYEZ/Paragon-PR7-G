@@ -538,6 +538,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
     // PITCH: TUNING, OCTAVER and FREEZE, before anything else shapes the guitar.
     pitchBlock.process (monoBlock, { param (ParamIDs::pitchTune), isOn (ParamIDs::octOn), param (ParamIDs::octSubTwo),
                                      param (ParamIDs::octSubOne), param (ParamIDs::octDry), param (ParamIDs::octUp),
+                                     isOn (ParamIDs::octAnalog),
                                      isOn (ParamIDs::freezeOn), param (ParamIDs::freezeLevel),
                                      param (ParamIDs::freezeAttack) / 1000.0f, param (ParamIDs::freezeRelease) / 1000.0f });
 

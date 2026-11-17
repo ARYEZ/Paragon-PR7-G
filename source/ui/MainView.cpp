@@ -355,8 +355,9 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     // RATIO, or Daybreak's COMP, DETAIL, MIX and INTENSITY.
     panels[pitchBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "TUNING", { { ParamIDs::pitchTune, "TUNING" } } },
-        { "OCTAVER", { { ParamIDs::octOn, "ON" }, { ParamIDs::octSubTwo, "2 DOWN" }, { ParamIDs::octSubOne, "1 DOWN" },
-                       { ParamIDs::octDry, "DRY" }, { ParamIDs::octUp, "1 UP" } } },
+        { "OCTAVER", { { ParamIDs::octOn, "ON" }, { ParamIDs::octAnalog, "ANALOG" }, { ParamIDs::octSubTwo, "2 DOWN" }, { ParamIDs::octSubOne, "1 DOWN" },
+                       { ParamIDs::octDry, "DRY" },
+                       { ParamIDs::octUp, "1 UP", [this] { return rawValue (ParamIDs::octAnalog) < 0.5f; } } } },   // ANALOG has no octave up
         { "FREEZE", { { ParamIDs::freezeOn, "FREEZE" }, { ParamIDs::freezeLevel, "LEVEL" }, { ParamIDs::freezeAttack, "ATTACK" },
                       { ParamIDs::freezeRelease, "RELEASE" } } } });
     const auto compIs = [this] (effects::CompGate::Type type)
@@ -454,8 +455,12 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
     };
     panels[modBlock] = modPanel ("MODULATION", ParamIDs::modIds);
     panels[mod2Block] = modPanel ("MODULATION 2", ParamIDs::mod2Ids);
-    // 12-Bit is the pedal: no TONE, and mono (no ping-pong).
-    const auto notTwelveBit = [this] { return juce::roundToInt (rawValue (ParamIDs::delayType)) != (int) effects::Delay::Type::twelveBit; };
+    // 12-Bit and Brigade are pedals: no TONE, and mono (no ping-pong).
+    const auto notTwelveBit = [this]
+    {
+        const auto type = juce::roundToInt (rawValue (ParamIDs::delayType));
+        return type != (int) effects::Delay::Type::twelveBit && type != (int) effects::Delay::Type::brigade;
+    };
     panels[delayBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "DELAY", { { ParamIDs::delayOn, "ON" }, { ParamIDs::delayType, "TYPE" }, { ParamIDs::delaySync, "SYNC" },
                      { ParamIDs::delayTime, "TIME", [this] { return rawValue (ParamIDs::delaySync) < 0.5f; } },

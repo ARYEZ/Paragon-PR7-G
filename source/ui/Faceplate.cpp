@@ -867,8 +867,8 @@ void Faceplate::paintDelay (juce::Graphics& g, juce::Rectangle<float> header, ju
 {
     // The delay's TYPE as its name; its repeats on a screen; TIME in digits.
     static const char* names[] = { "DIGITAL DELAY", "ANALOG DELAY", "TAPE ECHO", "MOD DELAY", "REVERSE DELAY",
-                                   "MULTI-TAP", "SHIMMER DELAY", "DUCKING DELAY", "12-BIT DELAY" };
-    static_assert (std::size (names) == 9);
+                                   "MULTI-TAP", "SHIMMER DELAY", "DUCKING DELAY", "12-BIT DELAY", "BRIGADE DELAY" };
+    static_assert (std::size (names) == 10);
     const auto type = juce::jlimit (0, (int) std::size (names) - 1, juce::roundToInt (raw (ParamIDs::delayType)));
     nameplate (g, header, names[type], "ECHO");
     const auto on = isOn();
