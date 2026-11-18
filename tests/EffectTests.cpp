@@ -1256,9 +1256,27 @@ TEST_CASE ("Modulation effects", "[effects][mod]")
             }
             return (float) flat / 1000.0f;
         };
+        // From the TR-2's schematic (0.91.0): IC3A's gain is (10k + WAVE) / 12k on a
+        // triangle of about 2.46 V, clipping at 3.5 V. WAVE's audio taper keeps
+        // noon (gain about 1.6) only starting to flatten; the top half squares it up.
+        CAPTURE (flatShare (0.0f), flatShare (5.0f), flatShare (7.0f), flatShare (10.0f));
         CHECK (flatShare (0.0f) < 0.05f);
-        CHECK_THAT (flatShare (5.0f), WithinAbs (0.82, 0.05));
-        CHECK (flatShare (10.0f) > 0.95f);
+        CHECK (flatShare (5.0f) < 0.2f);
+        CHECK (flatShare (7.0f) > flatShare (5.0f) + 0.15f);
+        CHECK_THAT (flatShare (10.0f), WithinAbs (0.79, 0.05));
+    }
+
+    SECTION ("Razor's RATE keeps to the pedal's range (about 1 to 11 Hz); SYNC stays in time")
+    {
+        CHECK_THAT (effects::Modulation::razorRateHz (0.05f), WithinAbs (1.0 / 0.090 * 10.0 / 110.0, 0.001));
+        CHECK_THAT (effects::Modulation::razorRateHz (20.0f), WithinAbs (1.0 / 0.090, 0.001));
+        CHECK_THAT (effects::Modulation::razorRateHz (4.0f), WithinAbs (4.0, 1.0e-6));
+    }
+
+    SECTION ("Razor's corners: C4 rounds the dips more than the tops (the OTA's control pin)")
+    {
+        CHECK (effects::Modulation::razorCornerSeconds (1.0) < 1.0e-4);
+        CHECK (effects::Modulation::razorCornerSeconds (0.01) > 2.0e-3);
     }
 
     SECTION ("Razor: WAVE fully up chops on and off, without clicks")
