@@ -599,8 +599,10 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
 
         // SYNC: one LFO cycle per note length at the tapped (or host) tempo.
         auto rate = param (ids.rate);
-        if (const auto sync = (int) param (ids.sync); sync > 0 && sync < (int) std::size (effects::Delay::syncBeats))
-            rate = juce::jlimit (0.02f, 40.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[sync]);   // 1/32 at 300 BPM
+        const auto syncIndex = (int) param (ids.sync);
+        const auto synced = syncIndex > 0 && syncIndex < (int) std::size (effects::Delay::syncBeats);
+        if (synced)
+            rate = juce::jlimit (0.02f, 40.0f, (float) (getTempoBpm() / 60.0) / effects::Delay::syncBeats[syncIndex]);   // 1/32 at 300 BPM
 
         const auto pre = (int) param (ids.position) == (int) effects::Modulation::Position::pre;
         effects::Modulation::Settings settings { isOn (ids.on), type, rate,
@@ -617,6 +619,7 @@ void ParagonX1AudioProcessor::processChunk (juce::AudioBuffer<float>& buffer, in
                              param (ids.cycBalance), param (ids.cycDrive), param (ids.cycLow), param (ids.cycHigh),
                              (effects::Cyclone::Mode) (int) param (ids.cycMode), param (ids.cycLevel),
                              expressionTarget == ExpressionTargets::cycloneSpeed ? pedal : -1.0f, morph };
+        settings.synced = synced;
         return std::pair { settings, pre };
     };
     const auto [modSettings, modPre] = modSettingsFor (ParamIDs::modIds);

@@ -153,17 +153,28 @@ namespace effects
         // even the square doesn't click. The volume is at full only once
         // per cycle and dips by DEPTH. Rate: Boss's spec, one cycle every 90
         // to 900 ms (about 1.1 to 11 Hz; RATE keeps the block's wider range).
+        // Razor, modelled on the Boss TR-2, from its schematic (PR7-G 0.91.0;
+        // before that, from descriptions of the pedal).
         namespace razor
         {
-            // How far WAVE fully up drives the triangle into clipping
-            // (estimated: flat for about 95% of each cycle, as the pedal
-            // fully up sounds nearly on and off).
-            constexpr float maxWaveGain = 30.0f;
-
-            // C4's rounding of the corners (estimated): a 1 ms time
-            // constant, fast enough to sound like a hard chop, slow enough
-            // not to click.
-            constexpr float cornerSeconds = 0.001f;
+            // The LFO: IC4A integrates the square of IC4B, a Schmitt trigger
+            // whose triangle swings about R29 / R37 = 33k / 47k of the square's
+            // 3.5 V (ours: the op-amps swing 3.5 V either way of their bias).
+            constexpr double triangleVolts = 3.5 * 33.0 / 47.0, rail = 3.5;
+            // WAVE: IC3A inverts the triangle with gain (R21 10k + WAVE, 100k
+            // audio taper) / R38 12k, 0.83 to 9.2, clipping at its rail: a
+            // triangle up to about 45% of WAVE's turn, then flattening.
+            constexpr double waveFixedOhms = 10.0e3, wavePotOhms = 100.0e3, waveInOhms = 12.0e3;
+            // RATE: a 100k linear pot over R20 10k picks 10/110 to all of the
+            // square for the integrator, a 1:11 range; the fastest pulse is the
+            // pedal's specified 90 ms.
+            constexpr float fastestHz = 1.0f / 0.090f, slowestHz = fastestHz * 10.0f / 110.0f;
+            // The volume: an OTA (M5207L01) whose gain follows the current into
+            // its control pin, through R8 100k with C4 0.1 uF at the pin. The
+            // pin's own resistance (26 mV over its current) rises as the current
+            // falls, so the corners round more in the dips than at the tops.
+            // Ours: 40 uA at full volume (about 4 V across R8).
+            constexpr double controlOhms = 100.0e3, controlFarads = 0.1e-6, fullAmps = 40.0e-6;
         }
 
         // Biquad coefficients (bilinear transform), written into an existing
@@ -481,7 +492,7 @@ namespace effects
 
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
-            const auto lfo = triangle (advanceLfo (carboniteRateHz (settings.rateHz)));
+            const auto lfo = triangle (advanceLfo (settings.synced ? settings.rateHz : carboniteRateHz (settings.rateHz)));
             const auto delaySamples = carboniteDelayMs (depth.getNextValue(), lfo) * msToSamples;
             mix.skip (1);
 
@@ -501,20 +512,39 @@ namespace effects
 
     float Modulation::razorShape (float phase, float wave) noexcept
     {
-        // The triangle, gained up by WAVE and clipped: -1 is full volume,
-        // 1 the deepest dip.
-        const auto gain = std::pow (razor::maxWaveGain, juce::jlimit (0.0f, 10.0f, wave) / 10.0f);
-        const auto clipped = juce::jlimit (-1.0f, 1.0f, gain * triangle (phase));
-        return 0.5f - 0.5f * clipped;
+        // IC3A: the triangle times (10k + WAVE) / 12k, clipping at the rail;
+        // as a share of its own peak, so full DEPTH always reaches the
+        // deepest dip (ours: the DEPTH stage's bias levels aren't readable).
+        // 0 is the deepest dip, 1 full volume.
+        const auto taper = (std::pow (10.0, 2.0 * juce::jlimit (0.0, 1.0, (double) wave / 10.0)) - 1.0) / 99.0;
+        const auto gain = (razor::waveFixedOhms + razor::wavePotOhms * taper) / razor::waveInOhms;
+        const auto peak = opAmpClip (gain * razor::triangleVolts, razor::rail);
+        const auto clipped = opAmpClip (gain * razor::triangleVolts * (double) triangle (phase), razor::rail);
+        return (float) (0.5 - 0.5 * clipped / peak);
+    }
+
+    float Modulation::razorRateHz (float rateHz) noexcept
+    {
+        return juce::jlimit (razor::slowestHz, razor::fastestHz, rateHz);
+    }
+
+    double Modulation::razorCornerSeconds (double volume) noexcept
+    {
+        // C4 against R8 in parallel with the control pin (26 mV / its current).
+        const auto amps = std::max (1.0e-8, razor::fullAmps * volume);
+        const auto pin = 0.026 / amps;
+        return razor::controlFarads * (razor::controlOhms * pin / (razor::controlOhms + pin));
     }
 
     void Modulation::processRazor (juce::dsp::AudioBlock<float> block, const Settings& settings) noexcept
     {
-        const auto corner = smoothing (sampleRate, razor::cornerSeconds);
+        const auto rate = settings.synced ? settings.rateHz : razorRateHz (settings.rateHz);   // SYNC stays in time
         for (size_t i = 0; i < block.getNumSamples(); ++i)
         {
-            razorLfo += (razorShape (advanceLfo (settings.rateHz), settings.wave) - razorLfo) * corner;
-            const auto gain = 1.0f - depth.getNextValue() * (1.0f - razorLfo);
+            const auto target = 1.0f - depth.getNextValue() * (1.0f - razorShape (advanceLfo (rate), settings.wave));
+            const auto corner = 1.0 - std::exp (-1.0 / (razorCornerSeconds (std::max (razorLfo, target)) * sampleRate));
+            razorLfo += (target - razorLfo) * (float) corner;
+            const auto gain = razorLfo;
             mix.skip (1);
 
             for (size_t ch = 0; ch < block.getNumChannels(); ++ch)

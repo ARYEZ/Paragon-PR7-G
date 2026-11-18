@@ -2,6 +2,24 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.91.0
+
+- **Razor (MOD's tremolo) rebuilt from the BOSS TR-2's schematic,** which you sent. Since 0.39.0 Razor was modelled on the TR-2 from descriptions of how it sounds; now its shape, speed range and corners come from the circuit:
+  - **WAVE:** the triangle (about ±2.5 V) goes through an inverting stage whose gain is (10k + WAVE) / 12k, 0.83 to 9.2, clipping at the op-amp's rail. Because WAVE is an audio-taper pot, the change happens late:
+    - up to about 45% of its turn the pulse stays a pure triangle;
+    - at noon it's only starting to flatten (flat about 9% of each cycle);
+    - from there it squares up, to flat about 80% of each cycle fully up.
+
+    Until now noon was already a trapezoid (82% flat), a guess that the circuit doesn't bear out. Fully up is a little softer than before (it was guessed at 95%).
+  - **RATE keeps to the pedal's range:** about 1 to 11 pulses per second. The pot only picks between 10/110 and all of the oscillator's drive (a 1:11 range, from the parts), and the fastest pulse is the pedal's specified 90 ms. Settings outside that stop at the ends. **SYNC isn't limited** and stays locked to your tempo; the same now goes for Carbonite, whose CE-2 speed range also limited SYNC since 0.85.0.
+  - **The corners:** the volume is an OTA chip steered through 100k with 0.1 µF at its control pin. The pin's own resistance rises as its current falls, so the tops of the pulses stay crisp (about 0.07 ms) while the dips round off over a few ms. Until now it was a fixed 1 ms.
+- **What's our reading:**
+  - the oscillator's swing (±3.5 V, so a triangle of about ±2.5 V), and the OTA's current at full volume (40 µA);
+  - DEPTH: the bias levels around it aren't readable on the schematic, so it stays as before (full DEPTH dips to silence at the bottom of each pulse).
+- **Your rigs:** the eight factory rigs with Razor all use WAVE fully down, which is a pure triangle as before, at rates inside the pedal's range or synced, so they sound the same apart from the subtler corners. Rigs of your own with WAVE turned up will be rounder (less square) at the same setting.
+- **Also checked, no changes:** AEON (BF-2) and Abyss (MT-2) are built from their schematics (Abyss from BOSS's service manual), with their few estimates stated when they shipped.
+- **Tests:** WAVE's shape at each end and noon, RATE's range, and the corners rounding more in the dips than at the tops.
+
 ## 0.90.0
 
 - **A new COMP / GATE TYPE, Bloom, modelled on the BOSS SG-1 Slow Gear:** each note starts silent and swells in by itself, like a violin bow or a volume pedal you don't have to work. It's built from the pedal's factory service notes (1981) and the redrawn schematic you sent.

@@ -17,7 +17,7 @@ namespace effects
     //                  0.38.0, replacing the original generic phaser)
     //   tremolo        Razor, modelled on the Boss TR-2, with its WAVE knob
     //                  (see processRazor; PR7-G 0.39.0, replacing the
-    //                  original sine tremolo)
+    //                  original sine tremolo; rebuilt from its schematic in 0.91.0)
     //   dimension      Roland Dimension D / Boss CE-1 style dual chorus
     //   uniVibe        Shin-ei Uni-Vibe: four uneven phase stages, lamp LFO
     //   rotary         CYCLONE, a rotary speaker inspired by the Neo Ventilator II
@@ -69,6 +69,7 @@ namespace effects
             bool hadronBlock = false;   // Hadron: the BLOCK circuit (false: SCRIPT)
             float wave = 0.0f;          // Razor's WAVE, 0 (triangle) to 10 (square)
             Cyclone::Settings cyclone;  // Cyclone's own controls (RATE, DEPTH and MIX don't apply to it)
+            bool synced = false;        // RATE comes from SYNC: the pedal models' own speed ranges don't apply
         };
 
         // The Vortex's EQ: how much it cuts or boosts the chorus's
@@ -91,6 +92,10 @@ namespace effects
         // Razor's volume, 0 to 1, at a point in the LFO's cycle (0 to 1),
         // before the corner-rounding capacitor (for tests).
         static float razorShape (float phase, float wave) noexcept;
+        // Razor's RATE: the block's RATE held to the pedal's range, about 1 to 11 Hz.
+        static float razorRateHz (float rateHz) noexcept;
+        // How long C4 takes to round the volume's corners at a volume 0 to 1 (seconds).
+        static double razorCornerSeconds (double volume) noexcept;
 
         Modulation();
         void prepare (double sampleRate, int maxBlockSize);
