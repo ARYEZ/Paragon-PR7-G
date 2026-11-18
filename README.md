@@ -38,10 +38,10 @@ A guitar multi-effects VST3 plugin built around [Neural Amp Modeler](https://git
 - **Footswitches 1-4** turn the effect blocks on and off. Click a footswitch's name to show its knobs
   below. Signal chain: comp/gate → filter / pitch → overdrive → amp → cabinet → presence → graphic EQ → modulation
   → delay → reverb → lo-fi.
-  - **1 Comp / Gate:** a compressor and **BASTION**, the noise gate: it listens to your clean guitar and cuts after the amp, cab and EQ, so the amp's hiss goes and echoes and reverb ring on (GATE, all the way down is off; HOLD; RELEASE; KEY Clean or Self). The compressor has two TYPEs:
-    **Classic** (threshold, ratio, level) and **Daybreak**, a modern pedal compressor: COMP (how much, with automatic make-up),
-    DETAIL (how much pick attack gets through), MIX (parallel compression), INTENSITY (smooth or hard) and LEVEL. The panel shows a
-    gain-reduction meter.
+  - **1 Comp / Gate:** a compressor and **BASTION**, the noise gate: it listens to your clean guitar and cuts after the amp, cab and EQ, so the amp's hiss goes and echoes and reverb ring on (GATE, all the way down is off; HOLD; RELEASE; KEY Clean or Self). The compressor has three TYPEs:
+    **Classic** (threshold, ratio, level); **Daybreak**, a modern pedal compressor: COMP (how much, with automatic make-up),
+    DETAIL (how much pick attack gets through), MIX (parallel compression), INTENSITY (smooth or hard) and LEVEL; and **Bloom**,
+    modelled on the BOSS SG-1 Slow Gear: each note swells in from silence (SENS, ATTACK, LEVEL). The panel shows a meter.
   - **Lo-Fi** (last in the chain; no footswitch): telephone, AM radio, megaphone, cassette (wow, flutter, hiss)
     or bitcrusher, for intros and breakdowns. AMOUNT, NOISE, MIX and LEVEL.
   - **CIPHER** (after HAVOK, the very last block; no footswitch): an envelope-controlled filter and multi-effect,

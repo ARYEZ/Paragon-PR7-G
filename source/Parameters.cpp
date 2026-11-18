@@ -435,6 +435,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
     // PR7-G 0.89.0: the OCTAVER's ANALOG switch (off: the shifters, as before).
     constexpr int v39 = 39;
     layout.add (makeSwitch (ParamIDs::octAnalog, "Octaver Analog", v39, false));
+
+    // PR7-G 0.90.0: COMP / GATE's BLOOM type (an attack delay): SENS and ATTACK, 0 to 10.
+    constexpr int v40 = 40;
+    layout.add (makeFloat (ParamIDs::compSens, "Bloom Sens", { 0.0f, 10.0f, 0.1f }, 6.0f, v40, asKnob));
+    layout.add (makeFloat (ParamIDs::compSwell, "Bloom Attack", { 0.0f, 10.0f, 0.1f }, 5.0f, v40, asKnob));
     // Added in PR7-G 0.76.0: CIPHER's macros, all at 0 (where every
     // assigned knob sits at its own setting).
     for (int macro = 1; macro <= ParamIDs::cipherNumMacros; ++macro)

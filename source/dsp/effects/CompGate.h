@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Bloom.h"
 #include "EffectUtils.h"
 
 namespace effects
@@ -16,12 +17,14 @@ namespace effects
     //             squashed sound blended with the dry guitar) and INTENSITY
     //             (off: smooth and gentle; on: fast and hard). Its detector
     //             ignores the lowest bass, so low palm mutes don't make it pump.
+    //   bloom     modelled on the compact attack delay ("slow gear"): each
+    //             note swells in from silence; SENS and ATTACK (see Bloom.h)
     class CompGate
     {
     public:
         // Saved by number in rigs and projects: only ever add to the end.
-        enum class Type { classic, daybreak };
-        static inline const juce::StringArray typeNames { "Classic", "Daybreak" };
+        enum class Type { classic, daybreak, bloom };
+        static inline const juce::StringArray typeNames { "Classic", "Daybreak", "Bloom" };
 
         struct Settings
         {
@@ -34,6 +37,8 @@ namespace effects
             float detail = 5.0f;         // daybreak: DETAIL, 0 to 10
             float mix = 1.0f;            // daybreak: MIX, 0 to 1
             bool intensity = false;      // daybreak: INTENSITY
+            float sens = 5.0f;           // bloom: SENS, 0 to 10
+            float swell = 5.0f;          // bloom: ATTACK, 0 to 10
         };
 
         // BASTION's GATE (the gateThreshold parameter) at or below this means it's off.
@@ -63,5 +68,9 @@ namespace effects
         float envelope = 0.0f;               // the detector's level
         float sidechainState = 0.0f;         // its bass cut
         juce::SmoothedValue<float> mix, daybreakMakeUp;
+
+        // Bloom
+        Bloom bloom;
+        Type lastType = Type::classic;
     };
 }

@@ -3253,3 +3253,88 @@ TEST_CASE ("OCTAVER ANALOG: the brown octave pedal's flip-flop octaves", "[effec
     }
 }
 
+
+TEST_CASE ("Bloom: the attack delay swells each note in from silence", "[effects][comp][bloom]")
+{
+    const auto makeRig = [] (float sens, float attack)
+    {
+        auto rig = std::make_unique<EffectRig>();
+        rig->set (ParamIDs::compOn, 1.0f);
+        rig->set (ParamIDs::compType, (float) effects::CompGate::Type::bloom);
+        rig->set (ParamIDs::compSens, sens);
+        rig->set (ParamIDs::compSwell, attack);
+        rig->set (ParamIDs::compLevel, 0.0f);
+        return rig;
+    };
+    // The level (dB, against the input) over a short window.
+    const auto levelIn = [] (const std::vector<float>& out, const std::vector<float>& in, double from, double to)
+    {
+        return dB (rms (out, from, to) / rms (in, from, to));
+    };
+    const auto withSilence = [] (std::vector<float> note, double before)
+    {
+        std::vector<float> out ((size_t) (before * sampleRate), 0.0f);
+        out.insert (out.end(), note.begin(), note.end());
+        return out;
+    };
+
+    SECTION ("A note after silence starts muted and swells to full volume")
+    {
+        auto rig = makeRig (6.0f, 3.0f);
+        const auto in = withSilence (sine (330.0, 0.2f, 3.0), 0.2);
+        const auto out = rig->runMono (in);
+        CAPTURE (levelIn (out, in, 0.2, 0.21), levelIn (out, in, 2.5, 3.0));
+        CHECK (levelIn (out, in, 0.2, 0.21) < -25.0f);
+        CHECK_THAT (levelIn (out, in, 2.5, 3.0), WithinAbs (0.0, 0.6));
+    }
+
+    SECTION ("ATTACK sets how long the swell takes: about 70 ms down to 1.4 s at the top")
+    {
+        CHECK_THAT (effects::Bloom::swellSeconds (0.0f), WithinAbs (0.068, 0.001));
+        CHECK_THAT (effects::Bloom::swellSeconds (10.0f), WithinAbs (1.428, 0.001));
+        const auto timeToHalf = [&] (float attack)
+        {
+            auto rig = makeRig (6.0f, attack);
+            const auto in = withSilence (sine (330.0, 0.2f, 5.0), 0.2);
+            const auto out = rig->runMono (in);
+            for (double t = 0.2; t < 5.0; t += 0.01)
+                if (levelIn (out, in, t, t + 0.01) > -6.0f)
+                    return t - 0.2;
+            return 99.0;
+        };
+        CAPTURE (timeToHalf (0.0f), timeToHalf (10.0f));
+        CHECK (timeToHalf (0.0f) < 0.15);
+        CHECK (timeToHalf (10.0f) > 0.8);
+        CHECK (timeToHalf (10.0f) < 3.0);
+    }
+
+    SECTION ("While you keep playing it stays open; after a gap the next note swells again")
+    {
+        auto rig = makeRig (6.0f, 2.0f);
+        auto in = withSilence (sine (330.0, 0.2f, 1.0), 0.2);
+        const auto second = sine (440.0, 0.2f, 0.5);
+        in.insert (in.end(), second.begin(), second.end());   // straight on: no gap
+        in.resize (in.size() + (size_t) (0.3 * sampleRate), 0.0f);   // a gap
+        const auto third = sine (330.0, 0.2f, 0.5);
+        in.insert (in.end(), third.begin(), third.end());
+        const auto out = rig->runMono (in);
+        CAPTURE (levelIn (out, in, 1.2, 1.25), levelIn (out, in, 2.0, 2.01));
+        CHECK (levelIn (out, in, 1.2, 1.25) > -1.0f);    // the second note, straight on: still open
+        CHECK (levelIn (out, in, 2.0, 2.01) < -20.0f);   // the third, after the gap: from silence again
+    }
+
+    SECTION ("SENS: a quiet note opens it with SENS up, not with SENS down")
+    {
+        const auto quiet = withSilence (sine (330.0, 0.002f, 2.0), 0.1);
+        const auto low = makeRig (0.5f, 0.0f)->runMono (quiet), high = makeRig (10.0f, 0.0f)->runMono (quiet);
+        CAPTURE (levelIn (low, quiet, 1.5, 2.0), levelIn (high, quiet, 1.5, 2.0));
+        CHECK (levelIn (low, quiet, 1.5, 2.0) < -25.0f);
+        CHECK (levelIn (high, quiet, 1.5, 2.0) > -1.0f);
+    }
+
+    SECTION ("The volume control: muted about 43 dB at rest, and 0.4 dB under unity open (22k against 470k)")
+    {
+        CHECK (dB ((float) effects::Bloom::gainFor (0.0)) < -40.0f);
+        CHECK_THAT (dB ((float) effects::Bloom::gainFor (1.0)), WithinAbs (-0.4, 0.05));
+    }
+}

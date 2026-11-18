@@ -2,6 +2,29 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.90.0
+
+- **A new COMP / GATE TYPE, Bloom, modelled on the BOSS SG-1 Slow Gear:** each note starts silent and swells in by itself, like a violin bow or a volume pedal you don't have to work. It's built from the pedal's factory service notes (1981) and the redrawn schematic you sent.
+  - **SENS** sets how loud a note has to be to trigger a swell.
+  - **ATTACK** sets how long the swell takes: about 70 ms to 1.4 s.
+  - **LEVEL** is the usual make-up.
+  - **The next swell needs the last note to die away below SENS first,** as on the pedal: keep playing and it stays open; leave a gap and the next note blooms again.
+  - **The faceplate's needle** shows each swell opening (SWELL dB).
+- **From the circuit:**
+  - **The volume control:** 22k into a JFET (2SK30A) to ground, with its two 1M resistors that keep it a clean resistor rather than a distortion, and 470k across it. At rest it's about 43 dB down; fully open, 0.4 dB under unity.
+  - **The note detector:** SENS (100k audio taper), the coupling (0.022 µF into 220k), and the op-amp's huge gain (1 + 1M / (390 + 1 µF), about 2,500×) clipping your note into a square wave. Then the transistors that conduct while that square wave swings.
+- **Our estimate, and why:**
+  - **The swell timing.** The factory drawing and the redrawing disagree on the parts that set it: the factory has a capacitor labelled "68/35" (68 µF or 0.68 µF; the scan can't tell) by the ATTACK pot, while the redrawing has 0.5 µF at the JFET's gate instead. So, as you chose, the swell runs through ATTACK (1k + 20k) into the factory's 68 µF: about 70 ms to 1.4 s, the range the Slow Gear is known for. The mute comes back about 30 ms after a note dies (47k into the redrawing's 0.5–0.68 µF).
+  - **The JFET's figures:** typical for its part (4 mA, pinching off at -1.2 V), since real 2SK30As vary widely (the factory has a trimmer for it).
+  - If a clearer factory scan turns up, only the timing would need revisiting.
+- **I couldn't listen to it here.** Tell me how the swells feel, especially how they re-trigger when you play faster.
+- **Tests:**
+  - a note after silence starts muted and swells to full;
+  - ATTACK's range;
+  - continuous playing stays open, and a note after a gap swells again;
+  - SENS decides whether a quiet note opens it;
+  - the volume control's depth and its level when open.
+
 ## 0.89.0
 
 - **The OCTAVER gains an ANALOG switch, modelled on the BOSS OC-2 Octave** (1982), built from its factory schematic (via Hobby-Hour), which you sent. With it off (the default) the OCTAVER is as before, so your rigs sound the same.
