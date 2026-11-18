@@ -365,11 +365,13 @@ MainView::MainView (ParagonX1AudioProcessor& processorToShow)
         return [this, type] { return juce::roundToInt (rawValue (ParamIDs::compType)) == (int) type; };
     };
     const auto classic = compIs (effects::CompGate::Type::classic), daybreak = compIs (effects::CompGate::Type::daybreak);
+    const auto bloom = compIs (effects::CompGate::Type::bloom);
     panels[compBlock] = std::make_unique<EffectPanel> (state, std::vector<Group> {
         { "COMPRESSOR", { { ParamIDs::compOn, "ON" }, { ParamIDs::compType, "TYPE" },
                           { ParamIDs::compThreshold, "THRESHOLD", classic, true }, { ParamIDs::compRatio, "RATIO", classic, true },
                           { ParamIDs::compAmount, "COMP", daybreak, true }, { ParamIDs::compDetail, "DETAIL", daybreak, true },
                           { ParamIDs::compMix, "MIX", daybreak, true }, { ParamIDs::compIntensity, "INTENSITY", daybreak, true },
+                          { ParamIDs::compSens, "SENS", bloom, true }, { ParamIDs::compSwell, "ATTACK", bloom, true },
                           { ParamIDs::compLevel, "LEVEL" } } },
         // BASTION (the noise gate, inspired by the Fortin Zuul+): the pedal's
         // GATE, HOLD and RELEASE, and its key.

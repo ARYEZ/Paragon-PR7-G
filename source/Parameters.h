@@ -116,6 +116,8 @@ namespace ParamIDs
     inline constexpr auto compDetail    = "compDetail";      // DETAIL
     inline constexpr auto compMix       = "compMix";         // MIX
     inline constexpr auto compIntensity = "compIntensity";   // INTENSITY
+    inline constexpr auto compSens      = "compSens";        // BLOOM's SENS (PR7-G 0.90.0)
+    inline constexpr auto compSwell     = "compSwell";       // BLOOM's ATTACK
 
     // Version 23: the GLITCH block.
     inline constexpr auto glitchOn       = "glitchOn";

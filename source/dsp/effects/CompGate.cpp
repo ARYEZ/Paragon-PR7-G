@@ -58,6 +58,7 @@ namespace effects
         compressor.setAttack (8.0f);
         compressor.setRelease (150.0f);
 
+        bloom.prepare (sampleRate);
         makeUpGain.reset (sampleRate, 0.02);
         mix.reset (sampleRate, 0.05);
         daybreakMakeUp.reset (sampleRate, 0.05);
@@ -74,9 +75,20 @@ namespace effects
         {
             juce::dsp::ProcessContextReplacing<float> context (block);
 
+            if (settings.type != lastType)
+            {
+                lastType = settings.type;
+                bloom.reset();   // a new type starts from silence (for Bloom: waiting for a note)
+            }
             if (settings.type == Type::daybreak)
             {
                 processDaybreak (block, settings);
+            }
+            else if (settings.type == Type::bloom)
+            {
+                // The meter shows how far the swell has opened: its needle rises as each note blooms.
+                bloom.process (block.getChannelPointer (0), (int) block.getNumSamples(), settings.sens, settings.swell);
+                gainReductionDb.store ((float) juce::Decibels::gainToDecibels (Bloom::gainFor (bloom.getOpen()), -60.0));
             }
             else
             {

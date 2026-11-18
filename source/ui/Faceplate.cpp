@@ -773,7 +773,9 @@ void Faceplate::paintPitch (juce::Graphics& g, juce::Rectangle<float> header, ju
 void Faceplate::paintClassic (juce::Graphics& g, juce::Rectangle<float> header, juce::Rectangle<float> body)
 {
     // A studio compressor: a gain-reduction needle on a screen, and its settings.
-    nameplate (g, header, "CLASSIC", "STUDIO COMPRESSOR  /  GATE");
+    // BLOOM shares the rack (and its needle shows how far each swell has opened).
+    const auto bloom = juce::roundToInt (raw (ParamIDs::compType)) == (int) effects::CompGate::Type::bloom;
+    nameplate (g, header, bloom ? "BLOOM" : "CLASSIC", bloom ? "ATTACK DELAY  /  GATE" : "STUDIO COMPRESSOR  /  GATE");
     const auto on = isOn();
 
     auto settings = isRack() ? juce::Rectangle<float>() : settingsColumn (body, 0.42f);   // on the rack the needle takes the display
@@ -800,7 +802,7 @@ void Faceplate::paintClassic (juce::Graphics& g, juce::Rectangle<float> header, 
         }
         g.setColour (orange.withAlpha (0.6f));
         g.setFont (font (8.0f));
-        g.drawText ("GAIN REDUCTION dB", glass.reduced (8.0f, 5.0f), juce::Justification::bottomLeft, false);
+        g.drawText (bloom ? "SWELL dB" : "GAIN REDUCTION dB", glass.reduced (8.0f, 5.0f), juce::Justification::bottomLeft, false);
         const auto needle = juce::Line<float> (pivot, pivot.getPointOnCircumference (radius * 0.98f, angleFor (on ? -shownReduction : 0.0f)));
         g.setColour (orange.withAlpha (0.3f));
         g.drawLine (needle, 4.0f);
