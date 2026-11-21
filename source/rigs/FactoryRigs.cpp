@@ -100,6 +100,12 @@ std::vector<Rig> makeFactoryRigs()
 {
     using namespace ParamIDs;
     constexpr int A = 0, B = 1, C = 2, D = 3;
+    // For 0.92.0's rework of rigs that had come out the same as an earlier one.
+    constexpr float twelveBitDelay = 8, brigadeDelay = 9;               // DELAY: 12-Bit and Brigade
+    constexpr float amberDrive = 7, emberDrive = 8, sapphireDrive = 10;  // OD / DISTORTION: Amber, Ember and Sapphire
+    constexpr float halfNote = 2;                                        // DELAY / MOD sync: 1/2
+    constexpr float glitchThirtySecond = 1, glitchSixteenthTriplet = 2;  // GLITCH's LENGTH
+    constexpr float classicComp = 0;                                     // COMP / GATE's TYPE
 
     return {
         make ("Clean Slate", A, 1, "Clean", {}),
@@ -790,13 +796,13 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
 
-        // A melodic lead with a dotted-eighth echo ducking under it and a hall.
+        // A melodic single-note lead: an overdrive push (Amber), a
+        // gritty 12-bit dotted-eighth echo (12-Bit), a small room.
         make ("Dotted Echo Lead", H, 12, "Album,Lead,Delay", {
             { rigLevel, -6 },
-            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 5 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.3f },
-            { delayDuck, 0.5f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+            { driveOn, 1 }, { driveModel, amberDrive }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, twelveBitDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.3f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
 
         // A crushed, sampled-sounding hook: your guitar through a bitcrusher,
         // as if lifted from a record.
@@ -848,20 +854,23 @@ std::vector<Rig> makeFactoryRigs()
             { delayTone, 8 },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.22f } }),
 
-        // Your part as two double-tracked guitars, one each side.
+        // Your part as two tight takes, one each side, played almost exactly
+        // together as the album's guitars are, with the gate shutting each stop.
         make ("Twin Takes Spread", I, 3, "Album,FX,Modulation", {
             { rigLevel, -3 },
-            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
+            { gateThreshold, -50 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.25f }, { modMix, 0.85f }, { modStereo, 1 } }),
 
-        // Glassy clean arpeggios: compressed, bright, a light chorus, a
-        // dotted-eighth echo and a plate.
+        // Glassy clean arpeggios: compressed, bright, a dimension chorus, an
+        // eighth echo bouncing side to side and a hall.
         make ("Glassy Arpeggio Clean", I, 4, "Album,Clean,Delay", {
             { rigLevel, 10 },
             { compOn, 1 }, { compThreshold, -28 }, { compRatio, 4 }, { compLevel, 3 },
             { eqOn, 1 }, { "eq125", -2 }, { "eq4k", 2 }, { "eq8k", 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.6f }, { modDepth, 0.35f }, { modMix, 0.3f }, { modStereo, 1 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
-            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.55f }, { reverbMix, 0.22f } }),
+            { modOn, 1 }, { modType, dimension }, { modRate, 0.5f }, { modDepth, 0.4f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.22f },
+            { delayPingPong, 1 },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.55f }, { reverbMix, 0.22f } }),
 
         // Swells that sit with a string section: the pedal is a volume pedal,
         // a wide dual chorus and a big hall.
@@ -891,13 +900,14 @@ std::vector<Rig> makeFactoryRigs()
             { delayDuck, 0.5f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
 
-        // A lead with an octave above gliding with it, boosted into your amp.
+        // A lead with an octave above gliding with it: a bluesy overdrive push
+        // (Sapphire), a modulated dotted-eighth echo, a hall.
         make ("Octave Glide Lead", I, 8, "Album,Lead,Pitch,Octave", {
             { rigLevel, -8 },
             { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.55f },
-            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 7 }, { driveLevel, 4 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
-            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
+            { driveOn, 1 }, { driveModel, sapphireDrive }, { driveGain, 2 }, { driveTone, 7 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, modDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.3f }, { delayMix, 0.22f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
 
         // Stop-start stutters: what you play grabbed back in sixteenths (on
         // the song's grid when your DAW plays), over your heavy amp.
@@ -966,14 +976,15 @@ std::vector<Rig> makeFactoryRigs()
         // J04 answers, on guitar, the delayed scream on "Silence" the owner
         // asked PR7-V to nail.
 
-        // A soaring lead: boosted into your amp, a dotted-eighth echo that
-        // ducks under the notes, a hall.
+        // A soaring lead: a bluesy overdrive push (Sapphire) into your
+        // amp, a warm analog dotted-eighth echo (Brigade) that ducks
+        // under the notes, a plate.
         make ("Champion Lead", J, 1, "Album,Lead,Delay", {
             { rigLevel, -7 },
-            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
+            { driveOn, 1 }, { driveModel, sapphireDrive }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 },
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
             { delayDuck, 0.5f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.2f } }),
 
         // Clean arpeggios: compressed, a gentle chorus, an eighth echo, a plate.
         make ("Fragment Arpeggio Clean", J, 2, "Album,Clean,Delay", {
@@ -983,12 +994,13 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
 
-        // A wave of broken noise for accents: your riff breaking up, pieces
-        // dropping out or caught in short loops, over your heavy amp.
+        // Your riff breaking up into a wave of noise: pieces dropped out or
+        // caught in short loops on the thirty-seconds, through a bitcrusher.
         make ("Scar Noise Accent", J, 3, "Album,FX,Glitch", {
             { rigLevel, -2 },
-            { glitchOn, 1 }, { glitchMode, glitchInterfere }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
-            { glitchDensity, 6 }, { glitchChaos, 5 }, { glitchMix, 1 } }),
+            { glitchOn, 1 }, { glitchMode, glitchInterfere }, { glitchSync, 1 }, { glitchDivision, glitchThirtySecond },
+            { glitchDensity, 6 }, { glitchChaos, 5 }, { glitchMix, 1 },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 6 }, { lofiNoise, 2 }, { lofiMix, 0.5f } }),
 
         // A note thrown into echoes that keep going after it stops: a big
         // quarter-note throw, ducked while you play, thinned and roughened.
@@ -1006,13 +1018,13 @@ std::vector<Rig> makeFactoryRigs()
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.45f }, { reverbMix, 0.2f } }),
 
         // Lonely swells: the expression pedal is a volume pedal (swell up from
-        // the heel), into a tape echo and a big hall.
+        // the heel), into a dark analog echo (Brigade) and a cathedral.
         make ("Abandoned Swell", J, 6, "Album,Clean,Ambient,Expression", {
             { rigLevel, 2 },
             { expressionTarget, pedalVolume },
             { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
-            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, quarter }, { delayFeedback, 0.55f }, { delayMix, 0.35f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.4f } }),
 
         // An electronic edge: a cloud of grains through a radio band.
         make ("Wired Texture", J, 7, "Album,FX,Glitch", {
@@ -1028,12 +1040,15 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, phaser }, { modRate, 0.3f }, { modDepth, 0.6f }, { modStereo, 1 },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.45f }, { reverbTone, 4 }, { reverbMix, 0.2f } }),
 
-        // A lead with an octave above it, boosted into your amp.
+        // A lead with an octave above it, rougher: a distortion
+        // (Ember) into your amp, a dark analog eighth echo (Brigade),
+        // a small room.
         make ("Fallen Octave Lead", J, 9, "Album,Lead,Pitch,Octave", {
             { rigLevel, -8 },
             { octOn, 1 }, { octSubOne, 0 }, { octDry, 0.8f }, { octUp, 0.55f },
-            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 4 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
+            { driveOn, 1 }, { driveModel, emberDrive }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 4 },
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
 
         // A big chorus clean: a wide dual chorus, a quarter echo and a hall.
         make ("Faith Chorus Clean", J, 10, "Album,Clean,Modulation", {
@@ -1065,10 +1080,12 @@ std::vector<Rig> makeFactoryRigs()
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 2 }, { driveTone, 6 }, { driveLevel, 4 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f } }),
 
-        // Your part as two guitars, one each side.
+        // Your part as two looser takes, one each side, thickened in the low
+        // mids and darker on top: a wall of rhythm guitars.
         make ("Wall Takes Spread", J, 14, "Album,FX,Modulation", {
             { rigLevel, -3 },
-            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
+            { eqOn, 1 }, { "eq250", 2 }, { "eq4k", -2 }, { "eq8k", -3 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.7f }, { modMix, 0.7f }, { modStereo, 1 } }),
 
         // A soulful wah lead: the expression pedal is a wah, boosted, a plate.
         make ("Soul Wah Lead", J, 15, "Album,Lead,Wah,Expression", {
@@ -1146,13 +1163,14 @@ std::vector<Rig> makeFactoryRigs()
             { compOn, 1 }, { compType, daybreakComp }, { compAmount, 6 }, { compDetail, 5 }, { compMix, 1 },
             { delayOn, 1 }, { delayType, analogDelay }, { delaySync, syncOff }, { delayTime, 90 }, { delayFeedback, 0.1f }, { delayMix, 0.12f } }),
 
-        // Clean arpeggios: a gentle chorus, an eighth echo, a plate.
+        // Clean arpeggios with a Carbonite chorus, an eighth
+        // echo, a room.
         make ("Arpeggio Chorus Clean", K, 9, "Album,Clean,Modulation", {
             { rigLevel, 7 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.5f }, { modDepth, 0.35f }, { modMix, 0.3f }, { modStereo, 1 },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.5f }, { modDepth, 0.4f }, { modMix, 0.35f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f },
-            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
 
         // A wash of rumbling noise: grains smeared from what you play,
         // through a noisy radio, in a big space.
@@ -1324,11 +1342,12 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, dimension }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbTone, 4 }, { reverbMix, 0.25f } }),
 
-        // A sparse, dry verse clean: firm and close, nothing after the note.
+        // A sparse, dry verse clean: a firm classic compressor, the low end and
+        // low mids trimmed, nothing after the note.
         make ("Sparse Verse Clean", M, 3, "Album,Clean,Dry", {
             { rigLevel, 3 },
-            { compOn, 1 }, { compType, daybreakComp }, { compAmount, 5 }, { compDetail, 5 }, { compMix, 1 },
-            { eqOn, 1 }, { "eq63", -3 }, { "eq4k", 1 } }),
+            { compOn, 1 }, { compType, classicComp }, { compThreshold, -20 }, { compRatio, 4 },
+            { eqOn, 1 }, { "eq63", -3 }, { "eq500", -2 }, { "eq2k", 1 } }),
 
         // A doomy lead: boosted, a slow phaser and a dark echo.
         make ("Doom Phase Lead", M, 4, "Album,Lead,Modulation", {
@@ -1375,9 +1394,11 @@ std::vector<Rig> makeFactoryRigs()
             { delayDuck, 0.5f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
 
-        // A hexed riff: a deep, resonant flange over your amp.
+        // A hexed riff: a very slow, deep, resonant flange over your amp, with a
+        // dark analog eighth echo (Brigade) trailing it.
         make ("Hex Flange Riff", M, 10, "Album,FX,Modulation", {
-            { modOn, 1 }, { modType, flanger }, { modRate, 0.35f }, { modDepth, 0.8f }, { modManual, 5 }, { modRes, 8 } }),
+            { modOn, 1 }, { modType, flanger }, { modRate, 0.12f }, { modDepth, 1.0f }, { modManual, 2 }, { modRes, 9 },
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.15f } }),
 
         // Industrial grit: stutters on the song's grid and a bitcrushed edge,
         // as programming might cut up a guitar.
@@ -1393,13 +1414,15 @@ std::vector<Rig> makeFactoryRigs()
             { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
 
         // Wounded swells: the pedal is a volume pedal (swell from the heel),
-        // into a tape echo and a big hall.
+        // through a slow Nebula throb, a dotted-eighth 12-bit echo
+        // (12-Bit) and a big hall.
         make ("Wounded Swell", M, 13, "Album,Clean,Ambient,Expression", {
             { rigLevel, 2 },
             { expressionTarget, pedalVolume },
             { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
-            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+            { modOn, 1 }, { modType, uniVibe }, { modRate, 0.8f }, { modDepth, 0.5f }, { modMix, 0.5f },
+            { delayOn, 1 }, { delayType, twelveBitDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.9f }, { reverbMix, 0.4f } }),
 
         // A bell-like clean to sit with piano: an octave above, bright and
         // even, a plate.
@@ -1410,10 +1433,13 @@ std::vector<Rig> makeFactoryRigs()
             { eqOn, 1 }, { "eq4k", 2 }, { "eq8k", 2 },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.22f } }),
 
-        // Your part as two guitars, one each side.
+        // Your part as two guitars the old way: a short analog delay
+        // (Brigade) on one side, a light chorus across them.
         make ("Twin Guitar Spread", M, 15, "Album,FX,Modulation", {
             { rigLevel, -3 },
-            { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.7f }, { modStereo, 1 } }),
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, syncOff }, { delayTime, 28 }, { delayFeedback, 0 },
+            { delayMix, 0.45f }, { delayPingPong, 1 },
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.4f }, { modDepth, 0.25f }, { modMix, 0.3f }, { modStereo, 1 } }),
 
         //======================================================================
         // Bank N: an album's guitar sounds, inspired by 30 Seconds to Mars'
@@ -1450,10 +1476,11 @@ std::vector<Rig> makeFactoryRigs()
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 5 }, { driveLevel, 5 },
             { delayOn, 1 }, { delayType, analogDelay }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.2f } }),
 
-        // A countdown riff: a slow, deep phaser over your amp.
+        // A slow, deep Nebula throb over your amp, its sweep locked to whole
+        // bars of the song's tempo.
         make ("Countdown Phase Riff", N, 4, "Album,FX,Modulation", {
             { rigLevel, 3 },
-            { modOn, 1 }, { modType, phaser }, { modRate, 0.2f }, { modDepth, 0.8f } }),
+            { modOn, 1 }, { modType, uniVibe }, { modSync, wholeNote }, { modDepth, 0.8f }, { modMix, 0.6f } }),
 
         // A dark ritual: a slow, deep, resonant flange and a dark room.
         make ("Dark Ritual Flange", N, 5, "Album,FX,Modulation", {
@@ -1500,10 +1527,13 @@ std::vector<Rig> makeFactoryRigs()
             { delayDuck, 0.5f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.15f } }),
 
-        // Thrust: your riff as two guitars, one each side, a wall of them.
+        // Thrust: your riff as two guitars, one each side, a wall of them,
+        // with an industrial crushed edge under it and the gate on the stops.
         make ("Wide Thrust Riff", N, 11, "Album,FX,Modulation", {
             { rigLevel, -3 },
-            { modOn, 1 }, { modType, doubler }, { modDepth, 0.6f }, { modMix, 0.8f }, { modStereo, 1 } }),
+            { gateThreshold, -55 },
+            { modOn, 1 }, { modType, doubler }, { modDepth, 0.6f }, { modMix, 0.8f }, { modStereo, 1 },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 4 }, { lofiNoise, 0 }, { lofiMix, 0.3f } }),
 
         // A robot choir: the talk box shaping your lead into vowels (the pedal
         // opens the mouth), boosted, a plate.
@@ -1675,10 +1705,12 @@ std::vector<Rig> makeFactoryRigs()
             { "cipher1EnvAmount", 0.6f }, { "cipher1Speed", 14 } }),
             { { 1, 7 } }),
 
-        // A robotic voice: the riff through CIPHER's vocoder.
+        // A robotic voice: the riff through CIPHER's vocoder on a low carrier,
+        // shouted through a megaphone.
         make ("Robot Riff Voice", P, 4, "Album,FX", {
             { cipherOn, 1 }, { rigLevel, 9 },
-            { "cipher1Type", 32 }, { "cipher1Main", 0.35f }, { "cipher1P2", 0.3f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.7f } }),
+            { "cipher1Type", 32 }, { "cipher1Main", 0.2f }, { "cipher1P2", 0.3f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.8f },
+            { lofiOn, 1 }, { lofiType, megaphone }, { lofiAmount, 4 }, { lofiNoise, 0 }, { lofiMix, 0.4f } }),
 
         // A machine-gun clean: a hard sixteenth tremolo, a plate.
         make ("Machine Tremolo Clean", P, 5, "Album,Clean,Modulation", {
@@ -1695,21 +1727,24 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.25f },
             { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.7f }, { reverbMix, 0.45f } }),
 
-        // A hypnotic flange on the riff.
+        // A hypnotic flange on the riff: its sweep locked to half notes of the
+        // song's tempo, the gate tight on the stops.
         make ("Hypno Flange Riff", P, 7, "Album,FX,Modulation", {
-            { modOn, 1 }, { modType, flanger }, { modRate, 0.5f }, { modDepth, 0.8f }, { modManual, 4 }, { modRes, 6 } }),
+            { gateThreshold, -55 },
+            { modOn, 1 }, { modType, flanger }, { modSync, halfNote }, { modDepth, 0.8f }, { modManual, 4 }, { modRes, 6 } }),
 
         // The riff cut and re-sequenced on the sixteenths.
         make ("Glitched Riff Sequence", P, 8, "Album,FX,Glitch", {
             { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
             { glitchDensity, 6 }, { glitchChaos, 4 }, { glitchMix, 1 } }),
 
-        // An octave squeal on the pedal for accents: heel your note, toe an octave up.
+        // An octave squeal on the pedal for accents (QUASAR), over a distortion
+        // distortion (Ember) into your amp.
         make ("Quasar Squeal Accent", P, 9, "Album,Lead,Pitch,Expression", {
-            { rigLevel, -3 },
-            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
+            { rigLevel, -12.5f },
             { expressionTarget, pedalWhammyWah },
-            { driveOn, 1 }, { driveModel, banshee }, { driveGain, 3 }, { driveTone, 6 }, { driveLevel, 5 } }),
+            { fpOn, 1 }, { fpType, whammyWah }, { fpXpProgram, xpUpOctave }, { fpMix, 1 },
+            { driveOn, 1 }, { driveModel, emberDrive }, { driveGain, 4 }, { driveTone, 6 }, { driveLevel, 5 } }),
 
         // A haunted clean as if through an old phone line, with static.
         make ("Haunted Radio Clean", P, 10, "Album,Clean,Lo-Fi", {
@@ -1717,18 +1752,22 @@ std::vector<Rig> makeFactoryRigs()
             { lofiOn, 1 }, { lofiType, telephone }, { lofiAmount, 6 }, { lofiNoise, 3 }, { lofiMix, 1 },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
 
-        // A spectral wash: every frequency held and fading, into a spectral reverb.
+        // A spectral wash: every frequency held and fading, into a spectral
+        // reverb, a warm tape echo under it.
         make ("Spectral Wash Clean", P, 11, "Album,Clean,Ambient", {
             { cipherOn, 1 }, { rigLevel, -6 },
             { "cipher1Type", 48 }, { "cipher1Main", 0.8f }, { "cipher1P1", 0.3f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.6f },
-            { "cipher2Type", 49 }, { "cipher2Main", 0.55f }, { "cipher2EnvAmount", 0 } }),
+            { "cipher2Type", 49 }, { "cipher2Main", 0.55f }, { "cipher2EnvAmount", 0 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.4f }, { delayMix, 0.25f } }),
 
-        // A cold, clear clean with a dotted-eighth echo and a hall.
+        // A cold, clear clean: a 12-bit dotted-eighth echo (12-Bit), a
+        // bright plate, the lows trimmed.
         make ("Frozen Echo Clean", P, 12, "Album,Clean,Delay", {
             { rigLevel, 3 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+            { eqOn, 1 }, { "eq125", -2 },
+            { delayOn, 1 }, { delayType, twelveBitDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.4f }, { delayMix, 0.25f },
+            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbTone, 8 }, { reverbMix, 0.25f } }),
 
         // A pitch dive: CIPHER's shifter falling from an octave up to an octave down each bar, beside the dry.
         withCipher (make ("Pitch Dive Riser", P, 13, "Album,FX,Pitch", {
@@ -1804,17 +1843,22 @@ std::vector<Rig> makeFactoryRigs()
             { delayDuck, 0.5f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.2f } }),
 
-        // A soft, tape-worn clean: through a gently wobbling cassette, a room.
+        // A soft, tape-worn clean: a gentle wow in the pitch (a slow vibrato),
+        // a short tape echo, the top rolled off, a room.
         make ("Soft Tape Clean", Q, 7, "Album,Clean,Lo-Fi", {
             { rigLevel, 5 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { lofiOn, 1 }, { lofiType, cassette }, { lofiAmount, 4 }, { lofiNoise, 2 }, { lofiMix, 0.7f },
+            { eqOn, 1 }, { "eq8k", -3 }, { "eq16k", -5 },
+            { modOn, 1 }, { modType, vibrato }, { modRate, 0.6f }, { modDepth, 0.25f }, { modMix, 1 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, eighth }, { delayFeedback, 0.2f }, { delayMix, 0.2f },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
 
-        // An electronic break: the sound cut and re-sequenced on the sixteenths.
+        // An electronic break: the sound cut and re-sequenced on the
+        // thirty-seconds, through a bitcrusher.
         make ("Glitch Stutter Break", Q, 8, "Album,FX,Glitch", {
-            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
-            { glitchDensity, 5 }, { glitchChaos, 3 }, { glitchMix, 1 } }),
+            { glitchOn, 1 }, { glitchMode, glitchSequence }, { glitchSync, 1 }, { glitchDivision, glitchThirtySecond },
+            { glitchDensity, 5 }, { glitchChaos, 3 }, { glitchMix, 1 },
+            { lofiOn, 1 }, { lofiType, bitcrusher }, { lofiAmount, 5 }, { lofiNoise, 0 }, { lofiMix, 0.4f } }),
 
         // A trap-feel clean: a tremolo in triplet eighths, a plate.
         make ("Triplet Tremolo Clean", Q, 9, "Album,Clean,Modulation", {
@@ -1823,11 +1867,12 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, tremolo }, { modSync, eighthTriplet }, { modDepth, 0.7f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
 
-        // Rainfall: a clean with echoes bouncing side to side and a hall.
+        // Rainfall: a clean with dotted-eighth echoes falling in several taps,
+        // bouncing side to side, a hall.
         make ("Rainfall Delay Clean", Q, 10, "Album,Clean,Delay", {
             { rigLevel, 3 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
+            { delayOn, 1 }, { delayType, multiTap }, { delaySync, dottedEighth }, { delayFeedback, 0.45f }, { delayMix, 0.3f },
             { delayPingPong, 1 },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.28f } }),
 
@@ -1838,11 +1883,14 @@ std::vector<Rig> makeFactoryRigs()
             { driveOn, 1 }, { driveModel, banshee }, { driveGain, 1 }, { driveTone, 4 }, { driveLevel, 4 },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
 
-        // A halo of sound: every frequency held and fading, into a spectral reverb.
+        // A halo of sound: every frequency held and fading, into a spectral
+        // reverb, then a cathedral; the pedal swells it in (a volume pedal, from the heel).
         make ("Spectral Halo Pad", Q, 12, "Album,Clean,Ambient", {
             { cipherOn, 1 }, { rigLevel, -9 },
+            { expressionTarget, pedalVolume },
             { "cipher1Type", 48 }, { "cipher1Main", 0.85f }, { "cipher1P1", 0.35f }, { "cipher1EnvAmount", 0 }, { "cipher1Mix", 0.6f },
-            { "cipher2Type", 49 }, { "cipher2Main", 0.65f }, { "cipher2EnvAmount", 0 } }),
+            { "cipher2Type", 49 }, { "cipher2Main", 0.65f }, { "cipher2EnvAmount", 0 },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.35f } }),
 
         // A choir-like swell: CIPHER's formant sweeping slowly through the vowels, into a hall.
         withCipher (make ("Formant Choir Swell", Q, 13, "Album,FX,Filter,Ambient", {
@@ -1851,12 +1899,14 @@ std::vector<Rig> makeFactoryRigs()
             { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
             { { 1, 4 } }),
 
-        // A blooming clean: a reverse reverb swelling in behind each note, a slow chorus.
+        // A reverse reverb swelling in behind each note, a Carbonite chorus
+        // and a soft quarter-note tape echo.
         make ("Reverse Bloom Clean", Q, 14, "Album,Clean,Ambient", {
             { rigLevel, 8 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.35f }, { modStereo, 1 },
-            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.65f }, { reverbMix, 0.45f } }),
+            { modOn, 1 }, { modType, carbonite }, { modRate, 0.4f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.75f }, { reverbMix, 0.45f } }),
 
         // A wide synth lead: an octave above, doubled side to side, an echo.
         make ("Wide Octave Synth Lead", Q, 15, "Album,Lead,Pitch,Octave", {
@@ -1953,11 +2003,13 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
             { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
 
-        // A slow build: echoes played backwards, into a long hall.
+        // A slow build: echoes played backwards in half notes, a slow Nebula
+        // throb, into a cathedral.
         make ("Slow Build Reverse Wash", R, 11, "Album,FX,Ambient,Delay", {
             { rigLevel, -4 },
-            { delayOn, 1 }, { delayType, reverseDelay }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.55f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.85f }, { reverbMix, 0.4f } }),
+            { modOn, 1 }, { modType, uniVibe }, { modRate, 0.3f }, { modDepth, 0.4f }, { modMix, 0.4f },
+            { delayOn, 1 }, { delayType, reverseDelay }, { delaySync, halfNote }, { delayFeedback, 0.4f }, { delayMix, 0.45f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
 
         // Scratching between riffs: HAVOK's scratch programs on the PROGRAM MAP
         // keys, in time with the song. Touch the pad (or a MIDI pad, CC 92).
@@ -2072,12 +2124,14 @@ std::vector<Rig> makeFactoryRigs()
             { octOn, 1 }, { octSubOne, 0.8f }, { octDry, 0.9f }, { octUp, 0 },
             { driveOn, 1 }, { driveModel, cosmonaut }, { driveGain, 5 }, { driveTone, 5 }, { driveLevel, 5 } }),
 
-        // A grand, airy clean: a shimmer rising out of each note, a hall.
+        // A grand, airy clean: a dotted-eighth shimmer rising out of each note,
+        // a wide dimension chorus, a cathedral.
         make ("Grand Shimmer Clean", S, 11, "Album,Clean,Ambient", {
             { rigLevel, 0 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.45f }, { delayMix, 0.28f },
-            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.8f }, { reverbMix, 0.35f } }),
+            { modOn, 1 }, { modType, dimension }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, shimmer }, { delaySync, dottedEighth }, { delayFeedback, 0.45f }, { delayMix, 0.28f },
+            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.85f }, { reverbMix, 0.35f } }),
 
         // A gentle ripple: a soft dimension chorus and a plate.
         make ("Gentle Ripple Clean", S, 12, "Album,Clean,Modulation", {
@@ -2151,17 +2205,19 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, ducking }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.25f },
             { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.2f } }),
 
-        // A stop-start break: the sound chopped on the sixteenths (on the song's grid when your DAW plays).
+        // Twitching: the sound chopped in sixteenth triplets.
         make ("Twitch Gate Stutter", T, 5, "Album,FX,Glitch", {
-            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenth },
+            { glitchOn, 1 }, { glitchMode, glitchKillswitch }, { glitchSync, 1 }, { glitchDivision, glitchSixteenthTriplet },
             { glitchDensity, 4 }, { glitchChaos, 0 }, { glitchMix, 1 } }),
 
-        // A ballad clean: a soft dimension chorus and a plate.
+        // A ballad clean: a soft dimension chorus, a warm analog quarter echo
+        // (Brigade) and a hall.
         make ("Ballad Dimension Clean", T, 6, "Album,Clean,Modulation", {
             { rigLevel, 5 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
             { modOn, 1 }, { modType, dimension }, { modRate, 0.4f }, { modDepth, 0.55f }, { modMix, 0.5f }, { modStereo, 1 },
-            { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.6f }, { reverbMix, 0.25f } }),
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, quarter }, { delayFeedback, 0.3f }, { delayMix, 0.2f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.7f }, { reverbMix, 0.3f } }),
 
         // An industrial pulse: CIPHER's resonant band-pass plucked every sixteenth, crushed a little.
         withCipher (make ("Industrial Pulse Riff", T, 7, "Album,FX,Filter", {
@@ -2178,21 +2234,25 @@ std::vector<Rig> makeFactoryRigs()
             { modOn, 1 }, { modType, doubler }, { modDepth, 0.5f }, { modMix, 0.6f }, { modStereo, 1 },
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.3f }, { delayMix, 0.18f } }),
 
-        // A dark clean: a slow phaser into a tape echo, a room.
+        // A dark clean: a slow phaser into a warm analog quarter echo
+        // (Brigade), a spring, the top rolled off.
         make ("Dark Phase Clean", T, 9, "Album,Clean,Modulation,Delay", {
             { rigLevel, 10.5f },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
+            { eqOn, 1 }, { "eq8k", -3 }, { "eq16k", -4 },
             { modOn, 1 }, { modType, phaser }, { modRate, 0.3f }, { modDepth, 0.6f },
-            { delayOn, 1 }, { delayType, tapeDelay }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
-            { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
+            { delayOn, 1 }, { delayType, brigadeDelay }, { delaySync, quarter }, { delayFeedback, 0.35f }, { delayMix, 0.22f },
+            { reverbOn, 1 }, { reverbType, spring }, { reverbSize, 0.5f }, { reverbMix, 0.2f } }),
 
-        // An atmospheric swell: volume swells (from the heel) into a shimmer and a cathedral.
+        // An atmospheric swell: volume swells (from the heel) into a dimension
+        // chorus, a modulated dotted-eighth echo and a long hall.
         make ("Atmosphere Swell Pad", T, 10, "Album,Clean,Ambient,Expression", {
             { rigLevel, 3.5f },
             { expressionTarget, pedalVolume },
             { compOn, 1 }, { compThreshold, -26 }, { compRatio, 3 },
-            { delayOn, 1 }, { delayType, shimmer }, { delaySync, quarter }, { delayFeedback, 0.5f }, { delayMix, 0.3f },
-            { reverbOn, 1 }, { reverbType, cathedral }, { reverbSize, 0.9f }, { reverbMix, 0.45f } }),
+            { modOn, 1 }, { modType, dimension }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.4f }, { modStereo, 1 },
+            { delayOn, 1 }, { delayType, modDelay }, { delaySync, dottedEighth }, { delayFeedback, 0.55f }, { delayMix, 0.3f },
+            { reverbOn, 1 }, { reverbType, hall }, { reverbSize, 0.95f }, { reverbMix, 0.45f } }),
 
         // An octave melody: an octave above your line, boosted, an echo.
         make ("Octave Melody Lead", T, 11, "Album,Lead,Pitch,Octave", {
@@ -2208,10 +2268,12 @@ std::vector<Rig> makeFactoryRigs()
             { lofiOn, 1 }, { lofiType, amRadio }, { lofiAmount, 5 }, { lofiNoise, 2 }, { lofiMix, 0.8f },
             { reverbOn, 1 }, { reverbType, room }, { reverbSize, 0.4f }, { reverbMix, 0.15f } }),
 
-        // A low-end layer: an octave below your riff, for the heaviest parts.
+        // A low-end layer: an analog octave below your riff (the OCTAVER's ANALOG,
+        // which follows your picking and growls), the gate tight on the stops.
         make ("Sub Octave Groove", T, 13, "Album,FX,Pitch,Sub", {
             { rigLevel, -2 },
-            { octOn, 1 }, { octSubOne, 0.8f }, { octDry, 0.9f }, { octUp, 0 } }),
+            { gateThreshold, -55 },
+            { octOn, 1 }, { octAnalog, 1 }, { octSubOne, 1.0f }, { octSubTwo, 0 }, { octDry, 0.7f }, { octUp, 0 } }),
 
         // A wah solo: the pedal is a wah, boosted, a plate.
         make ("Wah Solo Lead", T, 14, "Album,Lead,Wah,Expression", {
@@ -2221,12 +2283,14 @@ std::vector<Rig> makeFactoryRigs()
             { delayOn, 1 }, { delayType, digitalDelay }, { delaySync, eighth }, { delayFeedback, 0.25f }, { delayMix, 0.15f },
             { reverbOn, 1 }, { reverbType, plate }, { reverbSize, 0.5f }, { reverbMix, 0.18f } }),
 
-        // A hazy clean: a reverse reverb swelling in behind each note, a slow chorus.
+        // A hazy clean: a reverse reverb swelling in behind each note, a wide
+        // dimension chorus, the top rolled off.
         make ("Reverse Haze Clean", T, 15, "Album,Clean,Ambient", {
             { rigLevel, 9 },
             { compOn, 1 }, { compThreshold, -24 }, { compRatio, 3 },
-            { modOn, 1 }, { modType, chorus }, { modRate, 0.3f }, { modDepth, 0.5f }, { modMix, 0.35f }, { modStereo, 1 },
-            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.65f }, { reverbMix, 0.45f } }),
+            { eqOn, 1 }, { "eq8k", -3 }, { "eq16k", -4 },
+            { modOn, 1 }, { modType, dimension }, { modRate, 0.3f }, { modDepth, 0.6f }, { modMix, 0.5f }, { modStereo, 1 },
+            { reverbOn, 1 }, { reverbType, reverse }, { reverbSize, 0.6f }, { reverbMix, 0.5f } }),
     };
 }
 

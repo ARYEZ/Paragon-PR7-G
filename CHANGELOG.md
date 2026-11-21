@@ -2,6 +2,54 @@
 
 Each version's notes appear on its GitHub Release page.
 
+## 0.92.0
+
+- **No more look-alike factory rigs.** You noticed that some rigs in different banks sounded the same. An audit of all 271 factory rigs, comparing every pair by settings and by sound, found 17 groups. Three were exact copies of another rig's settings, and the rest differed by a knob nudged a tenth or so (you'd struggle to hear it). A new check then found 11 more pairs that close. In each group **the earliest rig is unchanged**, and each later copy now has something of its own that suits its song:
+
+  | Rig | Was the same as | Now |
+  |---|---|---|
+  | I03 Twin Takes Spread | H09 Wide Layered Takes | tight takes (the doubler at 0.25), the gate on the stops |
+  | J14 Wall Takes Spread | H09 (an exact copy of I03) | looser takes, thicker low mids, darker top |
+  | M15 Twin Guitar Spread | H09 (an exact copy of I03) | the old analog-delay double: a 28 ms Brigade echo on one side, a light Carbonite chorus |
+  | N11 Wide Thrust Riff | H09 | the doubler with a crushed industrial edge under it, the gate on |
+  | J06 Abandoned Swell | H11 Soft Swell Pad | a dark Brigade echo and a cathedral |
+  | M13 Wounded Swell | H11 (an exact copy of J06) | a slow Nebula throb, a dotted-eighth 12-Bit echo, a big hall |
+  | T13 Sub Octave Groove | Q05 Sub Octave Drop (an exact copy) | the OCTAVER's ANALOG octave (it growls and follows your picking), the gate on |
+  | Q14 Reverse Bloom Clean | M08 Narcotic Haze | a Carbonite chorus and a soft tape echo with the reverse reverb |
+  | T15 Reverse Haze Clean | M08 (only louder than Q14) | a Prism dimension chorus, the top rolled off |
+  | H12 Dotted Echo Lead | F02 Aching Chorus Lead | an Amber push, a gritty 12-Bit dotted echo, a small room |
+  | J01 Champion Lead | F02 | a Sapphire push, a warm Brigade dotted echo (still ducking), a plate |
+  | I08 Octave Glide Lead | F07 Glass Octave Lead | a Sapphire push, a modulated dotted echo, a hall |
+  | J09 Fallen Octave Lead | H10 Octave Line Lead | rougher: Ember into your amp, a dark Brigade echo, a room |
+  | T06 Ballad Dimension Clean | S12 Gentle Ripple Clean | a Brigade quarter echo and a hall with the dimension chorus |
+  | Q07 Soft Tape Clean | M06 Warped Tape Clean | a gentle pitch wow (slow vibrato), a short tape echo, the top rolled off (no cassette) |
+  | S11 Grand Shimmer Clean | N06 Reflective Shimmer Clean | a dotted-eighth shimmer, a dimension chorus, a cathedral |
+  | T10 Atmosphere Swell Pad | Q02 Ritual Swell Pad | a dimension chorus, a modulated dotted echo, a long hall |
+  | M03 Sparse Verse Clean | L14 Muted Clean Pulse | the Classic compressor, the low mids trimmed |
+  | M10 Hex Flange Riff | L08 Jet Flange Riff | a very slow, deep flange with a dark Brigade echo trailing it |
+  | P07 Hypno Flange Riff | K02 Swirl Flange Riff | its sweep locked to half notes of your tempo, the gate on |
+  | Q08 Glitch Stutter Break | P08 Glitched Riff Sequence | cut on the thirty-seconds, through a bitcrusher |
+  | P04 Robot Riff Voice | O09 Robot Choir | a lower vocoder voice, through a megaphone |
+  | R11 Slow Build Reverse Wash | H14 Reverse Riser | half-note reverse echoes, a slow Nebula throb, a cathedral |
+  | I04 Glassy Arpeggio Clean | H03 Harmonic Chime Verse | a dimension chorus, an eighth echo bouncing side to side, a hall |
+  | P12 Frozen Echo Clean | N02 Horizon Delay Clean | a 12-Bit dotted echo, a bright plate, the lows trimmed |
+  | P09 Quasar Squeal Accent | E01 Octave Squeal Solo | the octave squeal over Ember instead of a boost |
+  | T09 Dark Phase Clean | R04 Sedated Phase Echo | a Brigade echo, a spring, the top rolled off |
+  | N04 Countdown Phase Riff | L07 Slow Phase Riff | a Nebula throb locked to whole bars of your tempo |
+  | J03 Scar Noise Accent | H02 Broken Signal Riff | broken up on the thirty-seconds, through a bitcrusher |
+  | T05 Twitch Gate Stutter | L05 Toggle Kill Stutter | chopped in sixteenth triplets |
+  | P11 Spectral Wash Clean | O08 Spectral Freeze Pad | a tape echo under the spectral wash |
+  | Q12 Spectral Halo Pad | O08 | the pedal swells it in, into a cathedral |
+  | Q10 Rainfall Delay Clean | N02 Horizon Delay Clean | multi-tap echoes falling side to side |
+  | K09 Arpeggio Chorus Clean | J02 Fragment Arpeggio Clean | a Carbonite chorus and a room |
+
+- **The names, banks, numbers and tags stay the same**, so favourites and your setlists still find them. Your own saved rigs aren't touched.
+- **What's a guess:** each new character is my reading of the song's sound, not taken from a recording or a rig rundown. Tell me any that miss and I'll redo them, especially if you have a reference for the song.
+- **I couldn't listen to them here.** I checked them by measurement: each rig still does what its tags say (the octave rigs' octave, the ambient rigs' tails, the dry rigs' silence after the note), and each bank is still balanced within 6 dB.
+- **Tests:**
+  - **A new check keeps it this way:** no two factory rigs may be within a quarter of one knob's travel of each other in all their settings added up (RIG LEVEL doesn't count, and a different type, model or switch counts as a whole knob). Before this release 42 pairs were under that line; now the closest pair is 0.29 apart, a slow phaser against a fast one, which really do sound different.
+  - A hidden tool (`[rigaudit]`) renders every factory rig so their sounds can be compared again.
+
 ## 0.91.0
 
 - **Razor (MOD's tremolo) rebuilt from the BOSS TR-2's schematic,** which you sent. Since 0.39.0 Razor was modelled on the TR-2 from descriptions of how it sounds; now its shape, speed range and corners come from the circuit:
